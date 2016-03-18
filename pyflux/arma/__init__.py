@@ -1,1 +1,1 @@
-from .arma import ARI
+from .arma import ARIMA

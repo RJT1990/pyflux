@@ -1,6 +1,7 @@
 import numpy as np
 from math import sqrt
 import matplotlib.pyplot as plt
+import seaborn as sns
 
 # Returns sample autocovariance of two np arrays (stationarity assumed)
 def cov(x,lag=0):
@@ -21,7 +22,7 @@ def acf_plot(x,max_lag=10):
 	plt.figure(figsize=(8,4))
 	ax = plt.subplot(111)
 	ax.set_axis_bgcolor((0.2,0.2,0.2))
-	plt.bar(range(1,max_lag),[acf(x,lag) for lag in range(1,max_lag)],color='orange',edgecolor='orange')
+	plt.bar(range(1,max_lag),[acf(x,lag) for lag in range(1,max_lag)])
 	plt.xlabel("Lag")
 	plt.ylabel("Autocorrelation")
 	plt.title("ACF Plot")

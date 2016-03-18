@@ -1,13 +1,57 @@
-from math import exp, log
+from math import exp, log, tanh
+import numpy as np
 
-def gaussian_prior(mu,mu0,sig0):
-	return (1/float(sig0))*exp(-0.5*((mu-mu0)**2)/float(sig0**2))
+def transform_define(transform):
+	if transform == 'tanh':
+		return np.tanh
+	elif transform == 'exp':
+		return np.exp
+	elif transform is None:
+		return np.array
+	else:
+		return None
 
-def igamma_prior(z,alpha,beta):
-	return (z**(-alpha-1))*exp(-(beta/float(z)))
+class Normal(object):
 
-def lgaussian_prior(mu,mu0,sig0):
-	return -log(float(sig0)) - 0.5*((mu-mu0)**2)/float(sig0**2)
+	def __init__(self,mu0,sigma0,transform=None):
+		self.mu0 = mu0
+		self.sigma0 = sigma0
+		self.transform_name = transform		
+		self.transform = transform_define(transform)
 
-def ligamma_prior(z,alpha,beta):
-	return (-alpha-1)*log(z) -(beta/float(z))
+	def logpdf(self,mu):
+		if self.transform is not None:
+			mu = self.transform(mu)		
+		return -log(float(self.sigma0)) - (0.5*(mu-self.mu0)**2)/float(self.sigma0**2)
+
+	def pdf(self,mu):
+		if self.transform is not None:
+			mu = self.transform(mu)				
+		return (1/float(self.sigma0))*exp(-(0.5*(mu-self.mu0)**2)/float(self.sigma0**2))
+
+class Uniform(object):
+
+	def __init__(self,transform=None):
+		self.transform_name = transform		
+		self.transform = transform_define(transform)
+
+	def logpdf(self,mu):
+		return 0
+
+class InverseGamma(object):
+
+	def __init__(self,alpha,beta,transform=np.exp):
+		self.alpha = alpha
+		self.beta = beta
+		self.transform_name = transform
+		self.transform = transform_define(transform)
+
+	def logpdf(self,x):
+		if self.transform is not None:
+			x = self.transform(x)		
+		return (-self.alpha-1)*log(x) - (self.beta/float(x))
+
+	def pdf(self,x):
+		if self.transform is not None:
+			x = self.transform(x)				
+		return (x**(-self.alpha-1))*exp(-(self.beta/float(x)))
