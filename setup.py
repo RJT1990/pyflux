@@ -1,8 +1,7 @@
 from distutils.core import setup
 setup(
   name = 'pyflux',
-  packages = ['pyflux','pyflux.arma','pyflux.gas','pyflux.inference',
-    'pyflux.covariances','pyflux.output'], 
+  packages = ['pyflux','pyflux.arma','pyflux.gas','pyflux.inference','pyflux.output'], 
   version = '0.1.1',
   description = 'A time-series analysis library for Python',
   author = 'Ross Taylor',
