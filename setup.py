@@ -9,6 +9,6 @@ setup(
   url = 'https://github.com/rjt1990/pyflux', 
   download_url = 'https://github.com/rjt1990/pyflux/tarball/0.1', 
   keywords = ['time series','machine learning','bayesian statistics'],
-  license = 'BSD'
-  install_requires=['numpy', 'pandas', 'scipy', 'matplotlib', 'seaborn']
+  license = 'BSD',
+  install_req=['numpy', 'pandas', 'scipy', 'matplotlib', 'seaborn']
 )
