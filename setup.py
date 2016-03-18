@@ -1,8 +1,9 @@
 from distutils.core import setup
 setup(
   name = 'pyflux',
-  packages = ['pyflux'], 
-  version = '0.1',
+  packages = ['pyflux','pyflux.arma','pyflux.gas','pyflux.inference',
+    'pyflux.covariances','pyflux.output'], 
+  version = '0.1.1',
   description = 'A time-series analysis library for Python',
   author = 'Ross Taylor',
   author_email = 'rj-taylor@live.co.uk',
@@ -10,5 +11,5 @@ setup(
   download_url = 'https://github.com/rjt1990/pyflux/tarball/0.1', 
   keywords = ['time series','machine learning','bayesian statistics'],
   license = 'BSD',
-  install_req=['numpy', 'pandas', 'scipy', 'matplotlib', 'seaborn']
+  install_requires=['numpy', 'pandas', 'scipy', 'matplotlib', 'seaborn']
 )
