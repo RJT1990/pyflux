@@ -10,6 +10,7 @@ from scipy import optimize
 import matplotlib.pyplot as plt
 import seaborn as sns
 from .. import covariances as cov
+import numdifftools as nd
 
 class ARIMA(object):
 
@@ -20,8 +21,7 @@ class ARIMA(object):
 		self.ma = ma
 		self.int = integ
 
-		# Check pandas or numpy
-
+		# Check Data format
 		if isinstance(data, pd.DataFrame):
 			self.index = data.index			
 			if target is None:
@@ -61,7 +61,7 @@ class ARIMA(object):
 			self.data_name = "Differenced " + self.data_name
 		self.data = X		
 
-		# Holders for fitted models
+		# Holding variables for model output
 		self.params = []
 		self.ses = []
 		self.ihessian = []
@@ -71,15 +71,19 @@ class ARIMA(object):
 		self.param_desc = []
 
 		self.param_desc.append({'name' : 'Constant', 'index': 0, 'prior': ifr.Normal(0,3,transform=None)})		
+		
 		# AR priors
 		for j in range(1,self.ar+1):
 			self.param_desc.append({'name' : 'AR(' + str(j) + ')', 'index': j, 'prior': ifr.Normal(0,0.5,transform='tanh')})
+		
 		# MA priors
 		for k in range(self.ar+1,self.ar+self.ma+1):
 			self.param_desc.append({'name' : 'MA(' + str(k-self.ar) + ')', 'index': k, 'prior': ifr.Normal(0,0.5,transform='tanh')})
+		
 		# Variance prior
 		self.param_desc.append({'name' : 'Sigma','index': self.ar+self.ma+1, 'prior': ifr.Uniform(transform='exp')})
 
+	# Holds the core model matrices
 	def model(self,beta,x):
 		Y = np.array(x[max(self.ar,self.ma):len(x)])
 		X = np.ones(len(Y))
@@ -101,16 +105,19 @@ class ARIMA(object):
 
 		return mu, Y 
 
+	# Returns negative log likelihood
 	def likelihood(self,beta,x):
 		mu, Y = self.model(beta,x)
 		return -sum(ss.norm.logpdf(mu,loc=Y,scale=self.param_desc[len(beta)-1]['prior'].transform(beta[len(beta)-1])))
 		
+	# returns unnormalized posterior
 	def posterior(self,beta,x):
 		post = self.likelihood(beta,x)
 		for k in range(self.ar+self.ma+2):
 			post += -self.param_desc[k]['prior'].logpdf(beta[k])
 		return post
 
+	# Outputs tabular summary of prior assumptions
 	def list_priors(self):
 
 		prior_list = []
@@ -128,7 +135,7 @@ class ARIMA(object):
 				prior_desc.append('alpha: ' + str(self.param_desc[i]['prior'].alpha) + ', beta: ' + str(self.param_desc[i]['prior'].beta))
 			elif isinstance(x, ifr.Uniform):
 				prior_list.append('Uniform')
-				prior_desc.append('n/a (uninformative)')
+				prior_desc.append('n/a (non-informative)')
 			else:
 				raise Exception("Error - prior distribution not detected!")
 
@@ -154,12 +161,14 @@ class ARIMA(object):
 		
 		print( op.TablePrinter(fmt, ul='=')(data) )
 
+	# Allows for quicker changes to prior specification
 	def adjust_prior(self,index,prior):
 		if index < 0 or index > (self.ar+self.ma+1) or not isinstance(index, int):
 			raise Exception("Oops - the parameter index " + str(index) + " you have entered is invalid!")
 		else:
 			self.param_desc[index]['prior'] = prior
 
+	# Holding function for inference options
 	def fit(self,method,printer=True,nsims=100000,cov_matrix=None):
 		if method == 'MLE':
 			self.optimize_fit(self.likelihood,printer)
@@ -170,98 +179,137 @@ class ARIMA(object):
 		elif method == "Laplace":
 			self.laplace_fit(self.posterior,printer) 
 		else:
-			raise Exception("Method not recognized!")
+			raise ValueError("Method not recognized!")
 
+	# Stores point estimates for MAP and MLE estimation; prints summary output
 	def optimize_fit(self,obj_type,printer=True):
-		# Difference dependent variable
-		X = self.data
 
+		# Starting parameters
 		phi = np.zeros(self.ar+self.ma+2)
 
-		# Use L-BFGS-B to find a decent solution; then use BFGS to get final solution and iHessian
-		p = optimize.minimize(obj_type,phi,args=(X),method='L-BFGS-B')
-		p = optimize.minimize(obj_type,p.x,args=(X),method='BFGS')
-		
+		# Optimize using L-BFGS-B
+		p = optimize.minimize(obj_type,phi,args=(self.data),method='L-BFGS-B')
 		self.params = p.x
-		p_std = np.diag(p.hess_inv)**0.5
-		self.ses = p_std
-		self.ihessian = p.hess_inv
 
-		# Transform parameters
-		t_params = copy.deepcopy(p.x)
-		t_p_std = copy.deepcopy(p_std)
+		# Vector for transformed parameters
+		t_params = copy.deepcopy(p.x)			
 
-		# In future versions -> approximate Hessian when this happens
-		if sum(p_std) == len(p_std):
-			print "WARNING: Hessian not estimated! Use alternative fitting method to get uncertainty estimates, e.g. MCMC"
-			for k in range(len(p_std)):
-				t_params[k] = self.param_desc[k]['prior'].transform(p.x[k])
-		else:
-			for k in range(len(p_std)):
-				z_temp = (p.x[k]/float(p_std[k]))
-				t_params[k] = self.param_desc[k]['prior'].transform(p.x[k])
+		def lik_wrapper(x):
+		    return self.likelihood(x,self.data)
+
+		# Check that matrix is non-singular; act accordingly
+		try:
+			self.ihessian = np.linalg.inv(nd.Hessian(lik_wrapper)(self.params))
+			self.ses = np.diag(self.ihessian)**0.5
+			t_p_std = copy.deepcopy(self.ses) # vector for transformed standard errors
+
+			# Create transformed variables
+			for k in range(len(t_params)):
+				z_temp = (p.x[k]/float(self.ses[k]))
+				t_params[k] = self.param_desc[k]['prior'].transform(t_params[k])
 				t_p_std[k] = t_params[k] / z_temp
 
-		# Format parameters
+			# Replace with something more elegant in future versions
+			if printer is True:
 
-		if printer == True:
+				data = [
+				    {'parm_name':'Constant', 'parm_value':round(self.param_desc[0]['prior'].transform(p.x[0]),4), 'parm_std': round(t_p_std[0],4),'parm_z': round(t_params[0]/float(t_p_std[0]),4),'parm_p': round(tst.find_p_value(t_params[0]/float(t_p_std[0])),4),'ci': "(" + str(round(t_params[0] - t_p_std[0]*1.96,4)) + " | " + str(round(t_params[0] + t_p_std[0]*1.96,4)) + ")"}
+				]
 
-			data = [
-			    {'parm_name':'Constant', 'parm_value':round(t_params[0],4), 'parm_std': round(t_p_std[0],4),'parm_z': round(t_params[0]/float(t_p_std[0]),4),'parm_p': round(tst.find_p_value(t_params[0]/float(t_p_std[0])),4),'ci': "(" + str(round(t_params[0] - t_p_std[0]*1.96,4)) + " | " + str(round(t_params[0] + t_p_std[0]*1.96,4)) + ")"}
-			]
+				for k in range(self.ar):
+					data.append({'parm_name':'AR(' + str(k+1) + ')', 'parm_value':round(t_params[k+1],4), 'parm_std': round(t_p_std[k+1],4), 
+						'parm_z': round(t_params[k+1]/float(t_p_std[k+1]),4), 'parm_p': round(tst.find_p_value(t_params[k+1]/float(t_p_std[k+1])),4),'ci': "(" + str(round(t_params[k+1] - t_p_std[k+1]*1.96,4)) + " | " + str(round(t_params[k+1] + t_p_std[k+1]*1.96,4)) + ")"})
 
-			for k in range(self.ar):
-				data.append({'parm_name':'AR(' + str(k+1) + ')', 'parm_value':round(t_params[k+1],4), 'parm_std': round(t_p_std[k+1],4), 
-					'parm_z': round(t_params[k+1]/float(t_p_std[k+1]),4), 'parm_p': round(tst.find_p_value(t_params[k+1]/float(t_p_std[k+1])),4),'ci': "(" + str(round(t_params[k+1] - t_p_std[k+1]*1.96,4)) + " | " + str(round(t_params[k+1] + t_p_std[k+1]*1.96,4)) + ")"})
+				for k in range(self.ma):
+					data.append({'parm_name':'MA(' + str(k+1) + ')', 'parm_value':round(t_params[self.ar+k+1],4), 'parm_std': round(t_p_std[self.ar+k+1],4), 
+						'parm_z': round(t_params[self.ar+k+1]/float(t_p_std[self.ar+k+1]),4), 'parm_p': round(tst.find_p_value(t_params[self.ar+k+1]/float(t_p_std[self.ar+k+1])),4),'ci': "(" + str(round(t_params[self.ar+k+1] - t_p_std[self.ar+k+1]*1.96,4)) + " | " + str(round(self.ar+t_params[self.ar+k+1] + t_p_std[self.ar+k+1]*1.96,4)) + ")"})
 
-			for k in range(self.ma):
-				data.append({'parm_name':'MA(' + str(k+1) + ')', 'parm_value':round(t_params[self.ar+k+1],4), 'parm_std': round(t_p_std[self.ar+k+1],4), 
-					'parm_z': round(t_params[self.ar+k+1]/float(t_p_std[self.ar+k+1]),4), 'parm_p': round(tst.find_p_value(t_params[self.ar+k+1]/float(t_p_std[self.ar+k+1])),4),'ci': "(" + str(round(t_params[self.ar+k+1] - t_p_std[self.ar+k+1]*1.96,4)) + " | " + str(round(self.ar+t_params[k+1] + t_p_std[self.ar+k+1]*1.96,4)) + ")"})
+				data.append({'parm_name':'Sigma', 'parm_value':round(t_params[len(t_params)-1],4), 'parm_std': round(t_p_std[len(t_params)-1],4), 
+					'parm_z': round(t_params[len(t_params)-1]/float(t_p_std[len(t_params)-1]),4), 'parm_p': round(tst.find_p_value(t_params[len(t_params)-1]/float(t_p_std[len(t_params)-1])),4),'ci': "(" + str(round(t_params[len(t_params)-1] - t_p_std[len(t_params)-1]*1.96,4)) + " | " + str(round(self.ar+t_params[len(t_params)-1] + t_p_std[len(t_params)-1]*1.96,4)) + ")"})
 
-			fmt = [
-			    ('Parameter',       'parm_name',   20),
-			    ('Estimate',          'parm_value',       10),
-			    ('Standard Error', 'parm_std', 15),
-			    ('z',          'parm_z',       10),
-			    ('P>|z|',          'parm_p',       10),
-			    ('95% Confidence Interval',          'ci',       25)
-			]
 
+				fmt = [
+				    ('Parameter',       'parm_name',   20),
+				    ('Estimate',          'parm_value',       10),
+				    ('Standard Error', 'parm_std', 15),
+				    ('z',          'parm_z',       10),
+				    ('P>|z|',          'parm_p',       10),
+				    ('95% Confidence Interval',          'ci',       25)
+				]
+
+		except: # If Hessian is not invertible...
+			print "Hessian not invertible! Consider a different model specification."
+			print ""
+
+			# Transform parameters
+			for k in range(len(t_params)):
+				t_params[k] = self.param_desc[k]['prior'].transform(t_params[k])
+
+			if printer is True:
+
+				data = [
+				    {'parm_name':'Constant', 'parm_value':round(t_params[0],4)}
+				]
+
+				for k in range(self.ar):
+					data.append({'parm_name':'AR(' + str(k+1) + ')', 'parm_value':round(t_params[k+1],4)})
+
+				for k in range(self.sc):
+					data.append({'parm_name':'MA(' + str(k+1) + ')', 'parm_value':round(t_params[self.ar+k+1],4)})
+
+				data.append({'parm_name':'Scale', 'parm_value':round(t_params[len(t_params)-1],4)})
+
+				fmt = [
+				    ('Parameter',       'parm_name',   20),
+				    ('Estimate',          'parm_value',       10)
+				]
+
+		# Final printed output
+		if printer is True:
 			print "ARIMA(" + str(self.ar) + "," + str(self.int) + "," + str(self.ma) + ") regression"
 			print "=================="
 			if obj_type == self.likelihood:
 				print "Method: MLE"
 			elif obj_type == self.posterior:
 				print "Method: MAP"
-			print "Number of observations: " + str(len(X)-self.ar)
-			print "Log Likelihood: " + str(round(-self.likelihood(p.x,X),4))
+			print "Number of observations: " + str(len(self.data)-self.ar)
+			print "Log Likelihood: " + str(round(-self.likelihood(p.x,self.data),4))
 			if obj_type == self.posterior:
-				print "Log Posterior: " + str(round(-self.posterior(p.x,X),4))
-			print "AIC: " + str(round(2*len(p.x)+2*self.likelihood(p.x,X),4))
-			print "BIC: " + str(round(2*self.likelihood(p.x,X) + len(p.x)*log(len(X)-self.ar),4))
+				print "Log Posterior: " + str(round(-self.posterior(p.x,self.data),4))
+			print "AIC: " + str(round(2*len(p.x)+2*self.likelihood(p.x,self.data),4))
+			print "BIC: " + str(round(2*self.likelihood(p.x,self.data) + len(p.x)*log(len(self.data)-self.ar),4))
 			print ""
 			print( op.TablePrinter(fmt, ul='=')(data) )
 
+	# Performs a Laplace Approximation using MAP point estimates and Inverse Hessian
 	def laplace_fit(self,obj_type,printer=True):
 
+		# Get Mode and Inverse Hessian information
 		self.fit(method='MAP',printer=False)
-		chain, mean_est, median_est, upper_95_est, lower_95_est = ifr.laplace(self.params,self.ihessian)
-		
-		for k in range(len(chain)):
-			if self.param_desc[k]['prior'].transform == np.exp:
-				chain[k] = np.exp(chain[k])
-				mean_est[k] = exp(mean_est[k])
-				upper_95_est[k] = exp(upper_95_est[k])
-				lower_95_est[k] = exp(lower_95_est[k])				
-			elif self.param_desc[k]['prior'].transform == np.tanh: 
-				chain[k] = np.tanh(chain[k])
-				mean_est[k] = tanh(mean_est[k])
-				upper_95_est[k] = tanh(upper_95_est[k])
-				lower_95_est[k] = tanh(lower_95_est[k])	
+
+		if len(self.ses) == 0: # no errors, no Laplace party
+			raise Exception("No Hessian information - Laplace approximation cannot be performed")
+		else:
+
+			# Simulate from multivariate normal - silly, use analytical pdfs in future versions
+			chain, mean_est, median_est, upper_95_est, lower_95_est = ifr.laplace(self.params,self.ihessian)
+			
+			# Transform parameters - replace if statement with transform information directly in future version
+			for k in range(len(chain)):
+				if self.param_desc[k]['prior'].transform == np.exp:
+					chain[k] = np.exp(chain[k])
+					mean_est[k] = exp(mean_est[k])
+					upper_95_est[k] = exp(upper_95_est[k])
+					lower_95_est[k] = exp(lower_95_est[k])				
+				elif self.param_desc[k]['prior'].transform == np.tanh: 
+					chain[k] = np.tanh(chain[k])
+					mean_est[k] = tanh(mean_est[k])
+					upper_95_est[k] = tanh(upper_95_est[k])
+					lower_95_est[k] = tanh(lower_95_est[k])	
 
 		self.chains = chain
 
-		if printer == True:
+		if printer is True:
 
 			data = [
 			    {'parm_name':'Constant', 'parm_mean':round(mean_est[0],4), 'parm_median':round(median_est[0],4), 'ci': "(" + str(round(lower_95_est[0],4)) + " | " + str(round(upper_95_est[0],4)) + ")"}
@@ -273,21 +321,21 @@ class ARIMA(object):
 			for j in range(self.ma):
 				data.append({'parm_name':'MA(' + str(j+1) + ')', 'parm_mean':round(mean_est[self.ar+j+1],4), 'parm_median':round(median_est[self.ar+j+1],4), 'ci': "(" + str(round(lower_95_est[j+1+self.ar],4)) + " | " + str(round(upper_95_est[j+1+self.ar],4)) + ")"})
 
-		fmt = [
-			('Parameter','parm_name',20),
-			('Median','parm_median',10),
-			('Mean', 'parm_mean', 15),
-			('95% Credibility Interval','ci',25)]
+			fmt = [
+				('Parameter','parm_name',20),
+				('Median','parm_median',10),
+				('Mean', 'parm_mean', 15),
+				('95% Credibility Interval','ci',25)]
+			
+			print "ARIMA(" + str(self.ar) + "," + str(self.int) + "," + str(self.ma) + ") regression"
+			print "=================="
+			print "Method: Laplace Approximation"
+			print "Number of observations: " + str(len(self.data)-self.ar)
+			print "Log Posterior: " + str(round(-self.posterior(mean_est,self.data),4))
+			print ""
+			print( op.TablePrinter(fmt, ul='=')(data) )
 		
-		print "ARIMA(" + str(self.ar) + "," + str(self.int) + "," + str(self.ma) + ") regression"
-		print "=================="
-		print "Method: Laplace Approximation"
-		print "Number of observations: " + str(len(self.data)-self.ar)
-		print "Log Posterior: " + str(round(-self.posterior(mean_est,self.data),4))
-		print ""
-		print( op.TablePrinter(fmt, ul='=')(data) )
-		
-		
+		# Plot densities
 		for j in range(len(self.params)):
 			fig = plt.figure()
 			a = sns.distplot(chain[j], rug=False, hist=False, label=self.param_desc[j]['name'])
@@ -296,23 +344,20 @@ class ARIMA(object):
 				
 		sns.plt.show()		
 
+	# Wrapper function for MCMC inference methods
 	def mcmc_fit(self,scale=(2.38/sqrt(10000)),nsims=100000,printer=True,method="M-H",cov_matrix=None):
 
-		X = self.data
+		# Initialize with MAP estimates
 		self.fit(method='MAP',printer=False)
 		
 		if method == "M-H":
-			chain, mean_est, median_est, upper_95_est, lower_95_est = ifr.metropolis_hastings(X,self.posterior,scale,nsims,self.params,cov_matrix=cov_matrix)
-		# Not currently supported - for a future version!
-		elif method == "HMC":
-			def posterior_c(phi):
-				return self.posterior(phi,X)
-			chain, mean_est, median_est, upper_95_est, lower_95_est = ifr.hmc(X,posterior_c,nsims,self.params,self.ses)
+			chain, mean_est, median_est, upper_95_est, lower_95_est = ifr.metropolis_hastings(self.data,self.posterior,scale,nsims,self.params,cov_matrix=cov_matrix)
 		else:
 			raise Exception("Method not recognized!")
 
-		self.params = mean_est
+		self.params = np.asarray(mean_est)
 
+		# Transform parameters - replace if statement with transform information directly in future version
 		for k in range(len(chain)):
 			if self.param_desc[k]['prior'].transform == exp:
 				chain[k] = np.exp(chain[k])
@@ -327,7 +372,7 @@ class ARIMA(object):
 
 		self.chains = chain
 
-		if printer == True:
+		if printer is True:
 
 			data = [
 			    {'parm_name':'Constant', 'parm_mean':round(mean_est[0],4), 'parm_median':round(median_est[0],4), 'ci': "(" + str(round(lower_95_est[0],4)) + " | " + str(round(upper_95_est[0],4)) + ")"}
@@ -349,11 +394,12 @@ class ARIMA(object):
 		print "=================="
 		print "Method: Metropolis-Hastings"
 		print "Number of simulations: " + str(nsims)
-		print "Number of observations: " + str(len(X)-self.ar)
-		print "Log Posterior: " + str(round(-self.posterior(mean_est,X),4))
+		print "Number of observations: " + str(len(self.data)-self.ar)
+		print "Log Posterior: " + str(round(-self.posterior(mean_est,self.data),4))
 		print ""
 		print( op.TablePrinter(fmt, ul='=')(data) )
 
+		# Construct MCMC summary plot
 		fig = plt.figure()
 
 		for j in range(len(self.params)):
@@ -381,7 +427,8 @@ class ARIMA(object):
 						plt.title('ACF Plot')						
 		sns.plt.show()		
 
-
+	# Produces T-step ahead forecast for the series
+	# This code is very inefficient; needs amending
 	def predict(self,T=5,lookback=20,intervals=True):
 		if len(self.params) == 0:
 			raise Exception("No parameters estimated!")
@@ -391,12 +438,14 @@ class ARIMA(object):
 			exp_values = self.data[max(self.ar,self.ma):len(self.data)]
 			date_index = self.index[max(self.ar,self.ma):len(self.data)]
 			
+			# Create future dates
 			for t in range(T):
 				if self.data_type == 'pandas':
 					date_index += pd.DateOffset(1)
 				elif self.data_type == 'numpy':
 					date_index.append(date_index[len(date_index)-1]+1)
 
+			# Grab implied model information using estimated parameters
 			mu, Y = self.model(self.params,self.data)
 
 			# Get and format parameters
@@ -404,7 +453,7 @@ class ARIMA(object):
 			for k in range(len(self.params)):
 				params_to_use[k] = self.param_desc[k]['prior'].transform(self.params[k])
 
-			# Expectation
+			# Expected values of the series
 			mu_exp = mu
 			for t in range(T):
 				new_value = params_to_use[0]
@@ -422,7 +471,6 @@ class ARIMA(object):
 				mu_exp = np.append(mu_exp,[0]) # For indexing consistency
 
 			# Simulate error bars (do analytically in future)
-			# Expectation
 			sim_vector = np.zeros([10000,T])
 
 			for n in range(10000):
@@ -452,7 +500,8 @@ class ARIMA(object):
 			exp_values = exp_values[len(exp_values)-T-lookback:len(exp_values)]
 			date_index = date_index[len(date_index)-T-lookback:len(date_index)]
 			
-			if intervals == True:
+			# Plot prediction graph
+			if intervals is True:
 				plt.fill_between(date_index[len(date_index)-T:len(date_index)], forecasted_values-error_bars_90, forecasted_values+error_bars_90,alpha=0.25)
 				plt.fill_between(date_index[len(date_index)-T:len(date_index)], forecasted_values-error_bars, forecasted_values+error_bars,alpha=0.5)			
 			plt.plot(date_index,exp_values)

@@ -28,9 +28,6 @@ def metropolis_hastings(data,posterior,scale,nsims,initials,cov_matrix=None):
 		a_rate = np.zeros([sims_to_do,1])
 		crit = np.random.rand(sims_to_do,1)
 
-		# Draw from multivariate normal		
-		#rnums = np.random.randn(sims_to_do,len(initials))*scale
-		#print rnums
 		post = multivariate_normal(np.zeros(len(initials)),cov_matrix)
 		rnums = post.rvs()*scale
 		for k in range(1,sims_to_do): 

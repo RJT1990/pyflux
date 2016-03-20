@@ -36,7 +36,7 @@ class Uniform(object):
 		self.transform = transform_define(transform)
 
 	def logpdf(self,mu):
-		return 0
+		return 0.0
 
 class InverseGamma(object):
 
