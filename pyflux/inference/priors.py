@@ -11,6 +11,16 @@ def transform_define(transform):
 	else:
 		return None
 
+def itransform_define(transform):
+	if transform == 'tanh':
+		return np.arctanh
+	elif transform == 'exp':
+		return np.log
+	elif transform is None:
+		return np.array
+	else:
+		return None
+
 class Normal(object):
 
 	def __init__(self,mu0,sigma0,transform=None):
@@ -18,6 +28,7 @@ class Normal(object):
 		self.sigma0 = sigma0
 		self.transform_name = transform		
 		self.transform = transform_define(transform)
+		self.itransform = itransform_define(transform)
 
 	def logpdf(self,mu):
 		if self.transform is not None:
@@ -34,6 +45,7 @@ class Uniform(object):
 	def __init__(self,transform=None):
 		self.transform_name = transform		
 		self.transform = transform_define(transform)
+		self.itransform = itransform_define(transform)
 
 	def logpdf(self,mu):
 		return 0.0
@@ -45,6 +57,7 @@ class InverseGamma(object):
 		self.beta = beta
 		self.transform_name = transform
 		self.transform = transform_define(transform)
+		self.itransform = itransform_define(transform)
 
 	def logpdf(self,x):
 		if self.transform is not None:
@@ -55,3 +68,5 @@ class InverseGamma(object):
 		if self.transform is not None:
 			x = self.transform(x)				
 		return (x**(-self.alpha-1))*exp(-(self.beta/float(x)))
+
+

@@ -2,9 +2,9 @@ import numpy as np
 from math import exp
 from scipy.stats import multivariate_normal
 
-def laplace(modes,cov_matrix):
+def norm_post_sim(modes,cov_matrix):
 	post = multivariate_normal(modes,cov_matrix)
-	nsims = 20000
+	nsims = 30000
 	phi = np.zeros([nsims,len(modes)])
 
 	for i in range(nsims):

@@ -2,7 +2,7 @@ import numpy as np
 from math import exp
 from scipy.stats import multivariate_normal
 
-def metropolis_hastings(data,posterior,scale,nsims,initials,cov_matrix=None):
+def metropolis_hastings(posterior,scale,nsims,initials,cov_matrix=None):
 	phi = np.zeros([nsims,len(initials)])
 	phi[0] = initials
 
@@ -33,17 +33,17 @@ def metropolis_hastings(data,posterior,scale,nsims,initials,cov_matrix=None):
 		for k in range(1,sims_to_do): 
 			rnums = np.vstack((rnums,post.rvs()*scale))
 
-		old_lik = -posterior(phi[0],data)
+		old_lik = -posterior(phi[0])
 
 		for i in range(1,sims_to_do):
 			phi_prop = phi[i-1] + rnums[i]
 
-			lik_rat = exp(-posterior(phi_prop,data) - old_lik)
+			lik_rat = exp(-posterior(phi_prop) - old_lik)
 
 			if crit[i] < lik_rat:
 				phi[i] = phi_prop
 				a_rate[i] = 1
-				old_lik = -posterior(phi[i],data)
+				old_lik = -posterior(phi[i])
 			else:
 				phi[i] = phi[i-1]
 				a_rate[i] = 0

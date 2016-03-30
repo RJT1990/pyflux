@@ -1,0 +1,305 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>ARIMA models &mdash; PyFlux 0.1.4 documentation</title>
+  
+
+  
+  
+
+  
+  <link href='https://fonts.googleapis.com/css?family=Lato:400,700,400italic,700italic|Roboto+Slab:400,700|Inconsolata:400,700&subset=latin,cyrillic' rel='stylesheet' type='text/css'>
+
+  
+  
+    
+
+  
+
+  
+  
+    <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
+  
+
+  
+
+  
+    <link rel="top" title="PyFlux 0.1.4 documentation" href="index.html"/>
+        <link rel="next" title="GAS models" href="gas.html"/>
+        <link rel="prev" title="PyFlux: time-series for Python" href="index.html"/> 
+
+  
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/modernizr/2.6.2/modernizr.min.js"></script>
+
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-nav-search">
+        
+          <a href="index.html" class="fa fa-home"> PyFlux</a>
+        
+        
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+      </div>
+
+      <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+        
+          
+          
+              <ul class="current">
+<li class="toctree-l1 current"><a class="current reference internal" href="">ARIMA models</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#example">Example</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#class-arguments">Class Arguments</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#class-attributes">Class Attributes</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#class-methods">Class Methods</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="gas.html">GAS models</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="gas.html#example">Example</a></li>
+<li class="toctree-l2"><a class="reference internal" href="gas.html#class-arguments">Class Arguments</a></li>
+<li class="toctree-l2"><a class="reference internal" href="gas.html#class-attributes">Class Attributes</a></li>
+<li class="toctree-l2"><a class="reference internal" href="gas.html#class-methods">Class Methods</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="bayes.html">Bayesian Inference</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="bayes.html#priors">Priors</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="var.html">VAR models</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="var.html#example">Example</a></li>
+<li class="toctree-l2"><a class="reference internal" href="var.html#class-arguments">Class Arguments</a></li>
+<li class="toctree-l2"><a class="reference internal" href="var.html#class-attributes">Class Attributes</a></li>
+<li class="toctree-l2"><a class="reference internal" href="var.html#class-methods">Class Methods</a></li>
+</ul>
+</li>
+</ul>
+
+          
+        
+      </div>
+      &nbsp;
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" role="navigation" aria-label="top navigation">
+        <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+        <a href="index.html">PyFlux</a>
+      </nav>
+
+
+      
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href="index.html">Docs</a> &raquo;</li>
+      
+    <li>ARIMA models</li>
+      <li class="wy-breadcrumbs-aside">
+        
+          <a href="_sources/arima.txt" rel="nofollow"> View page source</a>
+        
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document">
+            
+  <div class="section" id="arima-models">
+<h1>ARIMA models<a class="headerlink" href="#arima-models" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="example">
+<h2>Example<a class="headerlink" href="#example" title="Permalink to this headline">¶</a></h2>
+<div class="highlight-python"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre> 1
+ 2
+ 3
+ 4
+ 5
+ 6
+ 7
+ 8
+ 9
+10</pre></div></td><td class="code"><div class="highlight"><pre><span class="kn">import</span> <span class="nn">numpy</span> <span class="kn">as</span> <span class="nn">np</span>
+<span class="kn">import</span> <span class="nn">pandas</span> <span class="kn">as</span> <span class="nn">pd</span>
+<span class="kn">from</span> <span class="nn">pandas.io.data</span> <span class="kn">import</span> <span class="n">DataReader</span>
+<span class="kn">from</span> <span class="nn">datetime</span> <span class="kn">import</span> <span class="n">datetime</span>
+<span class="kn">import</span> <span class="nn">pyflux</span> <span class="kn">as</span> <span class="nn">pf</span>
+
+<span class="n">ibm</span> <span class="o">=</span> <span class="n">DataReader</span><span class="p">(</span><span class="s">&#39;IBM&#39;</span><span class="p">,</span>  <span class="s">&#39;yahoo&#39;</span><span class="p">,</span> <span class="n">datetime</span><span class="p">(</span><span class="mi">2000</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">),</span> <span class="n">datetime</span><span class="p">(</span><span class="mi">2016</span><span class="p">,</span><span class="mi">3</span><span class="p">,</span><span class="mi">10</span><span class="p">))</span>
+<span class="n">ibm</span><span class="p">[</span><span class="s">&#39;Logged Open&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="n">ibm</span><span class="p">[</span><span class="s">&#39;Open&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">values</span><span class="p">)</span>
+
+<span class="n">model</span> <span class="o">=</span> <span class="n">pf</span><span class="o">.</span><span class="n">ARIMA</span><span class="p">(</span><span class="n">data</span><span class="o">=</span><span class="n">ibm</span><span class="p">,</span><span class="n">ar</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span><span class="n">ma</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span><span class="n">integ</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span><span class="n">target</span><span class="o">=</span><span class="s">&#39;Logged Open&#39;</span><span class="p">)</span>
+</pre></div>
+</td></tr></table></div>
+</div>
+<div class="section" id="class-arguments">
+<h2>Class Arguments<a class="headerlink" href="#class-arguments" title="Permalink to this headline">¶</a></h2>
+<p>The <strong>ARIMA()</strong> model class has the following arguments:</p>
+<ul class="simple">
+<li><em>data</em> : requires a pd.DataFrame object or an np.array</li>
+<li><em>ar</em> : the number of autoregressive lags</li>
+<li><em>ma</em> : the number of moving average lags</li>
+<li><em>integ</em> : (default : 0) order of integration (0 : no difference, 1 : first difference, ...)</li>
+<li><em>target</em> : (default: None) specify the pandas column name or numpy index if the input is a matrix. If None, the first column will be chosen as the data.</li>
+</ul>
+</div>
+<div class="section" id="class-attributes">
+<h2>Class Attributes<a class="headerlink" href="#class-attributes" title="Permalink to this headline">¶</a></h2>
+<p>An <strong>ARIMA()</strong> object holds the following attributes:</p>
+<p>Model Attributes:</p>
+<ul class="simple">
+<li><em>ar</em> : the number of autoregressive lags</li>
+<li><em>ma</em> : the number of moving average lags</li>
+<li><em>integ</em> : order of integration (0 : no difference, 1 : first difference, ...)</li>
+<li><em>index</em> : the timescale of the time-series</li>
+<li><em>data</em> : the dependent variable held as a np.array</li>
+<li><em>data_name</em> : string variable containing name of the time series</li>
+<li><em>data_type</em> : whether original datatype is numpy or pandas</li>
+</ul>
+<p>Parameter Attributes:</p>
+<p>The attribute <em>param.desc</em> is a dictionary holding information about individual parameters:</p>
+<ul class="simple">
+<li><em>name</em> : name of the parameter</li>
+<li><em>index</em> : index of the parameter (begins with 0)</li>
+<li><em>prior</em> : the prior specification for the parameter</li>
+<li><em>q</em> : the variational distribution approximation</li>
+</ul>
+<p>Inference Attributes:</p>
+<ul class="simple">
+<li><em>params</em> : holds any estimated parameters</li>
+<li><em>ses</em> : holds any estimated standard errors for parameters (MLE/MAP)</li>
+<li><em>ihessian</em> : holds any estimated inverse Hessian (MLE/MAP)</li>
+<li><em>chains</em> : holds trace information for MCMC runs</li>
+<li><em>supported_methods</em> : which inference methods are supported</li>
+<li><em>default_method</em> : default inference method</li>
+</ul>
+</div>
+<div class="section" id="class-methods">
+<h2>Class Methods<a class="headerlink" href="#class-methods" title="Permalink to this headline">¶</a></h2>
+<p><strong>adjust_prior(index,prior)</strong></p>
+<p>Adjusts a prior with the given parameter index. Arguments are:</p>
+<ul class="simple">
+<li><em>index</em> : taking a value in range(0,no of parameters)</li>
+<li><em>prior</em> : one of the prior objects listed in the Bayesian Inference section</li>
+</ul>
+<div class="highlight-python"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre>1
+2</pre></div></td><td class="code"><div class="highlight"><pre><span class="n">model</span><span class="o">.</span><span class="n">list_priors</span><span class="p">()</span>
+<span class="n">model</span><span class="o">.</span><span class="n">adjust_prior</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span><span class="n">ifr</span><span class="o">.</span><span class="n">Normal</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">))</span>
+</pre></div>
+</td></tr></table></div>
+<p><strong>fit(method)</strong></p>
+<p>Fits parameters for the model. Arguments are:</p>
+<ul class="simple">
+<li><em>method</em> : one of [&#8216;BBVI&#8217;,MLE&#8217;,&#8217;MAP&#8217;,&#8217;M-H&#8217;,&#8217;Laplace&#8217;]</li>
+<li><em>printed</em> : (default: True) whether to print output</li>
+<li><em>nsims</em> : (default: 100000) how many simulations if M-H is chosen</li>
+<li><em>cov_matrix</em> (default: None) covariance matrix for M-H</li>
+<li><em>iterations</em> : (default: 30000) how many iterations if BBVI is chosen</li>
+<li><em>step</em> : (default: 0.001) step size for BBVI</li>
+</ul>
+<div class="highlight-python"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre>1</pre></div></td><td class="code"><div class="highlight"><pre><span class="n">model</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="s">&quot;M-H&quot;</span><span class="p">,</span><span class="n">nsims</span><span class="o">=</span><span class="mi">20000</span><span class="p">)</span>
+</pre></div>
+</td></tr></table></div>
+<p><strong>list_priors()</strong></p>
+<p>Lists the current prior specification.</p>
+<p><strong>plot_fit()</strong></p>
+<p>Graphs the fit of the model.</p>
+<p><strong>predict(T)</strong></p>
+<p>Predicts T timesteps ahead. Arguments are:</p>
+<ul class="simple">
+<li><em>T</em> : (default: 5) how many timesteps to predict ahead</li>
+<li><em>lookback</em> : (default: 20) how many past observations to plot</li>
+<li><em>intervals</em> : (default: True) whether to plot 95/90 prediction intervals</li>
+</ul>
+<div class="highlight-python"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre>1</pre></div></td><td class="code"><div class="highlight"><pre><span class="n">model</span><span class="o">.</span><span class="n">predict</span><span class="p">(</span><span class="n">T</span><span class="o">=</span><span class="mi">12</span><span class="p">,</span><span class="n">lookback</span><span class="o">=</span><span class="mi">36</span><span class="p">)</span>
+</pre></div>
+</td></tr></table></div>
+</div>
+</div>
+
+
+          </div>
+          <footer>
+  
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+      
+        <a href="gas.html" class="btn btn-neutral float-right" title="GAS models">Next <span class="fa fa-arrow-circle-right"></span></a>
+      
+      
+        <a href="index.html" class="btn btn-neutral" title="PyFlux: time-series for Python"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+      
+    </div>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2016, Ross Taylor.
+    </p>
+  </div>
+
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/snide/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>.
+  
+</footer>
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  
+
+    <script type="text/javascript">
+        var DOCUMENTATION_OPTIONS = {
+            URL_ROOT:'./',
+            VERSION:'0.1.4',
+            COLLAPSE_INDEX:false,
+            FILE_SUFFIX:'.html',
+            HAS_SOURCE:  true
+        };
+    </script>
+      <script type="text/javascript" src="_static/jquery.js"></script>
+      <script type="text/javascript" src="_static/underscore.js"></script>
+      <script type="text/javascript" src="_static/doctools.js"></script>
+      <script type="text/javascript" src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+
+  
+
+  
+  
+    <script type="text/javascript" src="_static/js/theme.js"></script>
+  
+
+  
+  
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.StickyNav.enable();
+      });
+  </script>
+   
+
+</body>
+</html>
