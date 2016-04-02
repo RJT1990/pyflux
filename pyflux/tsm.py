@@ -11,6 +11,7 @@ import matplotlib.mlab as mlab
 import seaborn as sns
 import numdifftools as nd
 import covariances as cov
+import pandas as pd
 
 class TSM(object):
 
@@ -177,6 +178,9 @@ class TSM(object):
 			elif self.model_type == 'VAR':
 				self.model_name = "VAR(" + str(self.lags) + ") regression"
 				self.cutoff = self.lags			
+			elif self.model_type in ['EGARCH', 'GARCH']:
+				self.model_name = self.model_type + "(" + str(self.p) + "," + str(self.q) + ") regression"
+				self.cutoff = max(self.p,self.q)	
 
 			print self.model_name 
 			print "=================="
@@ -219,7 +223,7 @@ class TSM(object):
 			elif self.dist == 'Poisson':
 				phi[0] = np.log(np.mean(self.data))
 		elif self.model_type == 'VAR':
-			phi = self.create_B().flatten()
+			phi = self.create_B_direct().flatten()
 			cov = self.estimate_cov()
 
 			# Inelegant - needs refactoring
@@ -228,7 +232,13 @@ class TSM(object):
 					if i == k:
 						phi = np.append(phi,self.param_desc[len(phi)]['prior'].itransform(cov[i,k]))
 					elif i > k:
-						phi = np.append(phi,self.param_desc[len(phi)]['prior'].itransform(cov[i,k]))
+						phi = np.append(phi,self.param_desc[len(phi)]['prior'].itransform(cov[i,k]))			
+		elif self.model_type == 'GARCH':
+			phi = np.ones(self.param_no)*0.00001
+			phi[0] = self.param_desc[0]['prior'].itransform(np.mean(np.power(self.data,2)))
+		elif self.model_type == 'EGARCH':
+			phi[0] = self.param_desc[0]['prior'].itransform(np.log(np.mean(np.power(self.data,2))))
+
 
 		# Optimize using L-BFGS-B
 		p = optimize.minimize(obj_type,phi,method='L-BFGS-B')
@@ -256,8 +266,10 @@ class TSM(object):
 				data = []
 
 				for i in range(len(self.param_desc)-self.param_hide):
-					data.append({'param_name': self.param_desc[i]['name'], 'param_value':round(self.param_desc[i]['prior'].transform(p.x[i]),4), 'param_std': round(t_p_std[i],4),'param_z': round(t_params[i]/float(t_p_std[i]),4),'param_p': round(tst.find_p_value(t_params[i]/float(t_p_std[i])),4),'ci': "(" + str(round(t_params[i] - t_p_std[i]*1.96,4)) + " | " + str(round(t_params[i] + t_p_std[i]*1.96,4)) + ")"})
-
+					if self.param_desc[i]['prior'].transform == np.array:
+						data.append({'param_name': self.param_desc[i]['name'], 'param_value':round(self.param_desc[i]['prior'].transform(p.x[i]),4), 'param_std': round(t_p_std[i],4),'param_z': round(t_params[i]/float(t_p_std[i]),4),'param_p': round(tst.find_p_value(t_params[i]/float(t_p_std[i])),4),'ci': "(" + str(round(t_params[i] - t_p_std[i]*1.96,4)) + " | " + str(round(t_params[i] + t_p_std[i]*1.96,4)) + ")"})
+					else:
+						data.append({'param_name': self.param_desc[i]['name'], 'param_value':round(self.param_desc[i]['prior'].transform(p.x[i]),4)})						
 				fmt = [
 				    ('Parameter',       'param_name',   40),
 				    ('Estimate',          'param_value',       10),
@@ -306,6 +318,10 @@ class TSM(object):
 				self.model_name = "VAR(" + str(self.lags) + ") regression"
 				self.cutoff = self.lags			
 				self.data_length = self.data[0]
+			elif self.model_type in ['EGARCH', 'GARCH']:
+				self.model_name = self.model_type + "(" + str(self.p) + "," + str(self.q) + ") regression"
+				self.cutoff = max(self.p,self.q)	
+				self.data_length = self.data				
 
 			print self.model_name 
 			print "=================="
@@ -323,7 +339,7 @@ class TSM(object):
 			print( op.TablePrinter(fmt, ul='=')(data) )
 
 	def ols_fit(self,printer):
-		self.params = self.create_B().flatten()
+		self.params = self.create_B_direct().flatten()
 		cov = self.estimate_cov()
 
 		# Inelegant - needs refactoring
@@ -374,6 +390,9 @@ class TSM(object):
 				self.model_name = "VAR(" + str(self.lags) + ") regression"
 				self.cutoff = self.lags			
 				self.data_length = self.data[0]
+			elif self.model_type in ['EGARCH', 'GARCH']:
+				self.model_name = self.model_type + "(" + str(self.p) + "," + str(self.q) + ") regression"
+				self.cutoff = max(self.p,self.q)
 
 			print self.model_name 
 			print "=================="
@@ -434,6 +453,9 @@ class TSM(object):
 		elif self.model_type == 'VAR':
 			self.model_name = "VAR(" + str(self.lags) + ") regression"
 			self.cutoff = self.lags						
+		elif self.model_type in ['EGARCH', 'GARCH']:
+			self.model_name = self.model_type + "(" + str(self.p) + "," + str(self.q) + ") regression"
+			self.cutoff = max(self.p,self.q)
 
 		print self.model_name 
 		print "=================="
@@ -479,25 +501,39 @@ class TSM(object):
 			if self.model_type == 'GAS':
 				plt.figure()
 				date_index = self.index[max(self.ar,self.sc):len(self.data)]
-				mu, Y, scores = self.model(self.params,self.data)
+				mu, Y, scores = self.model(self.params)
 				plt.plot(date_index,Y,label='Data')
 				plt.plot(date_index,self.link(mu),label='Filter',c='black')
 				plt.title(self.data_name)
+				plt.legend(loc=2)	
 			elif self.model_type == 'VAR':
 				date_index = self.index[self.lags:len(self.data[0])]
-				mu, Y = self.model(self.params,self.data)
+				mu, Y = self.model(self.params)
 				for series in range(len(Y)):
 					plt.figure()
 					plt.plot(date_index,Y[series],label='Data ' + str(series))
 					plt.plot(date_index,mu[series],label='Filter' + str(series),c='black')	
 					plt.title(self.data_name[series])
+					plt.legend(loc=2)	
+			elif self.model_type in ['GARCH','EGARCH']:
+				plt.figure()
+				date_index = self.index[max(self.p,self.q):len(self.data)]
+				sigma2, Y, ___ = self.model(self.params)
+				plt.plot(date_index,np.abs(Y),label=self.data_name + ' Absolute Values')
+				if self.model_type == 'GARCH':
+					plt.plot(date_index,np.power(sigma2,0.5),label='GARCH(' + str(self.p) + ',' + str(self.q) + ') std',c='black')
+				elif self.model_type == 'EGARCH':
+					plt.plot(date_index,np.exp(sigma2/2),label='EGARCH(' + str(self.p) + ',' + str(self.q) + ') std',c='black')					
+				plt.title(self.data_name + " Volatility Plot")	
+				plt.legend(loc=2)			
 			else:
 				plt.figure()
 				date_index = self.index[max(self.ar,self.ma):len(self.data)]
-				mu, Y = self.model(self.params,self.data)
+				mu, Y = self.model(self.params)
 				plt.plot(date_index,Y,label='Data')
 				plt.plot(date_index,mu,label='Filter',c='black')
 				plt.title(self.data_name)
+				plt.legend(loc=2)	
 			plt.show()				
 
 	# Performs Black Box Variational Inference
@@ -524,3 +560,23 @@ class TSM(object):
 			self.param_desc[k]['q'] = q[k]
 
 		self.normal_posterior_sim(self.params,np.diag(np.exp(q_ses)),"Black Box Variational Inference",printer)
+
+	def shift_dates(self,h):
+		if self.model_type == 'VAR':
+			date_index = self.index[self.max_lag:len(self.data[0])]
+		else:
+			date_index = self.index[self.max_lag:len(self.data)]
+
+		for t in range(h):
+			if self.data_type == 'pandas':
+				date_index += pd.DateOffset(1)
+			elif self.data_type == 'numpy':
+				date_index.append(date_index[len(date_index)-1]+1)
+
+		return date_index	
+
+	def transform_parameters(self):
+		trans_params = copy.deepcopy(self.params)
+		for k in range(len(self.params)):
+			trans_params[k] = self.param_desc[k]['prior'].transform(self.params[k])	
+		return trans_params

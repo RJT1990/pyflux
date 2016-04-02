@@ -1,8 +1,8 @@
 from distutils.core import setup
 setup(
   name = 'pyflux',
-  packages = ['pyflux','pyflux.arma','pyflux.distributions','pyflux.gas','pyflux.inference','pyflux.output','pyflux.tests','pyflux.var'], 
-  version = '0.1.5',
+  packages = ['pyflux','pyflux.arma','pyflux.distributions','pyflux.gas','pyflux.garch','pyflux.inference','pyflux.output','pyflux.tests','pyflux.var'], 
+  version = '0.1.6',
   description = 'A time-series analysis library for Python',
   author = 'Ross Taylor',
   author_email = 'rj-taylor@live.co.uk',

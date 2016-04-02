@@ -3,6 +3,7 @@ from .. import distributions as dst
 from .. import output as op
 from .. import tests as tst
 from .. import tsm as tsm
+from .. import gas as gas
 import numpy as np
 import pandas as pd
 import scipy.stats as ss
@@ -13,45 +14,41 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 import numdifftools as nd
 
-class ARIMA(tsm.TSM):
+class EGARCH(tsm.TSM):
 	""" Inherits time series methods from TSM class.
 
-	**** AUTOREGRESSIVE INTEGERATED MOVING AVERAGE (ARIMA) MODELS ****
+	**** BETA-t-EGARCH MODELS ****
 
 	Parameters
 	----------
 	data : pd.DataFrame or np.ndarray
 		Field to specify the time series data that will be used.
 
-	ar : int
-		Field to specify how many AR terms the model will have. Warning:
+	p : int
+		Field to specify how many GARCH terms the model will have. Warning:
 		higher-order lag specifications often fail to return for optimization
 		methods of inference (MLE/MAP).
 
-	ma : int
-		Field to specify how many MA terms the model will have. Warning:
+	q : int
+		Field to specify how many SCORE terms the model will have. Warning:
 		higher-order lag specifications often fail to return for optimization
 		methods of inference (MLE/MAP).
-
-	integ : int (default : 0)
-		Specifies how many time to difference the time series.
 
 	target : str (pd.DataFrame) or int (np.ndarray)
 		Specifies which column name or array index to use. By default, first
 		column/array will be selected as the dependent variable.
 	"""
 
-	def __init__(self,data,ar,ma,integ=0,target=None):
+	def __init__(self,data,p,q,target=None):
 
 		# Initialize TSM object
-		tsm.TSM.__init__(self,'ARIMA')
+		tsm.TSM.__init__(self,'EGARCH')
 
 		# Parameters
-		self.ar = ar
-		self.ma = ma
-		self.integ = integ
-		self.param_no = self.ar + self.ma + 2
-		self.max_lag = max(self.ar,self.ma)
+		self.p = p
+		self.q = q
+		self.param_no = self.p + self.q + 2
+		self.max_lag = max(self.p,self.q)
 		self.hess_type = 'numerical'
 		self.param_hide = 0 # Whether to cutoff variance parameters from results
 		self.supported_methods = ["MLE","MAP","Laplace","M-H","BBVI"]
@@ -87,31 +84,23 @@ class ARIMA(tsm.TSM):
 				self.index = range(len(data))
 
 		else:
-			raise Exception("The data input is not pandas or numpy compatible!")
-
-		# Difference data
-		X = self.data
-		for order in range(self.integ):
-			X = np.diff(X)
-			self.data_name = "Differenced " + self.data_name
-		self.data = X		
-
-		# Add parameter information
+			raise Exception("The data input is not pandas or numpy compatible!")	
 
 		self.param_desc.append({'name' : 'Constant', 'index': 0, 'prior': ifr.Normal(0,3,transform=None), 'q': dst.Normal(0,3)})		
 		
-		# AR priors
-		for j in range(1,self.ar+1):
-			self.param_desc.append({'name' : 'AR(' + str(j) + ')', 'index': j, 'prior': ifr.Normal(0,0.5,transform=None), 'q': dst.Normal(0,3)})
+		# GARCH terms
+		for j in range(1,self.p+1):
+			self.param_desc.append({'name' : 'p(' + str(j) + ')', 'index': j, 'prior': ifr.Normal(0,0.5,transform=None), 'q': dst.Normal(0,3)})
 		
-		# MA priors
-		for k in range(self.ar+1,self.ar+self.ma+1):
-			self.param_desc.append({'name' : 'MA(' + str(k-self.ar) + ')', 'index': k, 'prior': ifr.Normal(0,0.5,transform=None), 'q': dst.Normal(0,3)})
-		
-		# Variance prior
-		self.param_desc.append({'name' : 'Sigma','index': self.ar+self.ma+1, 'prior': ifr.Uniform(transform='exp'), 'q': dst.Normal(0,3)})
+		# SCORE terms
+		for k in range(self.p+1,self.p+self.q+1):
+			self.param_desc.append({'name' : 'q(' + str(k-self.q) + ')', 'index': k, 'prior': ifr.Normal(0,0.5,transform=None), 'q': dst.Normal(0,3)})
+
+		# For t-distribution
+		self.param_desc.append({'name' : 'v', 'index': self.q+self.p+1, 'prior': ifr.Uniform(transform='exp'), 'q': dst.Normal(0,3)})
 
 
+	# Holds the core model matrices
 	def model(self,beta):
 		""" Creates the structure of the model
 
@@ -122,33 +111,45 @@ class ARIMA(tsm.TSM):
 
 		Returns
 		----------
-		mu : np.ndarray
-			Contains the predicted values for the time series
+		lambda : np.ndarray
+			Contains the values for the conditional volatility series
 
 		Y : np.ndarray
 			Contains the length-adjusted time series (accounting for lags)
-		"""		
+
+		scores : np.ndarray
+			Contains the score terms for the time series
+		"""
 
 		Y = np.array(self.data[self.max_lag:len(self.data)])
 		X = np.ones(len(Y))
+ 		scores = np.zeros(len(Y))
 
 		# Transform parameters
 		parm = [self.param_desc[k]['prior'].transform(beta[k]) for k in range(len(beta))]
 
-		# AR terms
-		if self.ar != 0:
-			for i in range(self.ar):
-				X = np.vstack((X,self.data[(self.max_lag-i-1):(len(self.data)-i-1)]))
+		lmda = np.ones(len(Y))*parm[0]
 
-		mu = np.matmul(np.transpose(X),parm[0:len(parm)-1-self.ma])
+		# Loop over time series
+		for t in range(len(Y)):
 
-		# MA terms
-		if self.ma != 0:
-			for t in range(self.max_lag,len(Y)):
-				for k in range(self.ma):
-						mu[t] += parm[1+self.ar+k]*(Y[t-1-k]-mu[t-1-k])
+			if t < self.max_lag:
 
-		return mu, Y 
+				lmda[t] = parm[0]/(1-np.sum(parm[1:(self.p+1)]))
+
+			else:
+
+				# Loop over GARCH terms
+				for p_term in range(self.p):
+					lmda[t] += parm[1+p_term]*lmda[t-p_term-1]
+
+				# Loop over Score terms
+				for q_term in range(self.q):
+					lmda[t] += parm[1+self.p+p_term]*scores[t-q_term-1]
+
+			scores[t] = gas.lik_score(Y[t],lmda[t],parm[len(parm)-1],'Beta-t')
+
+		return lmda, Y, scores
 
 	def likelihood(self,beta):
 		""" Creates the negative log-likelihood of the model
@@ -163,19 +164,22 @@ class ARIMA(tsm.TSM):
 		The negative logliklihood of the model
 		"""		
 
-		mu, Y = self.model(beta)
-		return -np.sum(ss.norm.logpdf(Y,loc=mu,scale=self.param_desc[len(beta)-1]['prior'].transform(beta[len(beta)-1])))
-
-	def mean_prediction(self,mu,Y,h,t_params):
+		lmda, Y, ___ = self.model(beta)
+		return -np.sum(ss.t.logpdf(x=Y,df=self.param_desc[len(beta)-1]['prior'].transform(beta[len(beta)-1]),loc=np.zeros(len(lmda)),scale=np.exp(lmda/float(2))))
+		
+	def mean_prediction(self,lmda,Y,scores,h,t_params):
 		""" Creates a h-step ahead mean prediction
 
 		Parameters
 		----------
-		mu : np.ndarray
+		lmda : np.ndarray
 			The past predicted values
 
 		Y : np.ndarray
 			The past data
+
+		scores : np.ndarray
+			The past scores
 
 		h : int
 			How many steps ahead for the prediction
@@ -189,37 +193,39 @@ class ARIMA(tsm.TSM):
 		"""		
 
 		# Create arrays to iteratre over
-		Y_exp = copy.deepcopy(Y)
-		mu_exp = copy.deepcopy(mu)
+		lmda_exp = copy.deepcopy(lmda)
+		scores_exp = copy.deepcopy(scores)
 
 		# Loop over h time periods			
 		for t in range(h):
 			new_value = t_params[0]
 
-			if self.ar != 0:
-				for j in range(1,self.ar+1):
-					new_value += t_params[j]*Y_exp[len(Y_exp)-j]
+			if self.q != 0:
+				for j in range(1,self.q+1):
+					new_value += t_params[j]*lmda_exp[len(lmda_exp)-j]
 
-			if self.ma != 0:
-				for k in range(1,self.ma+1):
-					if (k-1) >= t:
-						new_value += t_params[k+self.ar]*(Y_exp[len(Y_exp)-k]-mu_exp[len(mu_exp)-k])
+			if self.p != 0:
+				for k in range(1,self.p+1):
+					new_value += t_params[k+self.q]*scores_exp[len(scores_exp)-k]
 
-			Y_exp = np.append(Y_exp,[new_value])
-			mu_exp = np.append(mu_exp,[0]) # For indexing consistency
+			lmda_exp = np.append(lmda_exp,[new_value]) # For indexing consistency
+			scores_exp = np.append(scores_exp,[0]) # expectation of score is zero
 
-		return Y_exp
+		return lmda_exp
 
-	def sim_prediction(self,mu,Y,h,t_params,simulations):
+	def sim_prediction(self,lmda,Y,scores,h,t_params,simulations):
 		""" Simulates a h-step ahead mean prediction
 
 		Parameters
 		----------
-		mu : np.ndarray
+		lmda : np.ndarray
 			The past predicted values
 
 		Y : np.ndarray
 			The past data
+
+		scores : np.ndarray
+			The past scores
 
 		h : int
 			How many steps ahead for the prediction
@@ -239,27 +245,25 @@ class ARIMA(tsm.TSM):
 
 		for n in range(simulations):
 			# Create arrays to iteratre over		
-			Y_exp = copy.deepcopy(Y)
-			mu_exp = copy.deepcopy(mu)
+			lmda_exp = copy.deepcopy(lmda)
+			scores_exp = copy.deepcopy(scores)
 
 			# Loop over h time periods			
 			for t in range(h):
+				new_value = t_params[0]
 
-				new_value = t_params[0] + np.random.randn(1)*t_params[len(t_params)-1]
+				if self.q != 0:
+					for j in range(1,self.q+1):
+						new_value += t_params[j]*lmda_exp[len(lmda_exp)-j]
 
-				if self.ar != 0:
-					for j in range(1,self.ar+1):
-						new_value += t_params[j]*Y_exp[len(Y_exp)-j]
+				if self.p != 0:
+					for k in range(1,self.p+1):
+						new_value += t_params[k+self.q]*scores_exp[len(scores_exp)-k]
 
-				if self.ma != 0:
-					for k in range(1,self.ma+1):
-						if (k-1) >= t:
-							new_value += t_params[k+self.ar]*(Y_exp[len(Y_exp)-k]-mu_exp[len(mu_exp)-k])
+				lmda_exp = np.append(lmda_exp,[new_value]) # For indexing consistency
+				scores_exp = np.append(scores_exp,scores[np.random.randint(len(scores))]) # expectation of score is zero
 
-				Y_exp = np.append(Y_exp,[new_value])
-				mu_exp = np.append(mu_exp,[0]) # For indexing consistency
-
-				sim_vector[n] = Y_exp[(len(Y_exp)-h):(len(Y_exp))]
+			sim_vector[n] = lmda_exp[(len(lmda_exp)-h):(len(lmda_exp))]
 
 		return np.transpose(sim_vector)
 
@@ -285,7 +289,8 @@ class ARIMA(tsm.TSM):
 
 		intervals : Boolean
 			Would you like to show prediction intervals for the forecast?
-		"""				
+		"""	
+
 		error_bars = []
 		for pre in range(5,100,5):
 			error_bars.append(np.insert([np.percentile(i,pre) for i in sim_vector] - mean_values[(len(mean_values)-h):(len(mean_values))],0,0))
@@ -293,9 +298,8 @@ class ARIMA(tsm.TSM):
 		plot_values = mean_values[len(mean_values)-h-past_values:len(mean_values)]
 		plot_index = date_index[len(date_index)-h-past_values:len(date_index)]
 		return error_bars, forecasted_values, plot_values, plot_index
-		
-	# Produces T-step ahead forecast for the series
-	# This code is very inefficient; needs amending
+
+
 	def predict(self,h=5,past_values=20,intervals=True):
 		""" Makes forecast with the estimated model
 
@@ -321,28 +325,23 @@ class ARIMA(tsm.TSM):
 		else:
 
 			# Retrieve data, dates and (transformed) parameters
-			mu, Y = self.model(self.params)			
+			lmda, Y, scores = self.model(self.params)			
 			date_index = self.shift_dates(h)
 			t_params = self.transform_parameters()
 
 			# Get mean prediction and simulations (for errors)
-			mean_values = self.mean_prediction(mu,Y,h,t_params)
-			sim_values = self.sim_prediction(mu,Y,h,t_params,15000)
+			mean_values = self.mean_prediction(lmda,Y,scores,h,t_params)
+			sim_values = self.sim_prediction(lmda,Y,scores,h,t_params,15000)
 			error_bars, forecasted_values, plot_values, plot_index = self.summarize_simulations(mean_values,sim_values,date_index,h,past_values)
 
 			if intervals == True:
 				alpha =[0.15*i/float(100) for i in range(50,12,-2)]
 				for count, pre in enumerate(error_bars):
-					plt.fill_between(date_index[len(date_index)-h-1:len(date_index)], forecasted_values-pre, forecasted_values+pre,alpha=alpha[count])			
-			plt.plot(plot_index,plot_values)
+					plt.fill_between(date_index[len(date_index)-h-1:len(date_index)], np.exp((forecasted_values-pre)/2), np.exp((forecasted_values+pre)/2),alpha=alpha[count])			
+			plt.plot(plot_index,np.exp(plot_values/2))
 			plt.title("Forecast for " + self.data_name)
 			plt.xlabel("Time")
 			plt.ylabel(self.data_name)
 			plt.show()
 
 			return error_bars, forecasted_values, plot_values, plot_index
-
-
-
-
-

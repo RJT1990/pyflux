@@ -1,3 +1,4 @@
+from math import exp
 
 def lik_score(rv,mean,var,dist):
 	if dist == "Laplace":
@@ -20,3 +21,13 @@ def lik_score(rv,mean,var,dist):
 
 	elif dist == "Exponential":
 		return 1.0 - mean*rv
+
+	elif dist == "Beta-t":
+		"""
+		return (((var+1.0)*(rv**2.0))/float(var*exp(mean) + (rv**2))) - 1.0
+		"""
+		
+		try:
+			return (((var+1.0)*(rv**2))/float(var*exp(mean) + (rv**2))) - 1.0
+		except:
+			return -1.0
