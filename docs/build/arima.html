@@ -7,7 +7,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>ARIMA models &mdash; PyFlux 0.1.5 documentation</title>
+  <title>ARIMA models &mdash; PyFlux 0.1.7 documentation</title>
   
 
   
@@ -30,8 +30,8 @@
   
 
   
-    <link rel="top" title="PyFlux 0.1.5 documentation" href="index.html"/>
-        <link rel="next" title="GAS models" href="gas.html"/>
+    <link rel="top" title="PyFlux 0.1.7 documentation" href="index.html"/>
+        <link rel="next" title="EGARCH models" href="egarch.html"/>
         <link rel="prev" title="PyFlux: time-series for Python" href="index.html"/> 
 
   
@@ -69,6 +69,20 @@
 <li class="toctree-l2"><a class="reference internal" href="#class-arguments">Class Arguments</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#class-attributes">Class Attributes</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#class-methods">Class Methods</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="egarch.html">EGARCH models</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="egarch.html#example">Example</a></li>
+<li class="toctree-l2"><a class="reference internal" href="egarch.html#class-arguments">Class Arguments</a></li>
+<li class="toctree-l2"><a class="reference internal" href="egarch.html#class-attributes">Class Attributes</a></li>
+<li class="toctree-l2"><a class="reference internal" href="egarch.html#class-methods">Class Methods</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="garch.html">GARCH models</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="garch.html#example">Example</a></li>
+<li class="toctree-l2"><a class="reference internal" href="garch.html#class-arguments">Class Arguments</a></li>
+<li class="toctree-l2"><a class="reference internal" href="garch.html#class-attributes">Class Attributes</a></li>
+<li class="toctree-l2"><a class="reference internal" href="garch.html#class-methods">Class Methods</a></li>
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="gas.html">GAS models</a><ul>
@@ -230,14 +244,14 @@
 <p>Lists the current prior specification.</p>
 <p><strong>plot_fit()</strong></p>
 <p>Graphs the fit of the model.</p>
-<p><strong>predict(T)</strong></p>
-<p>Predicts T timesteps ahead. Arguments are:</p>
+<p><strong>predict(h)</strong></p>
+<p>Predicts h timesteps ahead. Arguments are:</p>
 <ul class="simple">
-<li><em>T</em> : (default: 5) how many timesteps to predict ahead</li>
-<li><em>lookback</em> : (default: 20) how many past observations to plot</li>
+<li><em>h</em> : (default: 5) how many timesteps to predict ahead</li>
+<li><em>past_values</em> : (default: 20) how many past observations to plot</li>
 <li><em>intervals</em> : (default: True) whether to plot 95/90 prediction intervals</li>
 </ul>
-<div class="highlight-python"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre>1</pre></div></td><td class="code"><div class="highlight"><pre><span class="n">model</span><span class="o">.</span><span class="n">predict</span><span class="p">(</span><span class="n">T</span><span class="o">=</span><span class="mi">12</span><span class="p">,</span><span class="n">lookback</span><span class="o">=</span><span class="mi">36</span><span class="p">)</span>
+<div class="highlight-python"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre>1</pre></div></td><td class="code"><div class="highlight"><pre><span class="n">model</span><span class="o">.</span><span class="n">predict</span><span class="p">(</span><span class="n">h</span><span class="o">=</span><span class="mi">12</span><span class="p">,</span><span class="n">past_values</span><span class="o">=</span><span class="mi">36</span><span class="p">)</span>
 </pre></div>
 </td></tr></table></div>
 </div>
@@ -249,7 +263,7 @@
   
     <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
       
-        <a href="gas.html" class="btn btn-neutral float-right" title="GAS models">Next <span class="fa fa-arrow-circle-right"></span></a>
+        <a href="egarch.html" class="btn btn-neutral float-right" title="EGARCH models">Next <span class="fa fa-arrow-circle-right"></span></a>
       
       
         <a href="index.html" class="btn btn-neutral" title="PyFlux: time-series for Python"><span class="fa fa-arrow-circle-left"></span> Previous</a>
@@ -282,7 +296,7 @@
     <script type="text/javascript">
         var DOCUMENTATION_OPTIONS = {
             URL_ROOT:'./',
-            VERSION:'0.1.5',
+            VERSION:'0.1.7',
             COLLAPSE_INDEX:false,
             FILE_SUFFIX:'.html',
             HAS_SOURCE:  true

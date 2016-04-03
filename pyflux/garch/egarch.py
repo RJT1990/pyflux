@@ -300,7 +300,10 @@ class EGARCH(tsm.TSM):
 		return error_bars, forecasted_values, plot_values, plot_index
 
 
-	def predict(self,h=5,past_values=20,intervals=True):
+	def predict(self,h=5,past_values=20,intervals=True,**kwargs):
+
+		figsize = kwargs.get('figsize',(10,7))
+		
 		""" Makes forecast with the estimated model
 
 		Parameters
@@ -334,14 +337,16 @@ class EGARCH(tsm.TSM):
 			sim_values = self.sim_prediction(lmda,Y,scores,h,t_params,15000)
 			error_bars, forecasted_values, plot_values, plot_index = self.summarize_simulations(mean_values,sim_values,date_index,h,past_values)
 
+			plt.figure(figsize=figsize)
 			if intervals == True:
 				alpha =[0.15*i/float(100) for i in range(50,12,-2)]
 				for count, pre in enumerate(error_bars):
 					plt.fill_between(date_index[len(date_index)-h-1:len(date_index)], np.exp((forecasted_values-pre)/2), np.exp((forecasted_values+pre)/2),alpha=alpha[count])			
+			
 			plt.plot(plot_index,np.exp(plot_values/2))
 			plt.title("Forecast for " + self.data_name)
 			plt.xlabel("Time")
 			plt.ylabel(self.data_name)
 			plt.show()
 
-			return error_bars, forecasted_values, plot_values, plot_index
+			self.predictions = {'error_bars' : error_bars, 'forecasted_values' : forecasted_values, 'plot_values' : plot_values, 'plot_index': plot_index}

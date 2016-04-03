@@ -95,26 +95,27 @@ class BBVI(object):
 	def lambda_update(self):
 		Gjj = 0
 		final_parameters = self.current_parameters()
-		final_samples = 0
+		final_samples = 1
 		for i in range(self.iterations):
 			# Draw variables and gradients
 			z = self.draw_variables()
 			gradient = self.cv_gradient(z)
-
+			gradient[np.isnan(gradient)] = 0
 			# RMS prop
 			Gjj = 0.99*Gjj + 0.01*(gradient**2)
-			new_parameters = self.current_parameters() + self.step*(gradient/np.sqrt(Gjj))				
+			new_parameters = self.current_parameters() + self.step*(gradient/np.sqrt(Gjj))	
 			self.change_parameters(new_parameters)
 
 			# Print progress
 			current_z = self.current_parameters()
-			current_lambda = np.array([current_z[el] for el in range(len(current_z)) if el%2==0])				
+			current_lambda = np.array([current_z[el] for el in range(len(current_z)) if el%2==0])		
 			self.print_progress(i,current_lambda)
 
 			# Construct final parameters using final 10% of samples
 			if i > self.iterations-round(self.iterations/10):
 				final_samples += 1
 				final_parameters = final_parameters+current_z
+
 		final_parameters = final_parameters/float(final_samples)
 		final_means = np.array([final_parameters[el] for el in range(len(final_parameters)) if el%2==0])
 		final_ses = np.array([final_parameters[el] for el in range(len(final_parameters)) if el%2!=0])

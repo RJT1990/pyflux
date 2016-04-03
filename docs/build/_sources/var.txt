@@ -90,15 +90,16 @@ Fits parameters for the model. Arguments are:
 
    model.fit("M-H",nsims=20000)
 
-**irf(T,shock_index,shock_dir)**
+**irf(h,shock_index,shock_dir)**
 
 Plots impulse response function graphs.
 
-* *T* : (default: 5) how many timesteps to predict ahead
+* *h* : (default: 5) how many timesteps to predict ahead
 * *shock_index* : which variable to apply the shock to
 * *shock_value* : (default: None) apply a custom shock, if None then applies 1 std shock
 * *shock_dir* : (default: 'positive') one of ['positive','negative']
 * *intervals* : (default: True) whether to plot 95/90 prediction intervals      
+* *cumulative* : (default: False) whether to plot cumulative effect or not
 
 **list_priors()**
 
@@ -108,15 +109,15 @@ Lists the current prior specification.
 
 Graphs the fit of the model.
 
-**predict(T)**
+**predict(h)**
 
-Predicts T timesteps ahead. Arguments are:
+Predicts h timesteps ahead. Arguments are:
 
-* *T* : (default: 5) how many timesteps to predict ahead
-* *lookback* : (default: 20) how many past observations to plot
+* *h* : (default: 5) how many timesteps to predict ahead
+* *past_values* : (default: 20) how many past observations to plot
 * *intervals* : (default: True) whether to plot 95/90 prediction intervals
 
 .. code-block:: python
    :linenos:
 
-   model.predict(T=12,lookback=36)
+   model.predict(h=12,past_values=36)

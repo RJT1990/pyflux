@@ -15,6 +15,8 @@ Models
    :maxdepth: 2
 
    arima
+   egarch
+   garch
    gas
    var
 

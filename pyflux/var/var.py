@@ -388,7 +388,10 @@ class VAR(tsm.TSM):
 		return np.array(exp)
 
 
-	def irf(self,h=10,shock_index=0,shock_value=None,intervals=True,shock_dir='positive',cumulative=False):
+	def irf(self,h=10,shock_index=0,shock_value=None,intervals=True,shock_dir='positive',cumulative=False,**kwargs):
+
+		figsize = kwargs.get('figsize',(10,7))
+
 		""" Function allows for mean prediction; also allows shock specification for simulations or impulse response effects
 
 		Parameters
@@ -454,6 +457,8 @@ class VAR(tsm.TSM):
 				elif cumulative is False:
 					if intervals is True:
 						sims = np.transpose(sim_vector[variable])
+						
+				plt.figure(figsize=figsize)
 
 				if intervals is True:
 					error_bars, forecasted_values, plot_values, plot_index = self.summarize_simulations(exps[variable],sims,date_index,h,0)
@@ -516,7 +521,10 @@ class VAR(tsm.TSM):
 		return error_bars, forecasted_values, plot_values, plot_index
 
 
-	def predict(self,h=5,past_values=20,intervals=True):
+	def predict(self,h=5,past_values=20,intervals=True,**kwargs):
+
+		figsize = kwargs.get('figsize',(10,7))
+
 		""" Makes forecast with the estimated model
 
 		Parameters
@@ -559,6 +567,7 @@ class VAR(tsm.TSM):
 				test = np.transpose(sim_vector[variable])
 				error_bars, forecasted_values, plot_values, plot_index = self.summarize_simulations(exps[variable],test,date_index,h,past_values)
 
+				plt.figure(figsize=figsize)
 				if intervals == True:
 					alpha = [0.15*i/float(100) for i in range(50,12,-2)]
 					for count, pre in enumerate(error_bars):
@@ -568,7 +577,6 @@ class VAR(tsm.TSM):
 				plt.xlabel("Time")
 				plt.ylabel(self.data_name[variable])
 				plt.show()
-
-			return error_bars, forecasted_values, plot_values, plot_index
+				self.predictions.append({'error_bars' : error_bars, 'forecasted_values' : forecasted_values, 'plot_values' : plot_values, 'plot_index': plot_index})
 
 

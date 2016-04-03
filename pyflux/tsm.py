@@ -22,6 +22,7 @@ class TSM(object):
 		self.ses = []
 		self.ihessian = []
 		self.chains = []
+		self.predictions = []
 
 		# Specify parameter description
 		self.param_desc = []
@@ -49,7 +50,7 @@ class TSM(object):
 				self.param_desc[index]['prior'] = prior
 
 	# Wrapper function for inference options
-	def fit(self,method=None,printer=True,nsims=100000,cov_matrix=None,step=0.001,iterations=30000):
+	def fit(self,method=None,printer=True,nsims=100000,cov_matrix=None,step=0.001,iterations=30000,**kwargs):
 		if method is None:
 			method = self.default_method
 
@@ -238,11 +239,12 @@ class TSM(object):
 			phi[0] = self.param_desc[0]['prior'].itransform(np.mean(np.power(self.data,2)))
 		elif self.model_type == 'EGARCH':
 			phi[0] = self.param_desc[0]['prior'].itransform(np.log(np.mean(np.power(self.data,2))))
-
+		elif self.model_type == 'GPAR':
+			phi = np.ones(self.param_no)*-3.0
 
 		# Optimize using L-BFGS-B
 		p = optimize.minimize(obj_type,phi,method='L-BFGS-B')
-		self.params = p.x
+		self.params = copy.deepcopy(p.x)
 
 		# Vector for transformed parameters
 		t_params = copy.deepcopy(p.x)			
@@ -308,11 +310,11 @@ class TSM(object):
 
 			if self.model_type == 'ARIMA':
 				self.model_name = "ARIMA(" + str(self.ar) + "," + str(self.integ) + "," + str(self.ma) + ") regression"
-				self.cutoff = max(self.ar,self.ma)
+				self.cutoff = self.max_lag	
 				self.data_length = self.data
 			elif self.model_type == 'GAS':
 				self.model_name = "GAS(" + str(self.ar) + "," + str(self.integ) + "," + str(self.sc) + ") regression"
-				self.cutoff = max(self.ar,self.sc)
+				self.cutoff = self.max_lag	
 				self.data_length = self.data				
 			elif self.model_type == 'VAR':
 				self.model_name = "VAR(" + str(self.lags) + ") regression"
@@ -320,8 +322,12 @@ class TSM(object):
 				self.data_length = self.data[0]
 			elif self.model_type in ['EGARCH', 'GARCH']:
 				self.model_name = self.model_type + "(" + str(self.p) + "," + str(self.q) + ") regression"
-				self.cutoff = max(self.p,self.q)	
-				self.data_length = self.data				
+				self.cutoff = self.max_lag		
+				self.data_length = self.data	
+			elif self.model_type == 'GPAR':
+				self.model_name = "GPAR(" + str(self.max_lag) + ") regression"
+				self.cutoff = self.max_lag			
+				self.data_length = self.data						
 
 			print self.model_name 
 			print "=================="
@@ -404,7 +410,9 @@ class TSM(object):
 			print ""
 			print( op.TablePrinter(fmt, ul='=')(data) )
 
-	def mcmc_fit(self,scale=(2.38/sqrt(10000)),nsims=100000,printer=True,method="M-H",cov_matrix=None):
+	def mcmc_fit(self,scale=(2.38/sqrt(10000)),nsims=100000,printer=True,method="M-H",cov_matrix=None,**kwargs):
+
+		figsize = kwargs.get('figsize',(15,15))
 
 		self.fit(method='MAP',printer=False)
 		
@@ -436,12 +444,12 @@ class TSM(object):
 			data = []
 
 			for i in range(len(self.param_desc)):
-				data.append({'param_name': self.param_desc[i]['name'], 'parm_mean':round(mean_est[i],4), 'parm_median':round(median_est[i],4), 'ci': "(" + str(round(lower_95_est[i],4)) + " | " + str(round(upper_95_est[i],4)) + ")"})
+				data.append({'param_name': self.param_desc[i]['name'], 'param_mean':round(mean_est[i],4), 'param_median':round(median_est[i],4), 'ci': "(" + str(round(lower_95_est[i],4)) + " | " + str(round(upper_95_est[i],4)) + ")"})
 
 		fmt = [
-			('Parameter','parm_name',20),
-			('Median','parm_median',10),
-			('Mean', 'parm_mean', 15),
+			('Parameter','param_name',20),
+			('Median','param_median',10),
+			('Mean', 'param_mean', 15),
 			('95% Credibility Interval','ci',25)]
 
 		if self.model_type == 'ARIMA':
@@ -466,7 +474,7 @@ class TSM(object):
 		print ""
 		print( op.TablePrinter(fmt, ul='=')(data) )
 
-		fig = plt.figure()
+		fig = plt.figure(figsize=figsize)
 
 		for j in range(len(self.params)):
 
@@ -494,12 +502,15 @@ class TSM(object):
 		sns.plt.show()		
 
 
-	def plot_fit(self):
+	def plot_fit(self,**kwargs):
+
+		figsize = kwargs.get('figsize',(10,7))
+
 		if len(self.params) == 0:
 			raise Exception("No parameters estimated!")
 		else:
 			if self.model_type == 'GAS':
-				plt.figure()
+				plt.figure(figsize=figsize)
 				date_index = self.index[max(self.ar,self.sc):len(self.data)]
 				mu, Y, scores = self.model(self.params)
 				plt.plot(date_index,Y,label='Data')
@@ -510,13 +521,13 @@ class TSM(object):
 				date_index = self.index[self.lags:len(self.data[0])]
 				mu, Y = self.model(self.params)
 				for series in range(len(Y)):
-					plt.figure()
+					plt.figure(figsize=figsize)
 					plt.plot(date_index,Y[series],label='Data ' + str(series))
 					plt.plot(date_index,mu[series],label='Filter' + str(series),c='black')	
 					plt.title(self.data_name[series])
 					plt.legend(loc=2)	
 			elif self.model_type in ['GARCH','EGARCH']:
-				plt.figure()
+				plt.figure(figsize=figsize)
 				date_index = self.index[max(self.p,self.q):len(self.data)]
 				sigma2, Y, ___ = self.model(self.params)
 				plt.plot(date_index,np.abs(Y),label=self.data_name + ' Absolute Values')
@@ -527,7 +538,7 @@ class TSM(object):
 				plt.title(self.data_name + " Volatility Plot")	
 				plt.legend(loc=2)			
 			else:
-				plt.figure()
+				plt.figure(figsize=figsize)
 				date_index = self.index[max(self.ar,self.ma):len(self.data)]
 				mu, Y = self.model(self.params)
 				plt.plot(date_index,Y,label='Data')
@@ -539,7 +550,35 @@ class TSM(object):
 	# Performs Black Box Variational Inference
 	def bbvi_fit(self,posterior,printer=True,step=0.001,iterations=30000):
 
-		self.fit("MAP",printer=False)
+		# Starting parameters
+		phi = np.zeros(self.param_no)
+
+		# Starting values
+		if self.model_type == 'GAS':
+			if self.dist in ['Laplace','Normal']:
+				phi[0] = np.mean(self.data)
+			elif self.dist == 'Poisson':
+				phi[0] = np.log(np.mean(self.data))
+		elif self.model_type == 'VAR':
+			phi = self.create_B_direct().flatten()
+			cov = self.estimate_cov()
+
+			# Inelegant - needs refactoring
+			for i in range(self.ylen):
+				for k in range(self.ylen):
+					if i == k:
+						phi = np.append(phi,self.param_desc[len(phi)]['prior'].itransform(cov[i,k]))
+					elif i > k:
+						phi = np.append(phi,self.param_desc[len(phi)]['prior'].itransform(cov[i,k]))			
+		elif self.model_type == 'GARCH':
+			phi = np.ones(self.param_no)*0.00001
+			phi[0] = self.param_desc[0]['prior'].itransform(np.mean(np.power(self.data,2)))
+		elif self.model_type == 'EGARCH':
+			phi[0] = self.param_desc[0]['prior'].itransform(np.log(np.mean(np.power(self.data,2))))
+		elif self.model_type == 'GPAR':
+			phi = np.ones(self.param_no)*-3.0
+
+		self.params = phi
 
 		# Starting values for approximate distribution
 		for i in range(len(self.param_desc)):

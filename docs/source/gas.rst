@@ -105,15 +105,15 @@ Lists the current prior specification.
 
 Graphs the fit of the model.
 
-**predict(T)**
+**predict(h)**
 
-Predicts T timesteps ahead. Arguments are:
+Predicts h timesteps ahead. Arguments are:
 
-* *T* : (default: 5) how many timesteps to predict ahead
-* *lookback* : (default: 20) how many past observations to plot
+* *h* : (default: 5) how many timesteps to predict ahead
+* *past_values* : (default: 20) how many past observations to plot
 * *intervals* : (default: True) whether to plot 95/90 prediction intervals
 
 .. code-block:: python
    :linenos:
 
-   model.predict(T=12,lookback=36)
+   model.predict(h=12,past_values=36)
