@@ -7,7 +7,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>EGARCH models &mdash; PyFlux 0.1.7 documentation</title>
+  <title>GP-NARX models &mdash; PyFlux 0.1.7 documentation</title>
   
 
   
@@ -31,8 +31,8 @@
 
   
     <link rel="top" title="PyFlux 0.1.7 documentation" href="index.html"/>
-        <link rel="next" title="GARCH models" href="garch.html"/>
-        <link rel="prev" title="ARIMA models" href="arima.html"/> 
+        <link rel="next" title="VAR models" href="var.html"/>
+        <link rel="prev" title="GAS models" href="gas.html"/> 
 
   
   <script src="https://cdnjs.cloudflare.com/ajax/libs/modernizr/2.6.2/modernizr.min.js"></script>
@@ -71,11 +71,11 @@
 <li class="toctree-l2"><a class="reference internal" href="arima.html#class-methods">Class Methods</a></li>
 </ul>
 </li>
-<li class="toctree-l1 current"><a class="current reference internal" href="">EGARCH models</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="#example">Example</a></li>
-<li class="toctree-l2"><a class="reference internal" href="#class-arguments">Class Arguments</a></li>
-<li class="toctree-l2"><a class="reference internal" href="#class-attributes">Class Attributes</a></li>
-<li class="toctree-l2"><a class="reference internal" href="#class-methods">Class Methods</a></li>
+<li class="toctree-l1"><a class="reference internal" href="egarch.html">EGARCH models</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="egarch.html#example">Example</a></li>
+<li class="toctree-l2"><a class="reference internal" href="egarch.html#class-arguments">Class Arguments</a></li>
+<li class="toctree-l2"><a class="reference internal" href="egarch.html#class-attributes">Class Attributes</a></li>
+<li class="toctree-l2"><a class="reference internal" href="egarch.html#class-methods">Class Methods</a></li>
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="garch.html">GARCH models</a><ul>
@@ -92,11 +92,11 @@
 <li class="toctree-l2"><a class="reference internal" href="gas.html#class-methods">Class Methods</a></li>
 </ul>
 </li>
-<li class="toctree-l1"><a class="reference internal" href="gpnar.html">GP-NAR models</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="gpnar.html#example">Example</a></li>
-<li class="toctree-l2"><a class="reference internal" href="gpnar.html#class-arguments">Class Arguments</a></li>
-<li class="toctree-l2"><a class="reference internal" href="gpnar.html#class-attributes">Class Attributes</a></li>
-<li class="toctree-l2"><a class="reference internal" href="gpnar.html#class-methods">Class Methods</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="">GP-NARX models</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#example">Example</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#class-arguments">Class Arguments</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#class-attributes">Class Attributes</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#class-methods">Class Methods</a></li>
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="var.html">VAR models</a><ul>
@@ -142,10 +142,10 @@
   <ul class="wy-breadcrumbs">
     <li><a href="index.html">Docs</a> &raquo;</li>
       
-    <li>EGARCH models</li>
+    <li>GP-NARX models</li>
       <li class="wy-breadcrumbs-aside">
         
-          <a href="_sources/egarch.txt" rel="nofollow"> View page source</a>
+          <a href="_sources/gpnar.txt" rel="nofollow"> View page source</a>
         
       </li>
   </ul>
@@ -153,46 +153,34 @@
 </div>
           <div role="main" class="document">
             
-  <div class="section" id="egarch-models">
-<h1>EGARCH models<a class="headerlink" href="#egarch-models" title="Permalink to this headline">¶</a></h1>
+  <div class="section" id="gp-narx-models">
+<h1>GP-NARX models<a class="headerlink" href="#gp-narx-models" title="Permalink to this headline">¶</a></h1>
 <div class="section" id="example">
 <h2>Example<a class="headerlink" href="#example" title="Permalink to this headline">¶</a></h2>
-<div class="highlight-python"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre>1
-2
-3
-4
-5
-6
-7
-8</pre></div></td><td class="code"><div class="highlight"><pre><span class="kn">import</span> <span class="nn">numpy</span> <span class="kn">as</span> <span class="nn">np</span>
-<span class="kn">import</span> <span class="nn">pyflux</span> <span class="kn">as</span> <span class="nn">pf</span>
-<span class="kn">from</span> <span class="nn">pandas.io.data</span> <span class="kn">import</span> <span class="n">DataReader</span>
-<span class="kn">from</span> <span class="nn">datetime</span> <span class="kn">import</span> <span class="n">datetime</span>
-
-<span class="n">ibm</span> <span class="o">=</span> <span class="n">DataReader</span><span class="p">(</span><span class="s">&#39;IBM&#39;</span><span class="p">,</span>  <span class="s">&#39;yahoo&#39;</span><span class="p">,</span> <span class="n">datetime</span><span class="p">(</span><span class="mi">2000</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">),</span> <span class="n">datetime</span><span class="p">(</span><span class="mi">2016</span><span class="p">,</span><span class="mi">3</span><span class="p">,</span><span class="mi">10</span><span class="p">))</span>
-<span class="n">ibm</span><span class="p">[</span><span class="s">&#39;Logged Open&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="n">ibm</span><span class="p">[</span><span class="s">&#39;Open&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">values</span><span class="p">)</span>
-<span class="n">model</span> <span class="o">=</span> <span class="n">pf</span><span class="o">.</span><span class="n">EGARCH</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">diff</span><span class="p">(</span><span class="n">ibm</span><span class="p">[</span><span class="s">&#39;Logged Open&#39;</span><span class="p">]),</span><span class="n">p</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span><span class="n">q</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
-</pre></div>
-</td></tr></table></div>
 </div>
 <div class="section" id="class-arguments">
 <h2>Class Arguments<a class="headerlink" href="#class-arguments" title="Permalink to this headline">¶</a></h2>
-<p>The <strong>EGARCH()</strong> model class has the following arguments:</p>
+<p>The <strong>GPNARX()</strong> model class has the following arguments:</p>
 <ul class="simple">
 <li><em>data</em> : requires a pd.DataFrame object or an np.array</li>
-<li><em>p</em> : the number of GARCH terms</li>
-<li><em>q</em> : the number of score terms</li>
+<li><em>ar</em> : the number of autoregressive lags</li>
+<li><em>kernel_type</em>: the type of kernel; one of [&#8216;SE&#8217;,&#8217;RQ&#8217;,&#8217;OU&#8217;]</li>
+<li><em>integ</em> : (default : 0) order of integration (0 : no difference, 1 : first difference, ...)</li>
 <li><em>target</em> : (default: None) specify the pandas column name or numpy index if the input is a matrix. If None, the first column will be chosen as the data.</li>
 </ul>
 </div>
 <div class="section" id="class-attributes">
 <h2>Class Attributes<a class="headerlink" href="#class-attributes" title="Permalink to this headline">¶</a></h2>
-<p>An <strong>EGARCH()</strong> object holds the following attributes:</p>
+<p>A <strong>GPNARX()</strong> object holds the following attributes:</p>
 <p>Model Attributes:</p>
 <ul class="simple">
-<li><em>p</em> : the number of GARCH terms</li>
-<li><em>q</em> : the number of score terms</li>
+<li><em>ar</em> : the number of autoregressive lags</li>
+<li><em>integ</em> : order of integration (0 : no difference, 1 : first difference, ...)</li>
 <li><em>param_no</em> : number of model parameters</li>
+<li><em>kernel_type</em> : the string name of the kernel</li>
+<li><em>kernel</em> : the kernel object (and associated methods)</li>
+<li><em>norm_mean</em> : the mean of the (differenced) time series</li>
+<li><em>norm_std</em> : the standard deviation of the (differenced) time series</li>
 <li><em>index</em> : the timescale of the time-series</li>
 <li><em>data</em> : the dependent variable held as a np.array</li>
 <li><em>data_name</em> : string variable containing name of the time series</li>
@@ -230,7 +218,7 @@
 </pre></div>
 </td></tr></table></div>
 <p><strong>fit(method)</strong></p>
-<p>Fits parameters for the model. Arguments are:</p>
+<p>Fits hyperparameters for the GP-NAR model. Arguments are:</p>
 <ul class="simple">
 <li><em>method</em> : one of [&#8216;BBVI&#8217;,MLE&#8217;,&#8217;MAP&#8217;,&#8217;M-H&#8217;,&#8217;Laplace&#8217;]</li>
 <li><em>printed</em> : (default: True) whether to print output</li>
@@ -265,10 +253,10 @@
   
     <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
       
-        <a href="garch.html" class="btn btn-neutral float-right" title="GARCH models">Next <span class="fa fa-arrow-circle-right"></span></a>
+        <a href="var.html" class="btn btn-neutral float-right" title="VAR models">Next <span class="fa fa-arrow-circle-right"></span></a>
       
       
-        <a href="arima.html" class="btn btn-neutral" title="ARIMA models"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+        <a href="gas.html" class="btn btn-neutral" title="GAS models"><span class="fa fa-arrow-circle-left"></span> Previous</a>
       
     </div>
   

@@ -1,41 +1,34 @@
-EGARCH models
+GP-NARX models
 ==================================
 
 Example
 ----------
 
-.. code-block:: python
-   :linenos:
-
-   import numpy as np
-   import pyflux as pf
-   from pandas.io.data import DataReader
-   from datetime import datetime
-
-   ibm = DataReader('IBM',  'yahoo', datetime(2000,1,1), datetime(2016,3,10))
-   ibm['Logged Open'] = np.log(ibm['Open'].values)
-   model = pf.EGARCH(np.diff(ibm['Logged Open']),p=1,q=1)
-
 Class Arguments
 ----------
 
-The **EGARCH()** model class has the following arguments:
+The **GPNARX()** model class has the following arguments:
 
 * *data* : requires a pd.DataFrame object or an np.array
-* *p* : the number of GARCH terms
-* *q* : the number of score terms
+* *ar* : the number of autoregressive lags
+* *kernel_type*: the type of kernel; one of ['SE','RQ','OU']
+* *integ* : (default : 0) order of integration (0 : no difference, 1 : first difference, ...)
 * *target* : (default: None) specify the pandas column name or numpy index if the input is a matrix. If None, the first column will be chosen as the data.
 
 Class Attributes
 ----------
 
-An **EGARCH()** object holds the following attributes:
+A **GPNARX()** object holds the following attributes:
 
 Model Attributes:
 
-* *p* : the number of GARCH terms
-* *q* : the number of score terms
+* *ar* : the number of autoregressive lags
+* *integ* : order of integration (0 : no difference, 1 : first difference, ...)
 * *param_no* : number of model parameters
+* *kernel_type* : the string name of the kernel
+* *kernel* : the kernel object (and associated methods)
+* *norm_mean* : the mean of the (differenced) time series
+* *norm_std* : the standard deviation of the (differenced) time series
 * *index* : the timescale of the time-series
 * *data* : the dependent variable held as a np.array
 * *data_name* : string variable containing name of the time series
@@ -77,7 +70,7 @@ Adjusts a prior with the given parameter index. Arguments are:
 
 **fit(method)**
 
-Fits parameters for the model. Arguments are:
+Fits hyperparameters for the GP-NAR model. Arguments are:
 
 * *method* : one of ['BBVI',MLE','MAP','M-H','Laplace']
 * *printed* : (default: True) whether to print output

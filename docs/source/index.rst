@@ -18,6 +18,7 @@ Models
    egarch
    garch
    gas
+   gpnar
    var
 
 Inference

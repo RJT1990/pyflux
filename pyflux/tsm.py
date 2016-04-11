@@ -1,4 +1,5 @@
 import inference as ifr
+import arma as arma
 import output as op
 import tests as tst
 import distributions as dst
@@ -14,6 +15,15 @@ import covariances as cov
 import pandas as pd
 
 class TSM(object):
+	""" TSM PARENT CLASS
+
+	Contains general time series methods to be inherited by models.
+
+	Parameters
+	----------
+	model_type : str
+		The type of model (e.g. 'ARIMA', 'GARCH')
+	"""
 
 	def __init__(self,model_type):
 
@@ -24,19 +34,44 @@ class TSM(object):
 		self.chains = []
 		self.predictions = []
 
-		# Specify parameter description
+		# Holds parameter descriptions and model type
 		self.param_desc = []
 		self.model_type = model_type
 
-	# returns unnormalized posterior
 	def posterior(self,beta):
+		""" Returns negative log posterior
+
+		Parameters
+		----------
+		beta : np.ndarray
+			Contains untransformed starting values for parameters
+
+		Returns
+		----------
+		Negative log posterior
+		"""
+
 		post = self.likelihood(beta)
 		for k in range(self.param_no):
 			post += -self.param_desc[k]['prior'].logpdf(beta[k])
 		return post
 
-	# Allows for quicker changes to prior specification
 	def adjust_prior(self,index,prior):
+		""" Adjusts priors for the parameters
+
+		Parameters
+		----------
+		index : int or list[int]
+			Which parameter index/indices to be altered
+
+		prior : PRIOR object
+			Which prior distribution? E.g. Normal(0,1)
+
+		Returns
+		----------
+		None (changes priors in self.param_desc)
+		"""
+
 		if isinstance(index, list):
 			for item in index:
 				if item < 0 or item > (self.param_no-1) or not isinstance(item, int):
@@ -51,6 +86,33 @@ class TSM(object):
 
 	# Wrapper function for inference options
 	def fit(self,method=None,printer=True,nsims=100000,cov_matrix=None,step=0.001,iterations=30000,**kwargs):
+		""" Fits a model
+
+		Parameters
+		----------
+		method : str
+			A fitting method (e.g 'MLE')
+
+		printer : Boolean
+			Whether to print results or not
+
+		nsims : int (optional)
+			How many simulations if an MCMC method
+
+		cov_matrix : None or np.ndarray
+			Option to include covariance matrix for M-H MCMC
+
+		step : float
+			Step size for BBVI method
+
+		iterations = int
+			How many iterations for BBVI
+
+		Returns
+		----------
+		None (stores fit information)
+		"""
+
 		if method is None:
 			method = self.default_method
 
@@ -68,12 +130,17 @@ class TSM(object):
 		elif method == "BBVI":
 			self.bbvi_fit(self.posterior,printer,step=step,iterations=iterations)
 		elif method == "OLS":
-			self.ols_fit(printer)
+			self.ols_fit(printer)			
 		else:
 			raise ValueError("Method not recognized!")
 
-	# Outputs tabular summary of prior assumptions
 	def list_priors(self):
+		""" Lists the current prior specification
+
+		Returns
+		----------
+		None (prints out prior information)
+		"""
 
 		prior_list = []
 		prior_desc = []
@@ -108,8 +175,13 @@ class TSM(object):
 		
 		print( op.TablePrinter(fmt, ul='=')(data) )
 
-	# Approximate distributions used for mean-field variational inference
 	def list_q(self):
+		""" Lists the current approximating distributions for variational inference
+
+		Returns
+		----------
+		None (lists prior specification)
+		"""
 
 		q_list = []
 
@@ -138,6 +210,27 @@ class TSM(object):
 		print( op.TablePrinter(fmt, ul='=')(data) )
 
 	def normal_posterior_sim(self,parameters,cov_matrix,method_name,printer):
+		""" Simulates from a multivariate normal posterior
+
+		Parameters
+		----------
+		parameters : np.ndarray
+			Contains untransformed starting values for parameters
+
+		cov_matrix : np.ndarray
+			The inverse Hessian
+
+		method_name : str
+			Name of the estimation procedure using this function
+
+		printer : str
+			Whether to print results or not
+
+		Returns
+		----------
+		None (plots the posteriors)
+		"""
+
 		chain, mean_est, median_est, upper_95_est, lower_95_est = ifr.norm_post_sim(parameters,cov_matrix)
 
 		# Transform parameters - replace if statement with transform information directly in future version
@@ -182,6 +275,9 @@ class TSM(object):
 			elif self.model_type in ['EGARCH', 'GARCH']:
 				self.model_name = self.model_type + "(" + str(self.p) + "," + str(self.q) + ") regression"
 				self.cutoff = max(self.p,self.q)	
+			elif self.model_type == 'GPNARX':
+				self.model_name = "GP-NARX(" + str(self.ar) + ") regression"
+				self.cutoff = self.max_lag	
 
 			print self.model_name 
 			print "=================="
@@ -200,8 +296,21 @@ class TSM(object):
 				
 		sns.plt.show()		
 
-	# Performs a Laplace Approximation using MAP point estimates and Inverse Hessian
 	def laplace_fit(self,obj_type,printer=True):
+		""" Performs a Laplace approximation to the posterior
+
+		Parameters
+		----------
+		obj_type : method
+			Whether a likelihood or a posterior
+
+		printer : Boolean
+			Whether to print results or not
+
+		Returns
+		----------
+		None (plots posterior)
+		"""
 
 		# Get Mode and Inverse Hessian information
 		self.fit(method='MAP',printer=False)
@@ -211,8 +320,21 @@ class TSM(object):
 		else:
 			self.normal_posterior_sim(self.params,self.ihessian,"Laplace",printer)
 
-	# Stores point estimates for MAP and MLE estimation; prints summary output
 	def optimize_fit(self,obj_type,printer=True):
+		""" Performs optimization of an objective function
+
+		Parameters
+		----------
+		obj_type : method
+			Whether a likelihood or a posterior
+
+		printer : Boolean
+			Whether to print results or not
+
+		Returns
+		----------
+		None (stores parameters)
+		"""
 
 		# Starting parameters
 		phi = np.zeros(self.param_no)
@@ -239,8 +361,11 @@ class TSM(object):
 			phi[0] = self.param_desc[0]['prior'].itransform(np.mean(np.power(self.data,2)))
 		elif self.model_type == 'EGARCH':
 			phi[0] = self.param_desc[0]['prior'].itransform(np.log(np.mean(np.power(self.data,2))))
-		elif self.model_type == 'GPAR':
-			phi = np.ones(self.param_no)*-3.0
+		elif self.model_type == 'GPNARX':
+			phi = np.ones(self.param_no)*-1.0
+			arma_start = arma.ARIMA(self.data,ar=self.ar,ma=0,integ=self.integ)
+			arma_start.fit(printer=False)
+			phi[0] = arma_start.params[len(arma_start.params)-1]			
 
 		# Optimize using L-BFGS-B
 		p = optimize.minimize(obj_type,phi,method='L-BFGS-B')
@@ -324,8 +449,8 @@ class TSM(object):
 				self.model_name = self.model_type + "(" + str(self.p) + "," + str(self.q) + ") regression"
 				self.cutoff = self.max_lag		
 				self.data_length = self.data	
-			elif self.model_type == 'GPAR':
-				self.model_name = "GPAR(" + str(self.max_lag) + ") regression"
+			elif self.model_type == 'GPNARX':
+				self.model_name = "GP-NARX(" + str(self.max_lag) + ") regression"
 				self.cutoff = self.max_lag			
 				self.data_length = self.data						
 
@@ -345,6 +470,19 @@ class TSM(object):
 			print( op.TablePrinter(fmt, ul='=')(data) )
 
 	def ols_fit(self,printer):
+		""" Performs OLS
+
+		Parameters
+		----------
+
+		printer : Boolean
+			Whether to print results or not
+
+		Returns
+		----------
+		None (stores parameters)
+		"""
+
 		self.params = self.create_B_direct().flatten()
 		cov = self.estimate_cov()
 
@@ -387,18 +525,11 @@ class TSM(object):
 			if self.model_type == 'ARIMA':
 				self.model_name = "ARIMA(" + str(self.ar) + "," + str(self.integ) + "," + str(self.ma) + ") regression"
 				self.cutoff = max(self.ar,self.ma)
-				self.data_length = self.data
-			elif self.model_type == 'GAS':
-				self.model_name = "GAS(" + str(self.ar) + "," + str(self.integ) + "," + str(self.sc) + ") regression"
-				self.cutoff = max(self.ar,self.sc)
-				self.data_length = self.data				
+				self.data_length = self.data			
 			elif self.model_type == 'VAR':
 				self.model_name = "VAR(" + str(self.lags) + ") regression"
 				self.cutoff = self.lags			
 				self.data_length = self.data[0]
-			elif self.model_type in ['EGARCH', 'GARCH']:
-				self.model_name = self.model_type + "(" + str(self.p) + "," + str(self.q) + ") regression"
-				self.cutoff = max(self.p,self.q)
 
 			print self.model_name 
 			print "=================="
@@ -411,6 +542,29 @@ class TSM(object):
 			print( op.TablePrinter(fmt, ul='=')(data) )
 
 	def mcmc_fit(self,scale=(2.38/sqrt(10000)),nsims=100000,printer=True,method="M-H",cov_matrix=None,**kwargs):
+		""" Performs MCMC 
+
+		Parameters
+		----------
+		scale : float
+			Default starting scale
+
+		nsims : int
+			Number of simulations
+
+		printer : Boolean
+			Whether to print results or not
+
+		method : str
+			What type of MCMC
+
+		cov_matrix: None or np.ndarray
+			Can optionally provide a covariance matrix for M-H.
+
+		Returns
+		----------
+		None (plots posteriors, stores parameters)
+		"""
 
 		figsize = kwargs.get('figsize',(15,15))
 
@@ -464,6 +618,9 @@ class TSM(object):
 		elif self.model_type in ['EGARCH', 'GARCH']:
 			self.model_name = self.model_type + "(" + str(self.p) + "," + str(self.q) + ") regression"
 			self.cutoff = max(self.p,self.q)
+		elif self.model_type == 'GPNARX':
+			self.model_name = "GP-NARX(" + str(self.ar) + ") regression"
+			self.cutoff = self.max_lag	
 
 		print self.model_name 
 		print "=================="
@@ -503,6 +660,12 @@ class TSM(object):
 
 
 	def plot_fit(self,**kwargs):
+		""" Plots the fit of the model
+
+		Returns
+		----------
+		None (plots data and the fit)
+		"""
 
 		figsize = kwargs.get('figsize',(10,7))
 
@@ -536,7 +699,9 @@ class TSM(object):
 				elif self.model_type == 'EGARCH':
 					plt.plot(date_index,np.exp(sigma2/2),label='EGARCH(' + str(self.p) + ',' + str(self.q) + ') std',c='black')					
 				plt.title(self.data_name + " Volatility Plot")	
-				plt.legend(loc=2)			
+				plt.legend(loc=2)	
+			elif self.model_type == 'GPNARX':
+				self.pfit(self.params)		
 			else:
 				plt.figure(figsize=figsize)
 				date_index = self.index[max(self.ar,self.ma):len(self.data)]
@@ -547,8 +712,27 @@ class TSM(object):
 				plt.legend(loc=2)	
 			plt.show()				
 
-	# Performs Black Box Variational Inference
 	def bbvi_fit(self,posterior,printer=True,step=0.001,iterations=30000):
+		""" Performs Black Box Variational Inference
+
+		Parameters
+		----------
+		posterior : method
+			Hands bbvi_fit a posterior object
+
+		printer : Boolean
+			Whether to print results or not
+
+		step : float
+			Step size for RMSProp
+
+		iterations: int
+			How many iterations for BBVI
+
+		Returns
+		----------
+		None (plots posteriors and stores parameters)
+		"""
 
 		# Starting parameters
 		phi = np.zeros(self.param_no)
@@ -575,8 +759,11 @@ class TSM(object):
 			phi[0] = self.param_desc[0]['prior'].itransform(np.mean(np.power(self.data,2)))
 		elif self.model_type == 'EGARCH':
 			phi[0] = self.param_desc[0]['prior'].itransform(np.log(np.mean(np.power(self.data,2))))
-		elif self.model_type == 'GPAR':
-			phi = np.ones(self.param_no)*-3.0
+		elif self.model_type == 'GPNARX':
+			phi = np.ones(self.param_no)*0.0
+			arma_start = arma.ARIMA(self.data,ar=self.ar,ma=0,integ=self.integ)
+			arma_start.fit(printer=False)
+			phi[0] = arma_start.params[len(arma_start.params)-1]
 
 		self.params = phi
 
@@ -601,6 +788,18 @@ class TSM(object):
 		self.normal_posterior_sim(self.params,np.diag(np.exp(q_ses)),"Black Box Variational Inference",printer)
 
 	def shift_dates(self,h):
+		""" Auxiliary function for creating dates for forecasts
+
+		Parameters
+		----------
+		h : int
+			How many steps to forecast
+
+		Returns
+		----------
+		A transformed date_index object
+		"""		
+
 		if self.model_type == 'VAR':
 			date_index = self.index[self.max_lag:len(self.data[0])]
 		else:
@@ -615,6 +814,12 @@ class TSM(object):
 		return date_index	
 
 	def transform_parameters(self):
+		""" Transforms parameters to actual scale by applying link function
+
+		Returns
+		----------
+		Transformed parameters 
+		"""		
 		trans_params = copy.deepcopy(self.params)
 		for k in range(len(self.params)):
 			trans_params[k] = self.param_desc[k]['prior'].transform(self.params[k])	

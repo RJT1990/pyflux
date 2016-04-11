@@ -2,6 +2,7 @@ from arma import *
 from var import *
 from gas import *
 from garch import *
+from gpnarx import *
 from inference import *
 import distributions as dist
 from covariances import *
