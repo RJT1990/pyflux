@@ -3,6 +3,7 @@ from .. import distributions as dst
 from .. import output as op
 from .. import tests as tst
 from .. import tsm as tsm
+from .. import data_check as dc
 import numpy as np
 import pandas as pd
 import scipy.stats as ss
@@ -57,37 +58,8 @@ class ARIMA(tsm.TSM):
 		self.supported_methods = ["MLE","MAP","Laplace","M-H","BBVI"]
 		self.default_method = "MLE"
 
-		# Check pandas or numpy
-		if isinstance(data, pd.DataFrame):
-			self.index = data.index			
-			if target is None:
-				self.data = data.ix[:,0].values
-				self.data_name = data.columns.values[0]
-			else:
-				self.data = data[target]
-				self.data_name = target					
-			self.data_type = 'pandas'
-			print str(self.data_name) + " picked as target variable"
-			print ""
-
-		elif isinstance(data, np.ndarray):
-			self.data_name = "Series"		
-			self.data_type = 'numpy'	
-			if any(isinstance(i, np.ndarray) for i in data):
-				if target is None:
-					self.data = data[0]
-					self.index = range(len(data[0]))
-				else:
-					self.data = data[target]
-					self.index = range(len(data[target]))
-				print "Nested list " + str(target) + " chosen as target variable"
-				print ""
-			else:
-				self.data = data
-				self.index = range(len(data))
-
-		else:
-			raise Exception("The data input is not pandas or numpy compatible!")
+		# Format the data
+		self.data, self.data_name, self.data_type, self.index = dc.data_check(data,target)
 
 		# Difference data
 		X = self.data

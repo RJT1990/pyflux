@@ -579,4 +579,26 @@ class VAR(tsm.TSM):
 				plt.show()
 				self.predictions.append({'error_bars' : error_bars, 'forecasted_values' : forecasted_values, 'plot_values' : plot_values, 'plot_index': plot_index})
 
+	def plot_fit(self,**kwargs):
+		""" Plots the fit of the model
+
+		Returns
+		----------
+		None (plots data and the fit)
+		"""
+
+		figsize = kwargs.get('figsize',(10,7))
+
+		if len(self.params) == 0:
+			raise Exception("No parameters estimated!")
+		else:
+			date_index = self.index[self.lags:len(self.data[0])]
+			mu, Y = self.model(self.params)
+			for series in range(len(Y)):
+				plt.figure(figsize=figsize)
+				plt.plot(date_index,Y[series],label='Data ' + str(series))
+				plt.plot(date_index,mu[series],label='Filter' + str(series),c='black')	
+				plt.title(self.data_name[series])
+				plt.legend(loc=2)	
+			plt.show()				
 

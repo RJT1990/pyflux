@@ -19,6 +19,7 @@ Models
    garch
    gas
    gpnar
+   ssm
    var
 
 Inference

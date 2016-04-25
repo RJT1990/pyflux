@@ -3,6 +3,7 @@ from .. import output as op
 from .. import tests as tst
 from .. import tsm as tsm
 from .. import distributions as dst
+from .. import data_check as dc
 import numpy as np
 import pandas as pd
 import scipy.stats as ss
@@ -69,35 +70,8 @@ class GAS(tsm.TSM):
 			self.link = np.exp
 			self.scale = False
 
-		# Check pandas or numpy
-		if isinstance(data, pd.DataFrame):
-			self.index = data.index			
-			if target is None:
-				self.data = data.ix[:,0].values
-				self.data_name = data.columns.values[0]
-			else:
-				self.data = data[target]
-				self.data_name = target					
-			self.data_type = 'pandas'
-			print str(self.data_name) + " picked as target variable"
-
-		elif isinstance(data, np.ndarray):
-			self.data_name = "Series"		
-			self.data_type = 'numpy'	
-			if any(isinstance(i, np.ndarray) for i in data):
-				if target is None:
-					self.data = data[0]
-					self.index = range(len(data[0]))
-				else:
-					self.data = data[target]
-					self.index = range(len(data[target]))
-				print "Nested list " + str(target) + " chosen as target variable"
-			else:
-				self.data = data
-				self.index = range(len(data))
-
-		else:
-			raise ValueError("The data input is not pandas or numpy compatible!")
+		# Format the data
+		self.data, self.data_name, self.data_type, self.index = dc.data_check(data,target)
 
 		# Difference data
 		X = self.data
@@ -395,3 +369,25 @@ class GAS(tsm.TSM):
 			plt.show()
 
 			self.predictions = {'error_bars' : error_bars, 'forecasted_values' : forecasted_values, 'plot_values' : plot_values, 'plot_index': plot_index}
+
+	def plot_fit(self,**kwargs):
+		""" Plots the fit of the model
+
+		Returns
+		----------
+		None (plots data and the fit)
+		"""
+
+		figsize = kwargs.get('figsize',(10,7))
+
+		if len(self.params) == 0:
+			raise Exception("No parameters estimated!")
+		else:
+			plt.figure(figsize=figsize)
+			date_index = self.index[max(self.ar,self.sc):len(self.data)]
+			mu, Y, scores = self.model(self.params)
+			plt.plot(date_index,Y,label='Data')
+			plt.plot(date_index,self.link(mu),label='Filter',c='black')
+			plt.title(self.data_name)
+			plt.legend(loc=2)	
+			plt.show()				

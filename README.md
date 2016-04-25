@@ -7,6 +7,8 @@ PyFlux is an open source time series library for the Python programming language
 - ARIMA models
 - GARCH models
 - GAS models
+- GP-NARX models
+- State Space models
 - VAR models
 
 ## Inference

@@ -4,6 +4,7 @@ from gas import *
 from garch import *
 from gpnarx import *
 from inference import *
+from ssm import *
 import distributions as dist
 from covariances import *
 from output import *

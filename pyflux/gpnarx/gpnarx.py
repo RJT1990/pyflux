@@ -3,6 +3,7 @@ from .. import distributions as dst
 from .. import output as op
 from .. import tests as tst
 from .. import tsm as tsm
+from .. import data_check as dc
 import numpy as np
 import pandas as pd
 import scipy.stats as ss
@@ -30,7 +31,7 @@ class GPNARX(tsm.TSM):
 
 	kernel_type : str
 		One of SE (SquaredExponential), OU (Ornstein-Uhlenbeck), RQ
-		(RationalQuadratic). Defines kernel choice for GP-NAR.
+		(RationalQuadratic), Periodic, ARD. Defines kernel choice for GP-NARX.
 
 	integ : int (default : 0)
 		Specifies how many time to difference the time series.
@@ -50,7 +51,7 @@ class GPNARX(tsm.TSM):
 		self.integ = integ
 
 		if kernel_type == 'ARD':
-			self.param_no = 3 + self.ar
+			self.param_no = 2 + self.ar
 		elif kernel_type == 'RQ':
 			self.param_no = 3 + 1
 		else:
@@ -64,37 +65,8 @@ class GPNARX(tsm.TSM):
 		self.kernel_type = kernel_type
 		self.denom = 1.0 # Redundant - remove in future version; used for normalization
 
-		# Check pandas or numpy
-		if isinstance(data, pd.DataFrame):
-			self.index = data.index			
-			if target is None:
-				self.data = data.ix[:,0].values
-				self.data_name = data.columns.values[0]
-			else:
-				self.data = (data[target] - np.mean(data[target])) / np.power(np.std(data[target]),self.denom)				
-				self.data_name = target					
-			self.data_type = 'pandas'
-			print str(self.data_name) + " picked as target variable"
-			print ""
-
-		elif isinstance(data, np.ndarray):
-			self.data_name = "Series"		
-			self.data_type = 'numpy'	
-			if any(isinstance(i, np.ndarray) for i in data):
-				if target is None:
-					self.data = data[0]			
-					self.index = range(len(data[0]))
-				else:
-					self.data = data[target]			
-					self.index = range(len(data[target]))
-				print "Nested list " + str(target) + " chosen as target variable"
-				print ""
-			else:
-				self.data = data					
-				self.index = range(len(data))
-
-		else:
-			raise Exception("The data input is not pandas or numpy compatible!")
+		# Format the data
+		self.data, self.data_name, self.data_type, self.index = dc.data_check(data,target)
 
 		# Difference data
 		Y = self.data
@@ -112,17 +84,28 @@ class GPNARX(tsm.TSM):
 
 		# Define parameters
 
-		self.param_desc.append({'name' : 'Noise Sigma','index': 0, 'prior': ifr.Uniform(transform='exp'), 'q': dst.Normal(0,3)})
+		self.param_desc.append({'name' : 'Noise Sigma^2','index': 0, 'prior': ifr.Uniform(transform='exp'), 'q': dst.Normal(0,3)})
 
-		self.param_desc.append({'name' : 'l','index': 1, 'prior': ifr.Uniform(transform='exp'), 'q': dst.Normal(0,3)})
+		if self.kernel_type == 'ARD':
 
-		if self.kernel_type == 'SE':
-			self.kernel = SquaredExponential(self.X(),1,1)
-		elif self.kernel_type == 'OU':
-			self.kernel = OrnsteinUhlenbeck(self.X(),1,1)
-		elif self.kernel_type == 'RQ':
-			self.param_desc.append({'name' : 'alpha','index': len(self.param_desc), 'prior': ifr.Uniform(transform='exp'), 'q': dst.Normal(0,3)})
-			self.kernel = RationalQuadratic(self.X(),1,1,1)
+			self.kernel = ARD(self.X(),np.ones(self.ar),1)
+
+			for lag in range(self.ar):
+				self.param_desc.append({'name' : 'l' + str(lag),'index': len(self.param_desc), 'prior': ifr.Uniform(transform='exp'), 'q': dst.Normal(0,3)})
+
+		else:
+
+			self.param_desc.append({'name' : 'l','index': 1, 'prior': ifr.Uniform(transform='exp'), 'q': dst.Normal(0,3)})
+
+			if self.kernel_type == 'SE':
+				self.kernel = SquaredExponential(self.X(),1,1)
+			elif self.kernel_type == 'OU':
+				self.kernel = OrnsteinUhlenbeck(self.X(),1,1)
+			elif self.kernel_type == 'Periodic':
+				self.kernel = Periodic(self.X(),1,1)
+			elif self.kernel_type == 'RQ':
+				self.param_desc.append({'name' : 'alpha','index': len(self.param_desc), 'prior': ifr.Uniform(transform='exp'), 'q': dst.Normal(0,3)})
+				self.kernel = RationalQuadratic(self.X(),1,1,1)
 
 		self.param_desc.append({'name' : 'tau', 'index': len(self.param_desc), 'prior': ifr.Uniform(transform='exp'), 'q': dst.Normal(0,3)})
 
@@ -140,11 +123,16 @@ class GPNARX(tsm.TSM):
 		None (changes data in self.kernel)
 		"""
 
-		self.kernel.l = self.param_desc[1]['prior'].transform(beta[1])
-		if self.kernel_type == 'RQ':
+		if self.kernel_type == 'ARD':
+			for lag in xrange(0,self.ar):
+				self.kernel.l[lag] = self.param_desc[1+lag]['prior'].transform(beta[1+lag])
+			self.kernel.tau = self.param_desc[len(self.param_desc)-1]['prior'].transform(beta[len(self.param_desc)-1])	
+		elif self.kernel_type == 'RQ':
+			self.kernel.l = self.param_desc[1]['prior'].transform(beta[1])
 			self.kernel.a = self.param_desc[2]['prior'].transform(beta[2])			
 			self.kernel.tau = self.param_desc[3]['prior'].transform(beta[3])	
 		else:
+			self.kernel.l = self.param_desc[1]['prior'].transform(beta[1])
 			self.kernel.tau = self.param_desc[2]['prior'].transform(beta[2])			
 
 	def X(self):
@@ -241,7 +229,7 @@ class GPNARX(tsm.TSM):
 		"""		
 
 		self.start_params(beta)
-		return self.kernel.K() - np.dot(np.dot(np.transpose(self.kernel.K()),np.linalg.pinv(self.kernel.K() + np.identity(self.kernel.K().shape[0])*self.param_desc[0]['prior'].transform(beta[0]))),self.kernel.K())		
+		return self.kernel.K() - np.dot(np.dot(np.transpose(self.kernel.K()),np.linalg.pinv(self.kernel.K() + np.identity(self.kernel.K().shape[0])*self.param_desc[0]['prior'].transform(beta[0]))),self.kernel.K()) + self.param_desc[0]['prior'].transform(beta[0])
 
 	def pfit(self,beta,intervals=True,**kwargs):
 		""" Plots the fit of the Gaussian process model to the data
@@ -347,17 +335,19 @@ class GPNARX(tsm.TSM):
 		- variance of predictions
 		"""				
 
+		# Refactor this entire code
+
 		Xstart = copy.deepcopy(self.X())
 		Xstart = [i for i in Xstart]
 
 		predictions = np.zeros(h)
 		variances = np.zeros(h)
 
-		for step in range(h):
+		for step in xrange(0,h):
 
 			Xstar = []
 
-			for lag in range(self.max_lag):
+			for lag in xrange(0,self.max_lag):
 
 				if lag == 0:
 					if step == 0:
@@ -373,7 +363,7 @@ class GPNARX(tsm.TSM):
 			Kstar = self.kernel.Kstar(np.transpose(np.array(Xstar)))
 
 			predictions[step] = np.dot(np.transpose(Kstar),self.alpha(beta))
-			variances[step] = self.kernel.Kstarstar(np.transpose(np.array(Xstar))) - np.dot(np.dot(np.transpose(self.kernel.Kstar(np.transpose(np.array(Xstar)))),np.linalg.pinv(self.kernel.K() + np.identity(self.kernel.K().shape[0])*self.param_desc[0]['prior'].transform(beta[0]))),self.kernel.Kstar(np.transpose(np.array(Xstar))))		
+			variances[step] = self.kernel.Kstarstar(np.transpose(np.array(Xstar))) - np.dot(np.dot(np.transpose(self.kernel.Kstar(np.transpose(np.array(Xstar)))),np.linalg.pinv(self.kernel.K() + np.identity(self.kernel.K().shape[0])*self.param_desc[0]['prior'].transform(beta[0]))),self.kernel.Kstar(np.transpose(np.array(Xstar))))	+ self.param_desc[0]['prior'].transform(beta[0])	
 		return predictions, variances, predictions - 1.98*np.power(variances,0.5), predictions + 1.98*np.power(variances,0.5)
 
 	def predict(self,h=5,past_values=20,intervals=True,**kwargs):
@@ -408,16 +398,18 @@ class GPNARX(tsm.TSM):
 			full_lower = np.append(self.data,lower)
 			full_upper = np.append(self.data,upper)
 			date_index = self.shift_dates(h)
-			lower = np.append(full_predictions[len(date_index)-h+1],lower)
-			upper = np.append(full_predictions[len(date_index)-h+1],upper)
 
 			# Plot values (how far to look back)
 			plot_values = full_predictions[len(full_predictions)-h-past_values:len(full_predictions)]*self.norm_std + self.norm_mean
 			plot_index = date_index[len(date_index)-h-past_values:len(date_index)]
 
+			# Lower and upper intervals
+			lower = np.append(full_predictions[len(full_predictions)-h-1],lower)
+			upper = np.append(full_predictions[len(full_predictions)-h-1],upper)
+
 			plt.figure(figsize=figsize)
 			if intervals == True:
-				plt.fill_between(date_index[len(date_index)-h-1:len(date_index)], lower*self.norm_std + self.norm_mean, upper*self.norm_std + self.norm_mean,alpha=0.5)			
+				plt.fill_between(date_index[len(date_index)-h-1:len(date_index)], lower*self.norm_std + self.norm_mean, upper*self.norm_std + self.norm_mean,alpha=0.2)			
 			
 			plt.plot(plot_index,plot_values)
 			plt.title("Forecast for " + self.data_name)
@@ -426,3 +418,19 @@ class GPNARX(tsm.TSM):
 			plt.show()
 
 			self.predictions = {'error_bars' : np.array([lower,upper]), 'forecasted_values' : predictions, 'plot_values' : plot_values, 'plot_index': plot_index}
+
+	def plot_fit(self,**kwargs):
+		""" Plots the fit of the model
+
+		Returns
+		----------
+		None (plots data and the fit)
+		"""
+
+		figsize = kwargs.get('figsize',(10,7))
+
+		if len(self.params) == 0:
+			raise Exception("No parameters estimated!")
+		else:
+			self.pfit(self.params)	
+			plt.show()				

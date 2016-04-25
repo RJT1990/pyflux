@@ -338,6 +338,7 @@ class TSM(object):
 
 		# Starting parameters
 		phi = np.zeros(self.param_no)
+		rounding_points = 4
 
 		# Starting values
 		if self.model_type == 'GAS':
@@ -365,7 +366,10 @@ class TSM(object):
 			phi = np.ones(self.param_no)*-1.0
 			arma_start = arma.ARIMA(self.data,ar=self.ar,ma=0,integ=self.integ)
 			arma_start.fit(printer=False)
-			phi[0] = arma_start.params[len(arma_start.params)-1]			
+			phi[0] = log(exp(arma_start.params[len(arma_start.params)-1])**2)			
+		elif self.model_type in ['LLT','LLEV']:
+			phi = np.ones(self.param_no)*-0.0
+			rounding_points=10
 
 		# Optimize using L-BFGS-B
 		p = optimize.minimize(obj_type,phi,method='L-BFGS-B')
@@ -394,9 +398,17 @@ class TSM(object):
 
 				for i in range(len(self.param_desc)-self.param_hide):
 					if self.param_desc[i]['prior'].transform == np.array:
-						data.append({'param_name': self.param_desc[i]['name'], 'param_value':round(self.param_desc[i]['prior'].transform(p.x[i]),4), 'param_std': round(t_p_std[i],4),'param_z': round(t_params[i]/float(t_p_std[i]),4),'param_p': round(tst.find_p_value(t_params[i]/float(t_p_std[i])),4),'ci': "(" + str(round(t_params[i] - t_p_std[i]*1.96,4)) + " | " + str(round(t_params[i] + t_p_std[i]*1.96,4)) + ")"})
+						data.append({
+							'param_name': self.param_desc[i]['name'], 
+							'param_value':round(self.param_desc[i]['prior'].transform(p.x[i]),rounding_points), 
+							'param_std': round(t_p_std[i],rounding_points),
+							'param_z': round(t_params[i]/float(t_p_std[i]),rounding_points),
+							'param_p': round(tst.find_p_value(t_params[i]/float(t_p_std[i])),rounding_points),
+							'ci': "(" + str(round(t_params[i] - t_p_std[i]*1.96,rounding_points)) + " | " + str(round(t_params[i] + t_p_std[i]*1.96,rounding_points)) + ")"})
 					else:
-						data.append({'param_name': self.param_desc[i]['name'], 'param_value':round(self.param_desc[i]['prior'].transform(p.x[i]),4)})						
+						data.append({
+							'param_name': self.param_desc[i]['name'], 
+							'param_value':round(self.param_desc[i]['prior'].transform(p.x[i]),rounding_points)})						
 				fmt = [
 				    ('Parameter',       'param_name',   40),
 				    ('Estimate',          'param_value',       10),
@@ -701,7 +713,63 @@ class TSM(object):
 				plt.title(self.data_name + " Volatility Plot")	
 				plt.legend(loc=2)	
 			elif self.model_type == 'GPNARX':
-				self.pfit(self.params)		
+				self.pfit(self.params)	
+			elif self.model_type == 'LLEV':
+
+				date_index = self.index
+				mu, _, _ = self.model(self.params)
+				mu = mu[0][0:len(mu[0])-1]
+
+				plt.figure(figsize=figsize)	
+
+				plt.subplot(3, 1, 1)
+				plt.title(self.data_name + " Raw and Filtered")	
+
+				plt.plot(date_index,self.data,label='Data')
+				plt.plot(date_index,mu,label='Filter',c='black')
+				plt.legend(loc=2)
+
+				plt.subplot(3, 1, 2)
+
+				plt.title(self.data_name + " Local Level")	
+				plt.plot(date_index,mu)
+
+				plt.subplot(3, 1, 3)
+
+				plt.title("Measurement Noise")	
+				plt.plot(date_index,self.data-mu)
+
+			elif self.model_type =='LLT':	
+
+				date_index = self.index
+				mu, _, _ = self.model(self.params)
+				mu0 = mu[0][0:len(mu[0])-1]
+				mu1 = mu[1][0:len(mu[1])-1]
+
+				plt.figure(figsize=figsize)	
+
+				plt.subplot(2, 2, 1)
+				plt.title(self.data_name + " Raw and Filtered")	
+
+				plt.plot(date_index,self.data,label='Data')
+				plt.plot(date_index,mu0,label='Filter',c='black')
+				plt.legend(loc=2)
+
+				plt.subplot(2, 2, 2)
+
+				plt.title(self.data_name + " Local Level")	
+				plt.plot(date_index,mu0)
+
+				plt.subplot(2, 2, 3)
+
+				plt.title(self.data_name + " Trend")	
+				plt.plot(date_index,mu1)
+
+				plt.subplot(2, 2, 4)
+
+				plt.title("Measurement Noise")	
+				plt.plot(date_index,self.data-mu0)
+
 			else:
 				plt.figure(figsize=figsize)
 				date_index = self.index[max(self.ar,self.ma):len(self.data)]
@@ -800,14 +868,17 @@ class TSM(object):
 		A transformed date_index object
 		"""		
 
+		date_index = self.index.copy()
+
 		if self.model_type == 'VAR':
-			date_index = self.index[self.max_lag:len(self.data[0])]
+			date_index = date_index[self.max_lag:len(self.data[0])]
 		else:
-			date_index = self.index[self.max_lag:len(self.data)]
+			date_index = date_index[self.max_lag:len(self.data)]
 
 		for t in range(h):
 			if self.data_type == 'pandas':
-				date_index += pd.DateOffset(1)
+				# Only configured for days - need to support smaller time intervals!
+				date_index += pd.DateOffset((date_index[len(date_index)-1] - date_index[len(date_index)-2]).days)
 			elif self.data_type == 'numpy':
 				date_index.append(date_index[len(date_index)-1]+1)
 
@@ -823,4 +894,4 @@ class TSM(object):
 		trans_params = copy.deepcopy(self.params)
 		for k in range(len(self.params)):
 			trans_params[k] = self.param_desc[k]['prior'].transform(self.params[k])	
-		return trans_params
+		return trans_params	
