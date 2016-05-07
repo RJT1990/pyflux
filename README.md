@@ -27,9 +27,9 @@ See some examples and documentation at [PyFlux.com](http://www.pyflux.com/).
 
 ## Installing PyFlux
 
-'''
-	pip install pyflux
-'''
+```{bash}
+pip install pyflux
+```
 
 ## Python Version
 
