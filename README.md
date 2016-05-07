@@ -1,6 +1,5 @@
-[![PyFlux](http://pyflux.com/pyflux.png)](http://www.pyflux.com/)
 # PyFlux
-
+[![PyFlux](http://pyflux.com/pyflux.png)](http://www.pyflux.com/)
 [![Join the chat at https://gitter.im/RJT1990/pyflux](https://badges.gitter.im/RJT1990/pyflux.svg)](https://gitter.im/RJT1990/pyflux?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
 [![PyPI version](https://badge.fury.io/py/pyflux.svg)](https://badge.fury.io/py/pyflux)
 
