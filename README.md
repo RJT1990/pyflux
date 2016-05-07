@@ -1,5 +1,4 @@
 [![PyFlux](http://pyflux.com/pyflux.png)](http://www.pyflux.com/)
-
 # PyFlux
 
 [![Join the chat at https://gitter.im/RJT1990/pyflux](https://badges.gitter.im/RJT1990/pyflux.svg)](https://gitter.im/RJT1990/pyflux?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
@@ -29,7 +28,7 @@ See some examples and documentation at [PyFlux.com](http://www.pyflux.com/).
 ## Installing PyFlux
 
 '''
-pip install pyflux
+	pip install pyflux
 '''
 
 ## Python Version
