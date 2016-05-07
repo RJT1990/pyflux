@@ -18,7 +18,7 @@ class SquaredExponential(object):
 				if i == j:
 					K[i,j] = self.tau
 				else:
-					K[i,j] = self.tau*np.exp(-0.5*np.sum(np.power(self.X[i] - self.X[j],2))/self.l**2)
+					K[i,j] = self.tau*np.exp(-0.5*np.sum(np.power(self.X[i] - self.X[j],2))/np.power(self.l,2))
 
 		K = K + np.identity(K.shape[0])*(10**-10)
 
@@ -33,7 +33,7 @@ class SquaredExponential(object):
 				if i == j:
 					K[i,j] = self.tau
 				else:
-					K[i,j] = self.tau*np.exp(-0.5*np.sum(np.power(self.X[i] - Xstar[j],2))/self.l**2)
+					K[i,j] = self.tau*np.exp(-0.5*np.sum(np.power(self.X[i] - Xstar[j],2))/np.power(self.l,2))
 
 		return K
 
@@ -46,7 +46,7 @@ class SquaredExponential(object):
 				if i == j:
 					K[i,j] = self.tau
 				else:
-					K[i,j] = self.tau*np.exp(-0.5*np.sum(np.power(Xstar[i] - Xstar[j],2))/self.l**2)
+					K[i,j] = self.tau*np.exp(-0.5*np.sum(np.power(Xstar[i] - Xstar[j],2))/np.power(self.l,2))
 
 		return K
 

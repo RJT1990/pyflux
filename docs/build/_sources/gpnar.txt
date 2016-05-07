@@ -11,7 +11,7 @@ The **GPNARX()** model class has the following arguments:
 
 * *data* : requires a pd.DataFrame object or an np.array
 * *ar* : the number of autoregressive lags
-* *kernel_type*: the type of kernel; one of ['SE','RQ','OU']
+* *kernel_type*: the type of kernel; one of ['SE','RQ','OU','ARD']
 * *integ* : (default : 0) order of integration (0 : no difference, 1 : first difference, ...)
 * *target* : (default: None) specify the pandas column name or numpy index if the input is a matrix. If None, the first column will be chosen as the data.
 
@@ -98,7 +98,7 @@ Predicts h timesteps ahead. Arguments are:
 
 * *h* : (default: 5) how many timesteps to predict ahead
 * *past_values* : (default: 20) how many past observations to plot
-* *intervals* : (default: True) whether to plot 95/90 prediction intervals
+* *intervals* : (default: True) whether to plot prediction intervals
 
 .. code-block:: python
    :linenos:

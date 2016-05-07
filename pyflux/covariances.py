@@ -6,7 +6,7 @@ import seaborn as sns
 # Returns sample autocovariance of two np arrays (stationarity assumed)
 def cov(x,lag=0):
 	if lag >= x.shape[0]:
-		raise Exception("Not enough observations to compute autocovariance")
+		raise ValueError("Not enough observations to compute autocovariance")
 	else:
 		x1 = x[lag:x.shape[0]]
 		x2 = x[0:(x.shape[0]-lag)]

@@ -3,11 +3,6 @@ import numdifftools as nd
 import matplotlib.pyplot as plt
 import matplotlib.mlab as mlab
 
-# Let x be observations, z be latent variables, lambda free parameters
-# of variational distribution q(z given lambda).
-
-# We want to approximate p(z given x with free parameter lambda).
-
 class BBVI(object):
 
 	def __init__(self,neg_posterior,q,sims,step=0.001,iterations=30000):
@@ -90,7 +85,7 @@ class BBVI(object):
 	def print_progress(self,i,current_params):
 		for split in range(1,11):
 			if i == (round(self.iterations/10*split)-1):
-				print str(split) + "0% done : ELBO is " + str(-self.neg_posterior(current_params)-self.create_logq(current_params))
+				print(str(split) + "0% done : ELBO is " + str(-self.neg_posterior(current_params)-self.create_logq(current_params)))
 
 	def lambda_update(self):
 		Gjj = 0
@@ -119,6 +114,6 @@ class BBVI(object):
 		final_parameters = final_parameters/float(final_samples)
 		final_means = np.array([final_parameters[el] for el in range(len(final_parameters)) if el%2==0])
 		final_ses = np.array([final_parameters[el] for el in range(len(final_parameters)) if el%2!=0])
-		print ""
-		print "Final model ELBO is " + str(-self.neg_posterior(final_means)-self.create_logq(final_means))
+		print("")
+		print("Final model ELBO is " + str(-self.neg_posterior(final_means)-self.create_logq(final_means)))
 		return self.q, final_means, final_ses

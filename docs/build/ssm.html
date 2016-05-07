@@ -7,7 +7,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>VAR models &mdash; PyFlux 0.1.9 documentation</title>
+  <title>Linear State Space models &mdash; PyFlux 0.1.9 documentation</title>
   
 
   
@@ -31,8 +31,8 @@
 
   
     <link rel="top" title="PyFlux 0.1.9 documentation" href="index.html"/>
-        <link rel="next" title="Bayesian Inference" href="bayes.html"/>
-        <link rel="prev" title="Linear State Space models" href="ssm.html"/> 
+        <link rel="next" title="VAR models" href="var.html"/>
+        <link rel="prev" title="GP-NARX models" href="gpnar.html"/> 
 
   
   <script src="https://cdnjs.cloudflare.com/ajax/libs/modernizr/2.6.2/modernizr.min.js"></script>
@@ -99,18 +99,18 @@
 <li class="toctree-l2"><a class="reference internal" href="gpnar.html#class-methods">Class Methods</a></li>
 </ul>
 </li>
-<li class="toctree-l1"><a class="reference internal" href="ssm.html">Linear State Space models</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="ssm.html#example">Example</a></li>
-<li class="toctree-l2"><a class="reference internal" href="ssm.html#class-arguments">Class Arguments</a></li>
-<li class="toctree-l2"><a class="reference internal" href="ssm.html#class-attributes">Class Attributes</a></li>
-<li class="toctree-l2"><a class="reference internal" href="ssm.html#class-methods">Class Methods</a></li>
-</ul>
-</li>
-<li class="toctree-l1 current"><a class="current reference internal" href="">VAR models</a><ul>
+<li class="toctree-l1 current"><a class="current reference internal" href="">Linear State Space models</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="#example">Example</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#class-arguments">Class Arguments</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#class-attributes">Class Attributes</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#class-methods">Class Methods</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="var.html">VAR models</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="var.html#example">Example</a></li>
+<li class="toctree-l2"><a class="reference internal" href="var.html#class-arguments">Class Arguments</a></li>
+<li class="toctree-l2"><a class="reference internal" href="var.html#class-attributes">Class Attributes</a></li>
+<li class="toctree-l2"><a class="reference internal" href="var.html#class-methods">Class Methods</a></li>
 </ul>
 </li>
 </ul>
@@ -149,10 +149,10 @@
   <ul class="wy-breadcrumbs">
     <li><a href="index.html">Docs</a> &raquo;</li>
       
-    <li>VAR models</li>
+    <li>Linear State Space models</li>
       <li class="wy-breadcrumbs-aside">
         
-          <a href="_sources/var.txt" rel="nofollow"> View page source</a>
+          <a href="_sources/ssm.txt" rel="nofollow"> View page source</a>
         
       </li>
   </ul>
@@ -160,48 +160,56 @@
 </div>
           <div role="main" class="document">
             
-  <div class="section" id="var-models">
-<h1>VAR models<a class="headerlink" href="#var-models" title="Permalink to this headline">¶</a></h1>
+  <div class="section" id="linear-state-space-models">
+<h1>Linear State Space models<a class="headerlink" href="#linear-state-space-models" title="Permalink to this headline">¶</a></h1>
 <div class="section" id="example">
 <h2>Example<a class="headerlink" href="#example" title="Permalink to this headline">¶</a></h2>
-<div class="highlight-python"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre>1
-2
-3
-4
-5
-6
-7
-8</pre></div></td><td class="code"><div class="highlight"><pre><span class="kn">import</span> <span class="nn">numpy</span> <span class="kn">as</span> <span class="nn">np</span>
+<div class="highlight-python"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre> 1
+ 2
+ 3
+ 4
+ 5
+ 6
+ 7
+ 8
+ 9
+10
+11
+12
+13
+14</pre></div></td><td class="code"><div class="highlight"><pre><span class="kn">import</span> <span class="nn">numpy</span> <span class="kn">as</span> <span class="nn">np</span>
 <span class="kn">import</span> <span class="nn">pyflux</span> <span class="kn">as</span> <span class="nn">pf</span>
-<span class="kn">from</span> <span class="nn">pandas.io.data</span> <span class="kn">import</span> <span class="n">DataReader</span>
-<span class="kn">from</span> <span class="nn">datetime</span> <span class="kn">import</span> <span class="n">datetime</span>
+<span class="kn">import</span> <span class="nn">pandas</span> <span class="kn">as</span> <span class="nn">pd</span>
 
-<span class="n">ibm</span> <span class="o">=</span> <span class="n">DataReader</span><span class="p">([</span><span class="s">&#39;JPM&#39;</span><span class="p">,</span><span class="s">&#39;GS&#39;</span><span class="p">,</span><span class="s">&#39;BAC&#39;</span><span class="p">,</span><span class="s">&#39;C&#39;</span><span class="p">,</span><span class="s">&#39;WFC&#39;</span><span class="p">,</span><span class="s">&#39;MS&#39;</span><span class="p">],</span>  <span class="s">&#39;yahoo&#39;</span><span class="p">,</span> <span class="n">datetime</span><span class="p">(</span><span class="mi">2000</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">),</span> <span class="n">datetime</span><span class="p">(</span><span class="mi">2016</span><span class="p">,</span><span class="mi">3</span><span class="p">,</span><span class="mi">28</span><span class="p">))</span>
-<span class="n">opening_prices</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="n">ibm</span><span class="p">[</span><span class="s">&#39;Open&#39;</span><span class="p">])</span>
-<span class="n">model</span> <span class="o">=</span> <span class="n">pf</span><span class="o">.</span><span class="n">VAR</span><span class="p">(</span><span class="n">data</span><span class="o">=</span><span class="n">opening_prices</span><span class="p">,</span><span class="n">lags</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span><span class="n">integ</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+<span class="n">nile</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">read_csv</span><span class="p">(</span><span class="s">&#39;https://vincentarelbundock.github.io/Rdatasets/csv/datasets/Nile.csv&#39;</span><span class="p">)</span>
+<span class="n">nile</span><span class="o">.</span><span class="n">index</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">to_datetime</span><span class="p">(</span><span class="n">nile</span><span class="p">[</span><span class="s">&#39;time&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">values</span><span class="p">,</span><span class="n">format</span><span class="o">=</span><span class="s">&#39;%Y&#39;</span><span class="p">)</span>
+
+<span class="n">model</span> <span class="o">=</span> <span class="n">pf</span><span class="o">.</span><span class="n">LLEV</span><span class="p">(</span><span class="n">data</span><span class="o">=</span><span class="n">niles</span><span class="p">,</span><span class="n">target</span><span class="o">=</span><span class="s">&#39;Poisson&#39;</span><span class="p">)</span> <span class="c"># local level</span>
+
+<span class="n">USgrowth</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="n">growthdata</span><span class="p">[</span><span class="s">&#39;VALUE&#39;</span><span class="p">]))</span>
+<span class="n">USgrowth</span><span class="o">.</span><span class="n">index</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">to_datetime</span><span class="p">(</span><span class="n">growthdata</span><span class="p">[</span><span class="s">&#39;DATE&#39;</span><span class="p">])</span>
+<span class="n">USgrowth</span><span class="o">.</span><span class="n">columns</span> <span class="o">=</span> <span class="p">[</span><span class="s">&#39;Logged US Real GDP&#39;</span><span class="p">]</span>
+
+<span class="n">model2</span> <span class="o">=</span> <span class="n">pf</span><span class="o">.</span><span class="n">LLT</span><span class="p">(</span><span class="n">data</span><span class="o">=</span><span class="n">USgrowth</span><span class="p">)</span> <span class="c"># local linear trend model</span>
 </pre></div>
 </td></tr></table></div>
 </div>
 <div class="section" id="class-arguments">
 <h2>Class Arguments<a class="headerlink" href="#class-arguments" title="Permalink to this headline">¶</a></h2>
-<p>The <strong>VAR()</strong> model class has the following arguments:</p>
+<p>The <strong>LLEV()</strong> and <strong>LLT()</strong> model class has the following arguments:</p>
 <ul class="simple">
 <li><em>data</em> : requires a pd.DataFrame object or an np.array</li>
-<li><em>lags</em> : the order (p) of the VAR</li>
-<li><em>integ</em> : (default : 0) order of integration (0 : no difference, 1 : first difference, ...)</li>
 <li><em>target</em> : (default: None) specify the pandas column name or numpy index if the input is a matrix. If None, the first column will be chosen as the data.</li>
 </ul>
 </div>
 <div class="section" id="class-attributes">
 <h2>Class Attributes<a class="headerlink" href="#class-attributes" title="Permalink to this headline">¶</a></h2>
-<p>An <strong>VAR()</strong> object holds the following attributes:</p>
+<p>THe <strong>LLEV()</strong> and <strong>LLT()</strong> model objects hold the following attributes:</p>
 <p>Model Attributes:</p>
 <ul class="simple">
-<li><em>lags</em> : the order (p) of the VAR</li>
-<li><em>integ</em> : order of integration (0 : no difference, 1 : first difference, ...)</li>
-<li><em>index</em> : the timescale of the time-series</li>
-<li><em>data</em> : the dependent variables held in an np.array</li>
-<li><em>data_name</em> : string variable containing names of the time series</li>
+<li><em>param_no</em> : number of model parameters</li>
+<li><em>data</em> : the dependent variable held as a np.array</li>
+<li><em>data_name</em> : string variable containing name of the time series</li>
 <li><em>data_type</em> : whether original datatype is numpy or pandas</li>
 </ul>
 <p>Parameter Attributes:</p>
@@ -248,26 +256,16 @@
 <div class="highlight-python"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre>1</pre></div></td><td class="code"><div class="highlight"><pre><span class="n">model</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="s">&quot;M-H&quot;</span><span class="p">,</span><span class="n">nsims</span><span class="o">=</span><span class="mi">20000</span><span class="p">)</span>
 </pre></div>
 </td></tr></table></div>
-<p><strong>irf(h,shock_index,shock_dir)</strong></p>
-<p>Plots impulse response function graphs.</p>
-<ul class="simple">
-<li><em>h</em> : (default: 5) how many timesteps to predict ahead</li>
-<li><em>shock_index</em> : which variable to apply the shock to</li>
-<li><em>shock_value</em> : (default: None) apply a custom shock, if None then applies 1 std shock</li>
-<li><em>shock_dir</em> : (default: &#8216;positive&#8217;) one of [&#8216;positive&#8217;,&#8217;negative&#8217;]</li>
-<li><em>intervals</em> : (default: True) whether to plot 95/90 prediction intervals</li>
-<li><em>cumulative</em> : (default: False) whether to plot cumulative effect or not</li>
-</ul>
 <p><strong>list_priors()</strong></p>
 <p>Lists the current prior specification.</p>
 <p><strong>plot_fit()</strong></p>
-<p>Graphs the fit of the model.</p>
+<p>Graphs the fit of the model and the model components (level, trend, irregular...)</p>
 <p><strong>predict(h)</strong></p>
 <p>Predicts h timesteps ahead. Arguments are:</p>
 <ul class="simple">
 <li><em>h</em> : (default: 5) how many timesteps to predict ahead</li>
 <li><em>past_values</em> : (default: 20) how many past observations to plot</li>
-<li><em>intervals</em> : (default: True) whether to plot 95/90 prediction intervals</li>
+<li><em>intervals</em> : (default: True) whether to plot predictions intervals</li>
 </ul>
 <div class="highlight-python"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre>1</pre></div></td><td class="code"><div class="highlight"><pre><span class="n">model</span><span class="o">.</span><span class="n">predict</span><span class="p">(</span><span class="n">h</span><span class="o">=</span><span class="mi">12</span><span class="p">,</span><span class="n">past_values</span><span class="o">=</span><span class="mi">36</span><span class="p">)</span>
 </pre></div>
@@ -281,10 +279,10 @@
   
     <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
       
-        <a href="bayes.html" class="btn btn-neutral float-right" title="Bayesian Inference">Next <span class="fa fa-arrow-circle-right"></span></a>
+        <a href="var.html" class="btn btn-neutral float-right" title="VAR models">Next <span class="fa fa-arrow-circle-right"></span></a>
       
       
-        <a href="ssm.html" class="btn btn-neutral" title="Linear State Space models"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+        <a href="gpnar.html" class="btn btn-neutral" title="GP-NARX models"><span class="fa fa-arrow-circle-left"></span> Previous</a>
       
     </div>
   

@@ -32,13 +32,13 @@ def data_check(data,target):
 		data_index = data.index			
 		if target is None:
 			transformed_data = data.ix[:,0].values
-			data_name = data.columns.values[0]
+			data_name = str(data.columns.values[0])
 		else:
-			transformed_data = data[target]			
-			data_name = target					
+			transformed_data = data[target].values			
+			data_name = str(target)					
 		data_type = 'pandas'
-		print str(data_name) + " picked as target variable"
-		print ""
+		print(str(data_name) + " picked as target variable")
+		print("")
 		
 	elif isinstance(data, np.ndarray):
 		data_name = "Series"		
@@ -50,12 +50,34 @@ def data_check(data,target):
 			else:
 				transformed_data = data[target]			
 				data_index = range(len(data[target]))
-			print "Nested list " + str(target) + " chosen as target variable"
-			print ""
+			print("Nested list " + str(target) + " chosen as target variable")
+			print("")
 		else:
 			transformed_data = data					
 			data_index = range(len(data))
 	else:
 		raise Exception("The data input is not pandas or numpy compatible!")
 	
+	return transformed_data, data_name, data_type, data_index
+
+def mv_data_check(data,check):
+	# Check pandas or numpy
+
+	if isinstance(data, pd.DataFrame):
+		data_index = data.index		
+		transformed_data = data.values
+		data_name = data.columns.values
+		data_type = 'pandas'
+		print(str(data_name) + " picked as target variables")
+		print("")
+
+	elif isinstance(data, np.ndarray):
+		data_name = np.asarray(range(1,len(data[0])+1))	
+		data_type= 'numpy'	
+		transformed_data = data
+		data_index = range(len(data[0]))
+
+	else:
+		raise Exception("The data input is not pandas or numpy compatible!")
+
 	return transformed_data, data_name, data_type, data_index
