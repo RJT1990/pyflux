@@ -183,7 +183,10 @@ class MetropolisHastings(object):
 		states = np.zeros([self.nsims, self.model.state_no, self.model.data.shape[0]])
 		T_start, Z_start, R_start, Q_start = self.model._ss_matrices(self.phi[0])
 		H_start, mu_start = self.model._approximating_model(self.phi[0],T_start,Z_start,R_start,Q_start)
-		states[0,:,:] = self.model.smoothed_state(self.model.data,self.phi[0],H_start,mu_start)
+
+		# Find starting states
+		states_start = 0
+		states[0,:,:] = self.model.simulation_smoother(self.phi[0])
 
 		while (acceptance < 0.234 or acceptance > 0.4) or finish == 0:
 
@@ -213,7 +216,7 @@ class MetropolisHastings(object):
 			# Sampling time!
 			for i in xrange(1,sims_to_do):
 				phi_prop = self.phi[i-1] + rnums[i]
-				states_prop = smoother_weight*self.model.simulation_smoother(phi_prop) + (1-smoother_weight)*states[i-1,:,:]
+				states_prop = smoother_weight*self.model.simulation_smoother(phi_prop) + (1-smoother_weight)*states[i-1,:,:]			
 				prop_post = -self.posterior(phi_prop,states_prop)
 				lik_rat = np.exp(prop_post - old_lik)
 

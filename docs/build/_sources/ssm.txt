@@ -1,4 +1,4 @@
-Linear State Space models
+Gaussian State Space models
 ==================================
 
 Example
@@ -98,17 +98,47 @@ Lists the current prior specification.
 
 **plot_fit()**
 
-Graphs the fit of the model and the model components (level, trend, irregular...)
+Graphs the fit of the model. Optional arguments are:
 
-**predict(h)**
+* *series_type* : 'Filtered' or 'Smoothed'
 
-Predicts h timesteps ahead. Arguments are:
+**plot_predict(h)**
+
+Predicts h timesteps ahead and plots results. Arguments are:
 
 * *h* : (default: 5) how many timesteps to predict ahead
 * *past_values* : (default: 20) how many past observations to plot
-* *intervals* : (default: True) whether to plot predictions intervals
+* *intervals* : (default: True) whether to plot prediction intervals
+
+**plot_predict_is(h)**
+
+Predicts rolling in-sample prediction for h past timestamps and plots results. Arguments are:
+
+* *h* : (default: 5) how many timesteps to predict
+* *past_values* : (default: 20) how many past observations to plot
+* *intervals* : (default: True) whether to plot prediction intervals
+
+**predict(h)**
+
+Predicts h timesteps ahead and outputs pd.DataFrame. Arguments are:
+
+* *h* : (default: 5) how many timesteps to predict ahead
+
+**predict_is(h)**
+
+Predicts h timesteps ahead and outputs pd.DataFrame. Arguments are:
+
+* *h* : (default: 5) how many timesteps to predict ahead
+
+**simulation_smoother(data, beta)**
+
+Outputs a simulated state trajectory from a simulation smoother. Arguments are:
+
+* *data* : the data to simulate from - use self.data usually.
+* *beta* : the parameters to use - use self.params (after fitting a model) usually.
+
 
 .. code-block:: python
    :linenos:
 
-   model.predict(h=12,past_values=36)
+   model.plot_predict(h=12,past_values=36)

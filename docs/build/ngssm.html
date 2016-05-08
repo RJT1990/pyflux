@@ -7,7 +7,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>Gaussian State Space models &mdash; PyFlux 0.2.1 documentation</title>
+  <title>Non-Gaussian State Space models &mdash; PyFlux 0.2.1 documentation</title>
   
 
   
@@ -31,8 +31,8 @@
 
   
     <link rel="top" title="PyFlux 0.2.1 documentation" href="index.html"/>
-        <link rel="next" title="Non-Gaussian State Space models" href="ngssm.html"/>
-        <link rel="prev" title="GP-NARX models" href="gpnar.html"/> 
+        <link rel="next" title="VAR models" href="var.html"/>
+        <link rel="prev" title="Gaussian State Space models" href="ssm.html"/> 
 
   
   <script src="https://cdnjs.cloudflare.com/ajax/libs/modernizr/2.6.2/modernizr.min.js"></script>
@@ -99,18 +99,18 @@
 <li class="toctree-l2"><a class="reference internal" href="gpnar.html#class-methods">Class Methods</a></li>
 </ul>
 </li>
-<li class="toctree-l1 current"><a class="current reference internal" href="">Gaussian State Space models</a><ul>
+<li class="toctree-l1"><a class="reference internal" href="ssm.html">Gaussian State Space models</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="ssm.html#example">Example</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ssm.html#class-arguments">Class Arguments</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ssm.html#class-attributes">Class Attributes</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ssm.html#class-methods">Class Methods</a></li>
+</ul>
+</li>
+<li class="toctree-l1 current"><a class="current reference internal" href="">Non-Gaussian State Space models</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="#example">Example</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#class-arguments">Class Arguments</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#class-attributes">Class Attributes</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#class-methods">Class Methods</a></li>
-</ul>
-</li>
-<li class="toctree-l1"><a class="reference internal" href="ngssm.html">Non-Gaussian State Space models</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="ngssm.html#example">Example</a></li>
-<li class="toctree-l2"><a class="reference internal" href="ngssm.html#class-arguments">Class Arguments</a></li>
-<li class="toctree-l2"><a class="reference internal" href="ngssm.html#class-attributes">Class Attributes</a></li>
-<li class="toctree-l2"><a class="reference internal" href="ngssm.html#class-methods">Class Methods</a></li>
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="var.html">VAR models</a><ul>
@@ -156,10 +156,10 @@
   <ul class="wy-breadcrumbs">
     <li><a href="index.html">Docs</a> &raquo;</li>
       
-    <li>Gaussian State Space models</li>
+    <li>Non-Gaussian State Space models</li>
       <li class="wy-breadcrumbs-aside">
         
-          <a href="_sources/ssm.txt" rel="nofollow"> View page source</a>
+          <a href="_sources/ngssm.txt" rel="nofollow"> View page source</a>
         
       </li>
   </ul>
@@ -167,8 +167,8 @@
 </div>
           <div role="main" class="document">
             
-  <div class="section" id="gaussian-state-space-models">
-<h1>Gaussian State Space models<a class="headerlink" href="#gaussian-state-space-models" title="Permalink to this headline">¶</a></h1>
+  <div class="section" id="non-gaussian-state-space-models">
+<h1>Non-Gaussian State Space models<a class="headerlink" href="#non-gaussian-state-space-models" title="Permalink to this headline">¶</a></h1>
 <div class="section" id="example">
 <h2>Example<a class="headerlink" href="#example" title="Permalink to this headline">¶</a></h2>
 <div class="highlight-python"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre> 1
@@ -184,34 +184,42 @@
 11
 12
 13
-14</pre></div></td><td class="code"><div class="highlight"><pre><span class="kn">import</span> <span class="nn">numpy</span> <span class="kn">as</span> <span class="nn">np</span>
+14
+15</pre></div></td><td class="code"><div class="highlight"><pre><span class="kn">import</span> <span class="nn">numpy</span> <span class="kn">as</span> <span class="nn">np</span>
 <span class="kn">import</span> <span class="nn">pyflux</span> <span class="kn">as</span> <span class="nn">pf</span>
 <span class="kn">import</span> <span class="nn">pandas</span> <span class="kn">as</span> <span class="nn">pd</span>
 
-<span class="n">nile</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">read_csv</span><span class="p">(</span><span class="s">&#39;https://vincentarelbundock.github.io/Rdatasets/csv/datasets/Nile.csv&#39;</span><span class="p">)</span>
-<span class="n">nile</span><span class="o">.</span><span class="n">index</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">to_datetime</span><span class="p">(</span><span class="n">nile</span><span class="p">[</span><span class="s">&#39;time&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">values</span><span class="p">,</span><span class="n">format</span><span class="o">=</span><span class="s">&#39;%Y&#39;</span><span class="p">)</span>
+<span class="n">leicester</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">read_csv</span><span class="p">(</span><span class="s">&#39;http://www.pyflux.com/notebooks/leicester_goals_scored.csv&#39;</span><span class="p">)</span>
+<span class="n">leicester</span><span class="o">.</span><span class="n">columns</span><span class="o">=</span> <span class="p">[</span><span class="s">&quot;Time&quot;</span><span class="p">,</span><span class="s">&quot;Leicester Goals Scored&quot;</span><span class="p">]</span>
 
-<span class="n">model</span> <span class="o">=</span> <span class="n">pf</span><span class="o">.</span><span class="n">LLEV</span><span class="p">(</span><span class="n">data</span><span class="o">=</span><span class="n">niles</span><span class="p">,</span><span class="n">target</span><span class="o">=</span><span class="s">&#39;Poisson&#39;</span><span class="p">)</span> <span class="c"># local level</span>
+<span class="n">model</span> <span class="o">=</span> <span class="n">pf</span><span class="o">.</span><span class="n">NLLEV</span><span class="o">.</span><span class="n">Poisson</span><span class="p">(</span><span class="n">data</span><span class="o">=</span><span class="n">leicester</span><span class="p">,</span><span class="n">target</span><span class="o">=</span><span class="s">&#39;Leicester Goals Scored&#39;</span><span class="p">)</span>
 
-<span class="n">USgrowth</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="n">growthdata</span><span class="p">[</span><span class="s">&#39;VALUE&#39;</span><span class="p">]))</span>
-<span class="n">USgrowth</span><span class="o">.</span><span class="n">index</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">to_datetime</span><span class="p">(</span><span class="n">growthdata</span><span class="p">[</span><span class="s">&#39;DATE&#39;</span><span class="p">])</span>
-<span class="n">USgrowth</span><span class="o">.</span><span class="n">columns</span> <span class="o">=</span> <span class="p">[</span><span class="s">&#39;Logged US Real GDP&#39;</span><span class="p">]</span>
+<span class="n">fb</span> <span class="o">=</span> <span class="n">DataReader</span><span class="p">(</span><span class="s">&#39;FB&#39;</span><span class="p">,</span>  <span class="s">&#39;yahoo&#39;</span><span class="p">,</span> <span class="n">datetime</span><span class="p">(</span><span class="mi">2015</span><span class="p">,</span><span class="mi">5</span><span class="p">,</span><span class="mi">1</span><span class="p">),</span> <span class="n">datetime</span><span class="p">(</span><span class="mi">2016</span><span class="p">,</span><span class="mi">5</span><span class="p">,</span><span class="mi">10</span><span class="p">))</span>
+<span class="n">returns</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">diff</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="n">fb</span><span class="p">[</span><span class="s">&#39;Open&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">values</span><span class="p">)))</span>
+<span class="n">returns</span><span class="o">.</span><span class="n">index</span> <span class="o">=</span> <span class="n">fb</span><span class="o">.</span><span class="n">index</span><span class="o">.</span><span class="n">values</span><span class="p">[</span><span class="mi">1</span><span class="p">:</span><span class="n">fb</span><span class="o">.</span><span class="n">index</span><span class="o">.</span><span class="n">values</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]]</span>
+<span class="n">returns</span><span class="o">.</span><span class="n">columns</span> <span class="o">=</span> <span class="p">[</span><span class="s">&#39;Facebook Returns&#39;</span><span class="p">]</span>
 
-<span class="n">model2</span> <span class="o">=</span> <span class="n">pf</span><span class="o">.</span><span class="n">LLT</span><span class="p">(</span><span class="n">data</span><span class="o">=</span><span class="n">USgrowth</span><span class="p">)</span> <span class="c"># local linear trend model</span>
+<span class="n">model2</span> <span class="o">=</span> <span class="n">pf</span><span class="o">.</span><span class="n">NLLEV</span><span class="o">.</span><span class="n">t</span><span class="p">(</span><span class="n">data</span><span class="o">=</span><span class="n">returns</span><span class="p">,</span><span class="n">target</span><span class="o">=</span><span class="s">&#39;Close&#39;</span><span class="p">)</span>
 </pre></div>
 </td></tr></table></div>
 </div>
 <div class="section" id="class-arguments">
 <h2>Class Arguments<a class="headerlink" href="#class-arguments" title="Permalink to this headline">¶</a></h2>
-<p>The <strong>LLEV()</strong> and <strong>LLT()</strong> model class has the following arguments:</p>
+<p>The <strong>NLLEV()</strong> model (local level) has two factory options:</p>
+<ul class="simple">
+<li><em>NLLEV.t</em> : creates a t-distributed model</li>
+<li><em>NLLEV.Poisson</em> : creates a Poisson distributed model</li>
+</ul>
+<p>In turn, these creation options have the following arguments:</p>
 <ul class="simple">
 <li><em>data</em> : requires a pd.DataFrame object or an np.array</li>
+<li><em>integ</em> : how many times to difference the series (0 = none)</li>
 <li><em>target</em> : (default: None) specify the pandas column name or numpy index if the input is a matrix. If None, the first column will be chosen as the data.</li>
 </ul>
 </div>
 <div class="section" id="class-attributes">
 <h2>Class Attributes<a class="headerlink" href="#class-attributes" title="Permalink to this headline">¶</a></h2>
-<p>THe <strong>LLEV()</strong> and <strong>LLT()</strong> model objects hold the following attributes:</p>
+<p>The <strong>NLLEV()</strong> model object hold the following attributes:</p>
 <p>Model Attributes:</p>
 <ul class="simple">
 <li><em>param_no</em> : number of model parameters</li>
@@ -235,6 +243,11 @@
 <li><em>chains</em> : holds trace information for MCMC runs</li>
 <li><em>supported_methods</em> : which inference methods are supported</li>
 <li><em>default_method</em> : default inference method</li>
+<li><em>self.states</em> = states</li>
+<li><em>self.states_mean</em> = holds any estimated state means</li>
+<li><em>self.states_median</em> = holds any estimated state medians</li>
+<li><em>self.states_upper_95</em> = holds any estimated state upper 95% credibility inter vals</li>
+<li><em>self.states_lower_95</em> = holds any estimated state lower 95% credibility intervals</li>
 </ul>
 </div>
 <div class="section" id="class-methods">
@@ -254,22 +267,16 @@
 <p>Fits parameters for the model. Arguments are:</p>
 <ul class="simple">
 <li><em>method</em> : one of [&#8216;BBVI&#8217;,MLE&#8217;,&#8217;MAP&#8217;,&#8217;M-H&#8217;,&#8217;Laplace&#8217;]</li>
-<li><em>printed</em> : (default: True) whether to print output</li>
-<li><em>nsims</em> : (default: 100000) how many simulations if M-H is chosen</li>
-<li><em>cov_matrix</em> (default: None) covariance matrix for M-H</li>
-<li><em>iterations</em> : (default: 30000) how many iterations if BBVI is chosen</li>
-<li><em>step</em> : (default: 0.001) step size for BBVI</li>
+<li><em>nsims</em> : (default: 100000) how many simulations for M-H</li>
+<li><em>smoother_weight</em> : (default: 0.1) how much weight to give to simulation smoother samples as opposed to the current state</li>
 </ul>
-<div class="highlight-python"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre>1</pre></div></td><td class="code"><div class="highlight"><pre><span class="n">model</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="s">&quot;M-H&quot;</span><span class="p">,</span><span class="n">nsims</span><span class="o">=</span><span class="mi">20000</span><span class="p">)</span>
+<div class="highlight-python"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre>1</pre></div></td><td class="code"><div class="highlight"><pre><span class="n">model</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">nsims</span><span class="o">=</span><span class="mi">20000</span><span class="p">,</span><span class="n">smoother_weight</span><span class="o">=</span><span class="mf">0.01</span><span class="p">)</span>
 </pre></div>
 </td></tr></table></div>
 <p><strong>list_priors()</strong></p>
 <p>Lists the current prior specification.</p>
 <p><strong>plot_fit()</strong></p>
-<p>Graphs the fit of the model. Optional arguments are:</p>
-<ul class="simple">
-<li><em>series_type</em> : &#8216;Filtered&#8217; or &#8216;Smoothed&#8217;</li>
-</ul>
+<p>Graphs the fit of the model and the various components.</p>
 <p><strong>plot_predict(h)</strong></p>
 <p>Predicts h timesteps ahead and plots results. Arguments are:</p>
 <ul class="simple">
@@ -299,6 +306,8 @@
 <ul class="simple">
 <li><em>data</em> : the data to simulate from - use self.data usually.</li>
 <li><em>beta</em> : the parameters to use - use self.params (after fitting a model) usually.</li>
+<li><em>H</em> :  H from an approximate Gaussian model</li>
+<li><em>mu</em> : mu from an approximate Gaussian model</li>
 </ul>
 <div class="highlight-python"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre>1</pre></div></td><td class="code"><div class="highlight"><pre><span class="n">model</span><span class="o">.</span><span class="n">plot_predict</span><span class="p">(</span><span class="n">h</span><span class="o">=</span><span class="mi">12</span><span class="p">,</span><span class="n">past_values</span><span class="o">=</span><span class="mi">36</span><span class="p">)</span>
 </pre></div>
@@ -312,10 +321,10 @@
   
     <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
       
-        <a href="ngssm.html" class="btn btn-neutral float-right" title="Non-Gaussian State Space models">Next <span class="fa fa-arrow-circle-right"></span></a>
+        <a href="var.html" class="btn btn-neutral float-right" title="VAR models">Next <span class="fa fa-arrow-circle-right"></span></a>
       
       
-        <a href="gpnar.html" class="btn btn-neutral" title="GP-NARX models"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+        <a href="ssm.html" class="btn btn-neutral" title="Gaussian State Space models"><span class="fa fa-arrow-circle-left"></span> Previous</a>
       
     </div>
   

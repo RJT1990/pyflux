@@ -139,7 +139,7 @@ class NLLEV(tsm.TSM):
 		if hasattr(self, 'mu'):
 			mu = self.mu
 		else:
-			mu = np.ones(self.data.shape[0])
+			mu = np.zeros(self.data.shape[0])
 
 		alpha = np.array([np.zeros(self.data.shape[0])])
 		tol = 100.0
@@ -175,39 +175,8 @@ class NLLEV(tsm.TSM):
 			Approximating measurement constants
 		"""		
 
-		if hasattr(self, 'H'):
-			H = self.H
-		else:
-			H = np.ones(self.data.shape[0])
-
-		if hasattr(self, 'mu'):
-			mu = self.mu
-		else:
-			mu = np.ones(self.data.shape[0])
-
-		if hasattr(self, 'alpha_temp'):
-			alpha = self.alpha_temp
-		else:
-			alpha = np.array([np.zeros(self.data.shape[0])])
-
-		v_t = self._param_desc[2]['prior'].transform(beta[2])
-		k = 1.0/(v_t-2)*self._param_desc[1]['prior'].transform(beta[1])
-
-		tol = 100.0
-		it = 0
-
-		while tol > 10**-7 and it < 20:
-			old_alpha = alpha[0]
-			alpha, V = nl_univariate_KFS(self.data,Z,H,T,Q,R,mu)
-			eps_hat = self.data - alpha[0]
-
-			mu = eps_hat - (((v_t+1)*k*eps_hat)/(1+k*eps_hat))*H
-			H_prop = np.power((1+k*eps_hat),2)/((v_t+1)*k*(1-(k*np.power(eps_hat,2))))
-			H_prop[H_prop<=0] = H[H_prop<=0]
-			mu[H_prop<=0] = -eps_hat[H_prop<=0]
-
-			tol = np.mean(np.abs(alpha[0]-old_alpha))
-			it += 1
+		H = np.ones(self.data.shape[0])*self._param_desc[1]['prior'].transform(beta[1])
+		mu = np.zeros(self.data.shape[0])
 
 		return H, mu
 

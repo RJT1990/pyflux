@@ -53,9 +53,9 @@ The attribute *param.desc* is a dictionary holding information about individual 
 * *prior* : the prior specification for the parameter
 * *q* : the variational distribution approximation
 
-
 Inference Attributes:
 
+* *starting_params* : starting parameters for estimation/inference
 * *params* : holds any estimated parameters
 * *ses* : holds any estimated standard errors for parameters (MLE/MAP)
 * *ihessian* : holds any estimated inverse Hessian (MLE/MAP)
@@ -103,15 +103,35 @@ Lists the current prior specification.
 
 Graphs the fit of the model.
 
-**predict(h)**
+**plot_predict(h)**
 
-Predicts h timesteps ahead. Arguments are:
+Predicts h timesteps ahead and plots results. Arguments are:
 
 * *h* : (default: 5) how many timesteps to predict ahead
 * *past_values* : (default: 20) how many past observations to plot
-* *intervals* : (default: True) whether to plot 95/90 prediction intervals
+* *intervals* : (default: True) whether to plot prediction intervals
+
+**plot_predict_is(h)**
+
+Predicts rolling in-sample prediction for h past timestamps and plots results. Arguments are:
+
+* *h* : (default: 5) how many timesteps to predict
+* *past_values* : (default: 20) how many past observations to plot
+* *intervals* : (default: True) whether to plot prediction intervals
+
+**predict(h)**
+
+Predicts h timesteps ahead and outputs pd.DataFrame. Arguments are:
+
+* *h* : (default: 5) how many timesteps to predict ahead
+
+**predict_is(h)**
+
+Predicts h timesteps ahead and outputs pd.DataFrame. Arguments are:
+
+* *h* : (default: 5) how many timesteps to predict ahead
 
 .. code-block:: python
    :linenos:
 
-   model.predict(h=12,past_values=36)
+   model.plot_predict(h=12,past_values=36)

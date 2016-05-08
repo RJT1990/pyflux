@@ -20,6 +20,7 @@ Models
    gas
    gpnar
    ssm
+   ngssm
    var
 
 Inference
