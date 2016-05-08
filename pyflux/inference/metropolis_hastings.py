@@ -60,8 +60,10 @@ class MetropolisHastings(object):
 			An adjusted scale parameter
 		"""		
 
-		if acceptance > 0.4:
-			scale *= 1.3
+		if acceptance > 0.8:
+			scale *= 2.0
+		elif acceptance <= 0.8 and acceptance > 0.4:
+			scale *= 1.3			
 		elif acceptance < 0.234 and acceptance > 0.1:
 			scale *= (1/1.3)
 		elif acceptance <= 0.1 and acceptance > 0.05:
@@ -146,7 +148,7 @@ class MetropolisHastings(object):
 
 		return chain, mean_est, median_est, upper_95_est, lower_95_est
 
-	def spdk_sample(self, smoother_weight):
+	def spdk_sample(self,smoother_weight):
 		""" Samples from SSM posterior using SPDK simulation smoothing
 
 		Parameters
@@ -179,7 +181,9 @@ class MetropolisHastings(object):
 		finish = 0
 
 		states = np.zeros([self.nsims, self.model.state_no, self.model.data.shape[0]])
-		states[0,:,:] = self.model.smoothed_state(self.model.data,self.phi[0])
+		T_start, Z_start, R_start, Q_start = self.model._ss_matrices(self.phi[0])
+		H_start, mu_start = self.model._approximating_model(self.phi[0],T_start,Z_start,R_start,Q_start)
+		states[0,:,:] = self.model.smoothed_state(self.model.data,self.phi[0],H_start,mu_start)
 
 		while (acceptance < 0.234 or acceptance > 0.4) or finish == 0:
 
@@ -193,6 +197,9 @@ class MetropolisHastings(object):
 				sims_to_do = self.nsims
 			else:
 				sims_to_do = int(round(self.nsims/2.0)) # For acceptance rate tuning
+				if acceptance != 1:
+					states[0,:,:] = states[round(self.nsims/2.0)-1,:,:]
+					self.phi[0] = self.phi[round(self.nsims/2.0)-1]
 
 			# Holds data on acceptance rates and uniform random numbers
 			a_rate = np.zeros([sims_to_do,1])
@@ -206,7 +213,7 @@ class MetropolisHastings(object):
 			# Sampling time!
 			for i in xrange(1,sims_to_do):
 				phi_prop = self.phi[i-1] + rnums[i]
-				states_prop = (1.0-smoother_weight)*states[i-1,:,:] + smoother_weight*self.model.simulation_smoother(phi_prop)
+				states_prop = smoother_weight*self.model.simulation_smoother(phi_prop) + (1-smoother_weight)*states[i-1,:,:]
 				prop_post = -self.posterior(phi_prop,states_prop)
 				lik_rat = np.exp(prop_post - old_lik)
 

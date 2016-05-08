@@ -131,18 +131,27 @@ class NLLEV(tsm.TSM):
 			Approximating measurement constants
 		"""		
 
-		H = np.ones(self.data.shape[0])
-		mu = np.zeros(self.data.shape[0])
+		if hasattr(self, 'H'):
+			H = self.H
+		else:
+			H = np.ones(self.data.shape[0])
+
+		if hasattr(self, 'mu'):
+			mu = self.mu
+		else:
+			mu = np.ones(self.data.shape[0])
+
 		alpha = np.array([np.zeros(self.data.shape[0])])
 		tol = 100.0
-
-		while tol > 10**-7:
+		it = 0
+		while tol > 10**-7 and it < 5:
 			old_alpha = alpha[0]
 			alpha, V = nl_univariate_KFS(self.data,Z,H,T,Q,R,mu)
 			H = np.exp(-alpha[0])
 			mu = self.data - alpha[0] - np.exp(-alpha[0])*(self.data - np.exp(alpha[0]))
-			tol = np.abs(np.mean(alpha[0]-old_alpha))
-		
+			tol = np.mean(np.abs(alpha[0]-old_alpha))
+			it += 1
+
 		return H, mu
 
 	def _t_approximating_model(self,beta,T,Z,R,Q):
@@ -166,15 +175,28 @@ class NLLEV(tsm.TSM):
 			Approximating measurement constants
 		"""		
 
-		H = np.ones(self.data.shape[0])
-		mu = np.zeros(self.data.shape[0])
-		alpha = np.array([np.zeros(self.data.shape[0])])
+		if hasattr(self, 'H'):
+			H = self.H
+		else:
+			H = np.ones(self.data.shape[0])
+
+		if hasattr(self, 'mu'):
+			mu = self.mu
+		else:
+			mu = np.ones(self.data.shape[0])
+
+		if hasattr(self, 'alpha_temp'):
+			alpha = self.alpha_temp
+		else:
+			alpha = np.array([np.zeros(self.data.shape[0])])
+
 		v_t = self._param_desc[2]['prior'].transform(beta[2])
 		k = 1.0/(v_t-2)*self._param_desc[1]['prior'].transform(beta[1])
 
 		tol = 100.0
+		it = 0
 
-		while tol > 10**-7:
+		while tol > 10**-7 and it < 20:
 			old_alpha = alpha[0]
 			alpha, V = nl_univariate_KFS(self.data,Z,H,T,Q,R,mu)
 			eps_hat = self.data - alpha[0]
@@ -184,8 +206,9 @@ class NLLEV(tsm.TSM):
 			H_prop[H_prop<=0] = H[H_prop<=0]
 			mu[H_prop<=0] = -eps_hat[H_prop<=0]
 
-			tol = np.abs(np.mean(alpha[0]-old_alpha))
-		
+			tol = np.mean(np.abs(alpha[0]-old_alpha))
+			it += 1
+
 		return H, mu
 
 	@classmethod
@@ -214,12 +237,13 @@ class NLLEV(tsm.TSM):
 		x._param_desc.append({'name' : 'v','index': 3, 'prior': ifr.Uniform(transform='exp'), 'q': dst.Normal(0,3)})
 		x._approximating_model = x._t_approximating_model
 		x.meas_likelihood = x.t_likelihood
-		x.model_name = "Student's-t Local Level Model"
+		x.model_name = "t-distributed Local Level Model"
 		x.param_no = 3	
 		x.link = np.array
 		temp = LLEV(data,integ=integ,target=target)
 		temp.fit(printer=False)
-		x.starting_params = np.array([temp.params[1],temp.params[0],2])		
+		x.starting_params = np.array([temp.params[1],temp.params[0],2])
+		x.starting_cov_matrix = np.diag(np.abs(x.starting_params)) 		
 		return x
 
 	@classmethod
@@ -252,6 +276,7 @@ class NLLEV(tsm.TSM):
 		temp = LLEV(data,integ=integ,target=target)
 		temp.fit(printer=False)
 		x.starting_params = np.array([temp.params[1]])
+		x.starting_cov_matrix = np.diag(np.abs(x.starting_params)) 
 		return x
 
 	def fit(self,nsims=1000,smoother_weight=0.1,printer=True,*args,**kwargs):
@@ -280,8 +305,8 @@ class NLLEV(tsm.TSM):
 
 		figsize = kwargs.get('figsize',(15,15))
 
-		scale = 2.32/sqrt(self.data.shape[0]+1)
-		sampler = ifr.MetropolisHastings(self.posterior,scale,nsims,self.starting_params,cov_matrix=None,model_object=self)
+		scale = 2.32/sqrt(self.param_no+self.data.shape[0])
+		sampler = ifr.MetropolisHastings(self.posterior,scale,nsims,self.starting_params,cov_matrix=self.starting_cov_matrix,model_object=self)
 		chain, mean_est, median_est, upper_95_est, lower_95_est, states, states_mean, states_median, states_upper_95, states_lower_95 = sampler.spdk_sample(smoother_weight=smoother_weight)	
 
 		self.params = np.asarray(mean_est)
@@ -691,13 +716,13 @@ class NLLEV(tsm.TSM):
 					a_plus[:,t] = np.dot(T,a_plus[:,t-1]) + rnd_q[t]
 					y_plus[t] = mu[t] + np.dot(Z,a_plus[:,t]) + rnd_h[t]
 
-		alpha_hat = self.smoothed_state(self.data,beta)
-		alpha_hat_plus = self.smoothed_state(y_plus,beta)
+		alpha_hat = self.smoothed_state(self.data,beta, H, mu)
+		alpha_hat_plus = self.smoothed_state(y_plus,beta, H, mu)
 		alpha_tilde = alpha_hat - alpha_hat_plus + a_plus
 		
 		return alpha_tilde
 
-	def smoothed_state(self,data,beta):
+	def smoothed_state(self,data,beta, H, mu):
 		""" Creates smoothed state estimate given state matrices and 
 		parameters.
 
@@ -716,6 +741,5 @@ class NLLEV(tsm.TSM):
 		"""			
 
 		T, Z, R, Q = self._ss_matrices(beta)
-		H, mu = self._approximating_model(beta,T,Z,R,Q)
 		alpha, V = nl_univariate_KFS(data,Z,H,T,Q,R,mu)
 		return alpha
