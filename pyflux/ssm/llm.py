@@ -1,5 +1,8 @@
 from math import exp, sqrt, log, tanh, pi
 import copy
+import sys
+if sys.version_info < (3,):
+    range = xrange
 
 import numpy as np
 import pandas as pd
@@ -16,7 +19,7 @@ from .. import tests as tst
 from .. import tsm as tsm
 from .. import data_check as dc
 
-from kalman import *
+from .kalman import *
 
 class LLEV(tsm.TSM):
 	""" Inherits time series methods from TSM class.
@@ -52,7 +55,7 @@ class LLEV(tsm.TSM):
 		self.model_name = "LLEV"
 
 		# Format the data
-		self.data, self.data_name, self.data_type, self.index = dc.data_check(data,target)
+		self.data, self.data_name, self.is_pandas, self.index = dc.data_check(data,target)
 		self.data_original = self.data
 
 		# Difference data
@@ -62,8 +65,8 @@ class LLEV(tsm.TSM):
 
 		# Add parameter information
 
-		self._param_desc.append({'name' : 'Sigma^2 irregular','index': 0, 'prior': ifr.Uniform(transform='exp'), 'q': dst.Normal(0,3)})
-		self._param_desc.append({'name' : 'Sigma^2 level','index': 1, 'prior': ifr.Uniform(transform='exp'), 'q': dst.Normal(0,3)})
+		self._param_desc.append({'name' : 'Sigma^2 irregular','index': 0, 'prior': ifr.Uniform(transform='exp'), 'q': dst.q_Normal(0,3)})
+		self._param_desc.append({'name' : 'Sigma^2 level','index': 1, 'prior': ifr.Uniform(transform='exp'), 'q': dst.q_Normal(0,3)})
 
 		# Starting Parameters for Estimation
 		self.starting_params = np.zeros(self.param_no)	
@@ -145,7 +148,7 @@ class LLEV(tsm.TSM):
 		"""			
 		_, _, _, F, v = self._model(self.data,beta)
 		loglik = 0.0
-		for i in xrange(0,self.data.shape[0]):
+		for i in range(0,self.data.shape[0]):
 			loglik += np.linalg.slogdet(F[:,:,i])[1] + np.dot(v[i],np.dot(np.linalg.pinv(F[:,:,i]),v[i]))
 		return -(-((self.data.shape[0]/2)*log(2*pi))-0.5*loglik.T[0].sum())
 
@@ -178,8 +181,8 @@ class LLEV(tsm.TSM):
 			date_index = self.shift_dates(h)
 			plot_values = a[0][a[0].shape[0]-h-past_values:a[0].shape[0]]
 			forecasted_values = a[0][a[0].shape[0]-h:a[0].shape[0]]
-			lower = forecasted_values - 1.98*np.power(P[0][0][P[0][0].shape[0]-h:P[0][0].shape[0]],0.5)
-			upper = forecasted_values + 1.98*np.power(P[0][0][P[0][0].shape[0]-h:P[0][0].shape[0]],0.5)
+			lower = forecasted_values - 1.98*np.power(P[0][0][P[0][0].shape[0]-h:P[0][0].shape[0]] + self._param_desc[0]['prior'].transform(self.params[0]),0.5)
+			upper = forecasted_values + 1.98*np.power(P[0][0][P[0][0].shape[0]-h:P[0][0].shape[0]] + self._param_desc[0]['prior'].transform(self.params[0]),0.5)
 			lower = np.append(plot_values[plot_values.shape[0]-h-1],lower)
 			upper = np.append(plot_values[plot_values.shape[0]-h-1],upper)
 
@@ -280,7 +283,7 @@ class LLEV(tsm.TSM):
 
 		predictions = []
 
-		for t in xrange(0,h):
+		for t in range(0,h):
 			x = LLEV(integ=self.integ,data=self.data_original[0:(self.data_original.shape[0]-h+t)])
 			x.fit(printer=False)
 			if t == 0:
@@ -345,7 +348,7 @@ class LLEV(tsm.TSM):
 		a_plus[0,0] = np.mean(self.data[0:5])
 		y_plus = np.zeros(self.data.shape[0])
 
-		for t in xrange(0,self.data.shape[0]+1):
+		for t in range(0,self.data.shape[0]+1):
 			if t == 0:
 				a_plus[:,t] = np.dot(T,a_plus[:,t]) + rnd_q[t]
 				y_plus[t] = np.dot(Z,a_plus[:,t]) + rnd_h[t]

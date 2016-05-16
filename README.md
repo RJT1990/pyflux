@@ -13,6 +13,7 @@ See some examples and documentation at [PyFlux.com](http://www.pyflux.com/).
 - [ARIMA models](http://www.pyflux.com/notebooks/ARIMA.html)
 - [GARCH models](http://www.pyflux.com/notebooks/GARCH.html)
 - [GAS models](http://www.pyflux.com/notebooks/GAS.html)
+- [GAS Regression models](http://www.pyflux.com/notebooks/GASReg.html)
 - [GP-NARX models](http://www.pyflux.com/notebooks/GPNARX.html)
 - [Gaussian State Space models](http://www.pyflux.com/notebooks/GaussianStateSpace.html)
 - [Non-Gaussian State Space models](http://www.pyflux.com/notebooks/NonGaussianStateSpace.html)
@@ -33,4 +34,4 @@ pip install pyflux
 
 ## Python Version
 
-PyFlux is currently supported on Python 2.7. 3.5 support will be released in the near future.
+PyFlux is tested on Python 2.7 and 3.5.

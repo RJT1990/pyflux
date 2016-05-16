@@ -1,4 +1,4 @@
 """
 The module Inference holds estimation procedures.
 """
-from distributions import Normal
+from .distributions import q_Normal

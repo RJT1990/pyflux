@@ -1,4 +1,7 @@
 from math import exp, sqrt, log, tanh, pi
+import sys
+if sys.version_info < (3,):
+    range = xrange
 
 import numpy as np
 import pandas as pd
@@ -52,7 +55,7 @@ class VAR(tsm.TSM):
 		self.default_method = "OLS"
 
 		# Format the data
-		self.data, self.data_name, self.data_type, self.index = dc.mv_data_check(data,target)
+		self.data, self.data_name, self.is_pandas, self.index = dc.mv_data_check(data,target)
 		self.data_original = self.data.copy()
 
 		# Difference data
@@ -65,20 +68,20 @@ class VAR(tsm.TSM):
 
 		# Create VAR parameters
 		for variable in range(self.ylen):
-			self._param_desc.append({'name' : self.data_name[variable] + ' Constant', 'index': len(self._param_desc), 'prior': ifr.Normal(0,3,transform=None), 'q': dist.Normal(0,3)})		
+			self._param_desc.append({'name' : self.data_name[variable] + ' Constant', 'index': len(self._param_desc), 'prior': ifr.Normal(0,3,transform=None), 'q': dist.q_Normal(0,3)})		
 			other_variables = np.delete(range(self.ylen), [variable])
 			for lag_no in range(self.lags):
-				self._param_desc.append({'name' : str(self.data_name[variable]) + ' AR(' + str(lag_no+1) + ')', 'index': len(self._param_desc), 'prior': ifr.Normal(0,0.5,transform=None), 'q': dist.Normal(0,3)})
+				self._param_desc.append({'name' : str(self.data_name[variable]) + ' AR(' + str(lag_no+1) + ')', 'index': len(self._param_desc), 'prior': ifr.Normal(0,0.5,transform=None), 'q': dist.q_Normal(0,3)})
 				for other in other_variables:
-					self._param_desc.append({'name' : str(self.data_name[other]) + ' to ' + str(self.data_name[variable]) + ' AR(' + str(lag_no+1) + ')', 'index': len(self._param_desc), 'prior': ifr.Normal(0,0.5,transform=None), 'q': dist.Normal(0,3)})
+					self._param_desc.append({'name' : str(self.data_name[other]) + ' to ' + str(self.data_name[variable]) + ' AR(' + str(lag_no+1) + ')', 'index': len(self._param_desc), 'prior': ifr.Normal(0,0.5,transform=None), 'q': dist.q_Normal(0,3)})
 
 		# Variance prior
 		for i in range(self.ylen):
 			for k in range(self.ylen):
 				if i == k:
-					self._param_desc.append({'name' : 'Sigma' + str(self.data_name[i]),'index': len(self._param_desc),'prior': ifr.Uniform(transform='exp'), 'q': dist.Normal(0,3)})
+					self._param_desc.append({'name' : 'Sigma' + str(self.data_name[i]),'index': len(self._param_desc),'prior': ifr.Uniform(transform='exp'), 'q': dist.q_Normal(0,3)})
 				elif i > k:
-					self._param_desc.append({'name' : 'Sigma' + str(self.data_name[i]) + ' to ' + str(self.data_name[k]),'index': len(self._param_desc), 'prior': ifr.Uniform(transform=None), 'q': dist.Normal(0,3)})
+					self._param_desc.append({'name' : 'Sigma' + str(self.data_name[i]) + ' to ' + str(self.data_name[k]),'index': len(self._param_desc), 'prior': ifr.Uniform(transform=None), 'q': dist.q_Normal(0,3)})
 
 		# Other attributes
 		self._param_hide = len(self.data)**2 - (len(self.data)**2 - len(self.data))/2 # Whether to cutoff variance parameters from results		
@@ -88,8 +91,8 @@ class VAR(tsm.TSM):
 		self.starting_params = self._create_B_direct().flatten()
 		cov = self.ols_covariance()
 
-		for i in xrange(0,self.ylen):
-			for k in xrange(0,self.ylen):
+		for i in range(0,self.ylen):
+			for k in range(0,self.ylen):
 				if i == k:
 					self.starting_params = np.append(self.starting_params,self._param_desc[len(self.starting_params)]['prior'].itransform(cov[i,k]))
 				elif i > k:
@@ -138,8 +141,8 @@ class VAR(tsm.TSM):
 
 		Z = np.ones(((self.ylen*self.lags +1),Y[0].shape[0]))
 		row_count = 1
-		for lag in xrange(1,self.lags+1):
-			for reg in xrange(Y.shape[0]):
+		for lag in range(1,self.lags+1):
+			for reg in range(Y.shape[0]):
 				Z[row_count,:] = self.data[reg][(self.lags-lag):self.data[reg].shape[0]-lag]			
 				row_count += 1
 		return Z
@@ -179,27 +182,27 @@ class VAR(tsm.TSM):
 		"""			
 
 		random = self._shock_create(h, shock_type, shock_index, shock_value, shock_dir,irf_intervals)
-		exp = [Y[variable] for variable in xrange(0,self.ylen)]
+		exp = [Y[variable] for variable in range(0,self.ylen)]
 		
 		# Each forward projection
-		for t in xrange(0,h):
+		for t in range(0,h):
 			new_values = np.zeros(self.ylen)
 
 			# Each variable
-			for variable in xrange(0,self.ylen):
+			for variable in range(0,self.ylen):
 				index_ref = variable*(1+self.ylen*self.lags)
 				new_values[variable] = t_params[index_ref] # constant
 
 				# VAR(p) terms
-				for lag in xrange(0,self.lags):
-					for lagged_var in xrange(0,self.ylen):
+				for lag in range(0,self.lags):
+					for lagged_var in range(0,self.ylen):
 						new_values[variable] += t_params[index_ref+lagged_var+(lag*self.ylen)+1]*exp[lagged_var][exp[lagged_var].shape[0]-1-lag]
 				
 				# Random shock
 				new_values[variable] += random[t][variable]
 
 			# Add new values
-			for variable in xrange(0,self.ylen):
+			for variable in range(0,self.ylen):
 				exp[variable] = np.append(exp[variable],new_values[variable])
 
 		return np.array(exp)
@@ -228,7 +231,7 @@ class VAR(tsm.TSM):
 
 		params = []
 		col_length = 1 + self.ylen*self.lags
-		for i in xrange(0,self.ylen):
+		for i in range(0,self.ylen):
 			params.append(beta[(col_length*i): (col_length*(i+1))])
 
 		mu = np.dot(np.array(params),self._create_Z(Y))
@@ -266,16 +269,16 @@ class VAR(tsm.TSM):
 
 		if shock_type is None:
 
-			random = [np.zeros(self.ylen) for i in xrange(0,h)]
+			random = [np.zeros(self.ylen) for i in range(0,h)]
 
 		elif shock_type == 'IRF':
 
 			cov = self.custom_covariance(self.params)
 			post = ss.multivariate_normal(np.zeros(self.ylen),cov)
 			if irf_intervals is False:
-				random = [np.zeros(self.ylen) for i in xrange(0,h)]
+				random = [np.zeros(self.ylen) for i in range(0,h)]
 			else:
-				random = [post.rvs() for i in xrange(0,h)]
+				random = [post.rvs() for i in range(0,h)]
 				random[0] = np.zeros(self.ylen)
 
 			if shock_value is None:
@@ -292,7 +295,7 @@ class VAR(tsm.TSM):
 			
 			cov = self.custom_covariance(self.params)
 			post = ss.multivariate_normal(np.zeros(self.ylen),cov)
-			random = [post.rvs() for i in xrange(0,h)]
+			random = [post.rvs() for i in range(0,h)]
 
 		return random
 
@@ -345,8 +348,8 @@ class VAR(tsm.TSM):
 		cov_matrix = np.zeros((self.ylen,self.ylen))
 
 		quick_count = 0
-		for i in xrange(0,self.ylen):
-			for k in xrange(0,self.ylen):
+		for i in range(0,self.ylen):
+			for k in range(0,self.ylen):
 				if i >= k:
 					index = self.ylen + self.lags*(self.ylen**2) + quick_count
 					quick_count += 1
@@ -424,13 +427,13 @@ class VAR(tsm.TSM):
 
 			if intervals is True:
 				# Error bars
-				sim_vector = np.array([np.zeros([10000,h]) for i in xrange(0,self.ylen)])
-				for it in xrange(0,10000):
+				sim_vector = np.array([np.zeros([10000,h]) for i in range(0,self.ylen)])
+				for it in range(0,10000):
 					exps_sim = self._forecast_mean(h,t_params,Y,'IRF',shock_index,None,shock_dir,True)
-					for variable in xrange(0,self.ylen):
+					for variable in range(0,self.ylen):
 						sim_vector[variable][it,:] = exps_sim[variable][(exps_sim[variable].shape[0]-h):exps_sim[variable].shape[0]]
 
-			for variable in xrange(exps.shape[0]):
+			for variable in range(exps.shape[0]):
 
 				exp_var = exps[variable][(exps[variable].shape[0]-h-1):exps[variable].shape[0]]
 				exp_var = exp_var - ss_exps[variable][ss_exps[variable].shape[0]-1] # demean
@@ -497,7 +500,7 @@ class VAR(tsm.TSM):
 		ll1 =  -(mu_t.shape[0]*mu_t.shape[1]/2.0)*log(2.0*pi) - (mu_t.shape[0]/2.0)*np.linalg.slogdet(cm)[1]
 		ll2 = 0
 
-		for t in xrange(0,mu_t.shape[0]):
+		for t in range(0,mu_t.shape[0]):
 			ll2 += np.dot(np.dot(diff[t].T,np.linalg.pinv(cm)),diff[t])
 
 		return -(ll1 -0.5*ll2)
@@ -528,7 +531,7 @@ class VAR(tsm.TSM):
 		else:
 			date_index = self.index[self.lags:self.data[0].shape[0]]
 			mu, Y = self._model(self.params)
-			for series in xrange(0,Y.shape[0]):
+			for series in range(0,Y.shape[0]):
 				plt.figure(figsize=figsize)
 				plt.plot(date_index,Y[series],label='Data ' + str(series))
 				plt.plot(date_index,mu[series],label='Filter' + str(series),c='black')	
@@ -572,12 +575,12 @@ class VAR(tsm.TSM):
 
 			# Simulation
 			sim_vector = np.array([np.zeros([15000,h]) for i in range(self.ylen)])
-			for it in xrange(0,15000):
+			for it in range(0,15000):
 				exps_sim = self._forecast_mean(h,t_params,Y,"Cov",None)
 				for variable in range(self.ylen):
 					sim_vector[variable][it,:] = exps_sim[variable][(exps_sim[variable].shape[0]-h):exps_sim[variable].shape[0]]
 
-			for variable in xrange(0,exps.shape[0]):
+			for variable in range(0,exps.shape[0]):
 				test = np.transpose(sim_vector[variable])
 				error_bars, forecasted_values, plot_values, plot_index = self._summarize_simulations(exps[variable],test,date_index,h,past_values)
 
@@ -607,9 +610,9 @@ class VAR(tsm.TSM):
 
 		predictions = []
 
-		for t in xrange(0,h):
+		for t in range(0,h):
 			new_data = []
-			for variable in xrange(0,self.ylen):
+			for variable in range(0,self.ylen):
 				temp_data = self.data_original.transpose()
 				new_data.append(temp_data[variable][0:(temp_data[0].shape[0]-h+t)])
 			new_data = np.transpose(np.array(new_data))
@@ -650,7 +653,7 @@ class VAR(tsm.TSM):
 			# Expectation
 			exps = self._forecast_mean(h,t_params,Y,None,None)
 
-			for variable in xrange(0,exps.shape[0]):
+			for variable in range(0,exps.shape[0]):
 				forecasted_values = exps[variable][(exps[variable].shape[0]-h):exps[variable].shape[0]]
 				if variable == 0:
 					result = pd.DataFrame(forecasted_values)

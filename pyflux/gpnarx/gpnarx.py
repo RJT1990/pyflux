@@ -1,4 +1,7 @@
 from math import exp, sqrt, log, tanh, pi
+import sys
+if sys.version_info < (3,):
+    range = xrange
 
 import numpy as np
 import pandas as pd
@@ -8,7 +11,6 @@ from scipy import optimize
 import matplotlib.pyplot as plt
 import seaborn as sns
 import numdifftools as nd
-from kernels import *
 
 from .. import arma
 from .. import inference as ifr
@@ -17,6 +19,8 @@ from .. import output as op
 from .. import tests as tst
 from .. import tsm as tsm
 from .. import data_check as dc
+
+from .kernels import *
 
 class GPNARX(tsm.TSM):
 	""" Inherits time series methods from TSM class.
@@ -68,7 +72,7 @@ class GPNARX(tsm.TSM):
 		self.kernel_type = kernel_type
 
 		# Format the data
-		self.data, self.data_name, self.data_type, self.index = dc.data_check(data,target)
+		self.data, self.data_name, self.is_pandas, self.index = dc.data_check(data,target)
 		self.data_original = self.data.copy()
 
 		# Difference data
@@ -87,16 +91,16 @@ class GPNARX(tsm.TSM):
 
 		# Define parameters
 
-		self._param_desc.append({'name' : 'Noise Sigma^2','index': 0, 'prior': ifr.Uniform(transform='exp'), 'q': dst.Normal(0,3)})
+		self._param_desc.append({'name' : 'Noise Sigma^2','index': 0, 'prior': ifr.Uniform(transform='exp'), 'q': dst.q_Normal(0,3)})
 
 		if self.kernel_type == 'ARD':
 			self.kernel = ARD(self.X(),np.ones(self.ar),1)
 
 			for lag in range(self.ar):
-				self._param_desc.append({'name' : 'l' + str(lag),'index': len(self._param_desc), 'prior': ifr.Uniform(transform='exp'), 'q': dst.Normal(0,3)})
+				self._param_desc.append({'name' : 'l' + str(lag),'index': len(self._param_desc), 'prior': ifr.Uniform(transform='exp'), 'q': dst.q_Normal(0,3)})
 
 		else:
-			self._param_desc.append({'name' : 'l','index': 1, 'prior': ifr.Uniform(transform='exp'), 'q': dst.Normal(0,3)})
+			self._param_desc.append({'name' : 'l','index': 1, 'prior': ifr.Uniform(transform='exp'), 'q': dst.q_Normal(0,3)})
 
 			if self.kernel_type == 'SE':
 				self.kernel = SquaredExponential(self.X(),1,1)
@@ -105,10 +109,10 @@ class GPNARX(tsm.TSM):
 			elif self.kernel_type == 'Periodic':
 				self.kernel = Periodic(self.X(),1,1)
 			elif self.kernel_type == 'RQ':
-				self._param_desc.append({'name' : 'alpha','index': len(self._param_desc), 'prior': ifr.Uniform(transform='exp'), 'q': dst.Normal(0,3)})
+				self._param_desc.append({'name' : 'alpha','index': len(self._param_desc), 'prior': ifr.Uniform(transform='exp'), 'q': dst.q_Normal(0,3)})
 				self.kernel = RationalQuadratic(self.X(),1,1,1)
 
-		self._param_desc.append({'name' : 'tau', 'index': len(self._param_desc), 'prior': ifr.Uniform(transform='exp'), 'q': dst.Normal(0,3)})
+		self._param_desc.append({'name' : 'tau', 'index': len(self._param_desc), 'prior': ifr.Uniform(transform='exp'), 'q': dst.q_Normal(0,3)})
 
 		# Starting Parameters for Estimation
 		self.starting_params = np.ones(self.param_no)*-1.0
@@ -155,10 +159,10 @@ class GPNARX(tsm.TSM):
 		predictions = np.zeros(h)
 		variances = np.zeros(h)
 
-		for step in xrange(0,h):
+		for step in range(0,h):
 			Xstar = []
 
-			for lag in xrange(0,self.max_lag):
+			for lag in range(0,self.max_lag):
 				if lag == 0:
 					if step == 0:
 						Xstar.append([self.data[self.data.shape[0]-1]])
@@ -211,7 +215,7 @@ class GPNARX(tsm.TSM):
 		"""
 
 		if self.kernel_type == 'ARD':
-			for lag in xrange(0,self.ar):
+			for lag in range(0,self.ar):
 				self.kernel.l[lag] = self._param_desc[1+lag]['prior'].transform(beta[1+lag])
 			self.kernel.tau = self._param_desc[len(self._param_desc)-1]['prior'].transform(beta[len(self._param_desc)-1])	
 		elif self.kernel_type == 'RQ':
@@ -230,7 +234,7 @@ class GPNARX(tsm.TSM):
 		The design matrix
 		"""		
 
-		for i in xrange(0,self.ar):
+		for i in range(0,self.ar):
 			datapoint = self.data_full[(self.max_lag-i-1):(self.data_full.shape[0]-i-1)]			
 			if i==0:
 				X = datapoint
@@ -426,7 +430,7 @@ class GPNARX(tsm.TSM):
 
 		predictions = []
 
-		for t in xrange(0,h):
+		for t in range(0,h):
 			x = GPNARX(ar=self.ar,kernel_type=self.kernel_type,integ=self.integ,data=self.data_original[0:(self.data_original.shape[0]-h+t)])
 			if t == 0:
 				x.fit(printer=False)

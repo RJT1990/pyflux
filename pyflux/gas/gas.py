@@ -1,9 +1,11 @@
 from math import exp, sqrt, log, tanh
+import sys
+if sys.version_info < (3,):
+    range = xrange
 
 import numpy as np
 import pandas as pd
 import scipy.stats as ss
-from scores import *
 from scipy import optimize
 import matplotlib.pyplot as plt
 import seaborn as sns
@@ -15,6 +17,8 @@ from .. import tests as tst
 from .. import tsm as tsm
 from .. import distributions as dst
 from .. import data_check as dc
+
+from .scores import *
 
 class GAS(tsm.TSM):
 	""" Inherits time series methods from TSM class.
@@ -79,31 +83,31 @@ class GAS(tsm.TSM):
 			self.param_no +=2
 
 		# Format the data
-		self.data, self.data_name, self.data_type, self.index = dc.data_check(data,target)
+		self.data, self.data_name, self.is_pandas, self.index = dc.data_check(data,target)
 		self.data_original = self.data.copy()
 
 		# Difference data
-		for order in xrange(0,self.integ):
+		for order in range(0,self.integ):
 			self.data = np.diff(self.data)
 			self.data_name = "Differenced " + self.data_name
 
 		# Add parameter information
 
-		self._param_desc.append({'name' : 'Constant', 'index': 0, 'prior': ifr.Normal(0,3,transform=None), 'q': dst.Normal(0,3)})		
+		self._param_desc.append({'name' : 'Constant', 'index': 0, 'prior': ifr.Normal(0,3,transform=None), 'q': dst.q_Normal(0,3)})		
 		
 		# AR priors
 		
 		for j in range(1,self.ar+1):
-			self._param_desc.append({'name' : 'AR(' + str(j) + ')', 'index': j, 'prior': ifr.Normal(0,0.5,transform=None), 'q': dst.Normal(0,3)})
+			self._param_desc.append({'name' : 'AR(' + str(j) + ')', 'index': j, 'prior': ifr.Normal(0,0.5,transform=None), 'q': dst.q_Normal(0,3)})
 		
 		for k in range(self.ar+1,self.ar+self.sc+1):
-			self._param_desc.append({'name' : 'SC(' + str(k-self.ar) + ')', 'index': k, 'prior': ifr.Normal(0,0.5,transform=None), 'q': dst.Normal(0,3)})
+			self._param_desc.append({'name' : 'SC(' + str(k-self.ar) + ')', 'index': k, 'prior': ifr.Normal(0,0.5,transform=None), 'q': dst.q_Normal(0,3)})
 	
 		if self.dist == 't':
-			self._param_desc.append({'name' : 'v','index': len(self._param_desc), 'prior': ifr.Uniform(transform='exp'), 'q': dst.Normal(0,3)})			
+			self._param_desc.append({'name' : 'v','index': len(self._param_desc), 'prior': ifr.Uniform(transform='exp'), 'q': dst.q_Normal(0,3)})			
 
 		if self.scale is True:
-			self._param_desc.append({'name' : 'Scale','index': self.ar+self.sc+1, 'prior': ifr.Uniform(transform='exp'), 'q': dst.Normal(0,3)})
+			self._param_desc.append({'name' : 'Scale','index': self.ar+self.sc+1, 'prior': ifr.Uniform(transform='exp'), 'q': dst.q_Normal(0,3)})
 
 		# Starting Parameters for Estimation
 		self.starting_params = np.zeros(self.param_no)
@@ -134,7 +138,7 @@ class GAS(tsm.TSM):
 
 		Y = np.array(self.data[self.max_lag:self.data.shape[0]])
 		scores = np.zeros(Y.shape[0])
- 		parm = np.array([self._param_desc[k]['prior'].transform(beta[k]) for k in range(beta.shape[0])])
+		parm = np.array([self._param_desc[k]['prior'].transform(beta[k]) for k in range(beta.shape[0])])
 		theta = np.ones(Y.shape[0])*parm[0]
 
 		# Check if model has scale parameter
@@ -149,7 +153,7 @@ class GAS(tsm.TSM):
 			model_v = 0
 
 		# Loop over time series
-		for t in xrange(0,Y.shape[0]):
+		for t in range(0,Y.shape[0]):
 
 			if t < self.max_lag:
 
@@ -157,11 +161,11 @@ class GAS(tsm.TSM):
 			else:
 
 				# Loop over AR terms
-				for ar_term in xrange(0,self.ar):
+				for ar_term in range(0,self.ar):
 					theta[t] += parm[1+ar_term]*theta[t-ar_term-1]
 
 				# Loop over Score terms
-				for sc_term in xrange(0,self.sc):
+				for sc_term in range(0,self.sc):
 					theta[t] += parm[1+self.ar+sc_term]*scores[t-sc_term-1]
 
 			# Calculate scores
@@ -200,15 +204,15 @@ class GAS(tsm.TSM):
 		scores_exp = scores.copy()
 
 		# Loop over h time periods			
-		for t in xrange(0,h):
+		for t in range(0,h):
 			new_value = t_params[0]
 
 			if self.ar != 0:
-				for j in xrange(1,self.ar+1):
+				for j in range(1,self.ar+1):
 					new_value += t_params[j]*theta_exp[theta_exp.shape[0]-j]
 
 			if self.sc != 0:
-				for k in xrange(1,self.sc+1):
+				for k in range(1,self.sc+1):
 					new_value += t_params[k+self.ar]*scores_exp[scores_exp.shape[0]-k]
 
 			Y_exp = np.append(Y_exp,[self.link(new_value)])
@@ -247,22 +251,22 @@ class GAS(tsm.TSM):
 
 		sim_vector = np.zeros([simulations,h])
 
-		for n in xrange(0,simulations):
+		for n in range(0,simulations):
 			# Create arrays to iteratre over		
 			Y_exp = Y.copy()
 			theta_exp = theta.copy()
 			scores_exp = scores.copy()
 
 			# Loop over h time periods			
-			for t in xrange(0,h):
+			for t in range(0,h):
 				new_value = t_params[0]
 
 				if self.ar != 0:
-					for j in xrange(1,self.ar+1):
+					for j in range(1,self.ar+1):
 						new_value += t_params[j]*theta_exp[theta_exp.shape[0]-j]
 
 				if self.sc != 0:
-					for k in xrange(1,self.sc+1):
+					for k in range(1,self.sc+1):
 						new_value += t_params[k+self.ar]*scores_exp[scores_exp.shape[0]-k]
 
 				if self.dist == "Normal":
@@ -412,8 +416,6 @@ class GAS(tsm.TSM):
 			plt.ylabel(self.data_name)
 			plt.show()
 
-			self.predictions = {'error_bars' : error_bars, 'forecasted_values' : forecasted_values, 'plot_values' : plot_values, 'plot_index': plot_index}
-
 	def predict_is(self,h=5):
 		""" Makes dynamic in-sample predictions with the estimated model
 
@@ -429,7 +431,7 @@ class GAS(tsm.TSM):
 
 		predictions = []
 
-		for t in xrange(0,h):
+		for t in range(0,h):
 			x = GAS(ar=self.ar,sc=self.sc,dist=self.dist,integ=self.integ,data=self.data_original[0:(self.data_original.shape[0]-h+t)])
 			x.fit(printer=False)
 			if t == 0:

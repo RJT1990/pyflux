@@ -101,7 +101,7 @@ Lists the current prior specification.
 
 **plot_fit()**
 
-Graphs the fit of the model.
+Graphs the fit of the model and the model components (level, trend, irregular...)
 
 **plot_predict(h)**
 

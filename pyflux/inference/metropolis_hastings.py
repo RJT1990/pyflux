@@ -1,5 +1,9 @@
 import numpy as np
 from math import exp
+import sys
+if sys.version_info < (3,):
+    range = xrange
+
 from scipy.stats import multivariate_normal
 
 class MetropolisHastings(object):
@@ -114,13 +118,13 @@ class MetropolisHastings(object):
 			crit = np.random.rand(sims_to_do,1)
 			post = multivariate_normal(np.zeros(self.param_no),self.cov_matrix)
 			rnums = post.rvs()*self.scale
-			for k in xrange(1,sims_to_do): 
+			for k in range(1,sims_to_do): 
 				rnums = np.vstack((rnums,post.rvs()*self.scale))
 
 			old_lik = -self.posterior(self.phi[0]) # Initial posterior
 
 			# Sampling time!
-			for i in xrange(1,sims_to_do):
+			for i in range(1,sims_to_do):
 				phi_prop = self.phi[i-1] + rnums[i]
 				post_prop = -self.posterior(phi_prop)
 				lik_rat = exp(post_prop - old_lik)
@@ -137,14 +141,14 @@ class MetropolisHastings(object):
 
 			print("Acceptance rate of Metropolis-Hastings is " + str(acceptance))
 
-		chain = np.array([self.phi[i][0] for i in xrange(0,self.phi.shape[0])])
-		for m in xrange(1,self.param_no):
-			chain = np.vstack((chain,[self.phi[i][m] for i in xrange(0,self.phi.shape[0])]))
+		chain = np.array([self.phi[i][0] for i in range(0,self.phi.shape[0])])
+		for m in range(1,self.param_no):
+			chain = np.vstack((chain,[self.phi[i][m] for i in range(0,self.phi.shape[0])]))
 
-		mean_est = np.array([np.mean(np.array([self.phi[i][j] for i in xrange(0,self.phi.shape[0])])) for j in range(self.param_no)])
-		median_est = np.array([np.median(np.array([self.phi[i][j] for i in xrange(0,self.phi.shape[0])])) for j in range(self.param_no)])
-		upper_95_est = np.array([np.percentile(np.array([self.phi[i][j] for i in xrange(0,self.phi.shape[0])]),95) for j in range(self.param_no)])
-		lower_95_est = np.array([np.percentile(np.array([self.phi[i][j] for i in xrange(0,self.phi.shape[0])]),5) for j in range(self.param_no)])
+		mean_est = np.array([np.mean(np.array([self.phi[i][j] for i in range(0,self.phi.shape[0])])) for j in range(self.param_no)])
+		median_est = np.array([np.median(np.array([self.phi[i][j] for i in range(0,self.phi.shape[0])])) for j in range(self.param_no)])
+		upper_95_est = np.array([np.percentile(np.array([self.phi[i][j] for i in range(0,self.phi.shape[0])]),95) for j in range(self.param_no)])
+		lower_95_est = np.array([np.percentile(np.array([self.phi[i][j] for i in range(0,self.phi.shape[0])]),5) for j in range(self.param_no)])
 
 		return chain, mean_est, median_est, upper_95_est, lower_95_est
 
@@ -209,12 +213,12 @@ class MetropolisHastings(object):
 			crit = np.random.rand(sims_to_do,1)
 			post = multivariate_normal(np.zeros(self.param_no),self.cov_matrix)
 			rnums = post.rvs()*self.scale
-			for k in xrange(1,sims_to_do): 
+			for k in range(1,sims_to_do): 
 				rnums = np.vstack((rnums,post.rvs()*self.scale))
 			old_lik = -self.posterior(self.phi[0],states[0,:,:]) # Initial posterior
 
 			# Sampling time!
-			for i in xrange(1,sims_to_do):
+			for i in range(1,sims_to_do):
 				phi_prop = self.phi[i-1] + rnums[i]
 				states_prop = smoother_weight*self.model.simulation_smoother(phi_prop) + (1-smoother_weight)*states[i-1,:,:]			
 				prop_post = -self.posterior(phi_prop,states_prop)
@@ -234,7 +238,6 @@ class MetropolisHastings(object):
 
 			print("Acceptance rate of Metropolis-Hastings is " + str(acceptance))
 
-
 		for state_number in range(self.model.state_no):
 			states_vector = states[:,state_number,:]
 
@@ -249,13 +252,13 @@ class MetropolisHastings(object):
 				state_upper_95 = np.array([state_upper_95,np.percentile(states_vector,95,axis=0)])
 				state_lower_95 = np.array([state_lower_95,np.percentile(states_vector,5,axis=0)])			
 
-		chain = np.array([self.phi[i][0] for i in xrange(0,self.phi.shape[0])])
-		for m in xrange(1,self.param_no):
-			chain = np.vstack((chain,[self.phi[i][m] for i in xrange(0,self.phi.shape[0])]))
+		chain = np.array([self.phi[i][0] for i in range(0,self.phi.shape[0])])
+		for m in range(1,self.param_no):
+			chain = np.vstack((chain,[self.phi[i][m] for i in range(0,self.phi.shape[0])]))
 
-		mean_est = np.array([np.mean(np.array([self.phi[i][j] for i in xrange(0,self.phi.shape[0])])) for j in range(self.param_no)])
-		median_est = np.array([np.median(np.array([self.phi[i][j] for i in xrange(0,self.phi.shape[0])])) for j in range(self.param_no)])
-		upper_95_est = np.array([np.percentile(np.array([self.phi[i][j] for i in xrange(0,self.phi.shape[0])]),95) for j in range(self.param_no)])
-		lower_95_est = np.array([np.percentile(np.array([self.phi[i][j] for i in xrange(0,self.phi.shape[0])]),5) for j in range(self.param_no)])
+		mean_est = np.array([np.mean(np.array([self.phi[i][j] for i in range(0,self.phi.shape[0])])) for j in range(self.param_no)])
+		median_est = np.array([np.median(np.array([self.phi[i][j] for i in range(0,self.phi.shape[0])])) for j in range(self.param_no)])
+		upper_95_est = np.array([np.percentile(np.array([self.phi[i][j] for i in range(0,self.phi.shape[0])]),95) for j in range(self.param_no)])
+		lower_95_est = np.array([np.percentile(np.array([self.phi[i][j] for i in range(0,self.phi.shape[0])]),5) for j in range(self.param_no)])
 
 		return chain, mean_est, median_est, upper_95_est, lower_95_est, states, state_mean, state_median, state_upper_95, state_lower_95

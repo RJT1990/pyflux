@@ -1,11 +1,19 @@
 from math import exp, log, tanh
 import numpy as np
 
+def ilogit(x):
+	return 1/(1+np.exp(-x))
+
+def logit(x):
+	return np.log(x) - np.log(1 - x)
+
 def transform_define(transform):
 	if transform == 'tanh':
 		return np.tanh
 	elif transform == 'exp':
 		return np.exp
+	elif transform == 'logit':
+		return ilogit
 	elif transform is None:
 		return np.array
 	else:
@@ -16,6 +24,8 @@ def itransform_define(transform):
 		return np.arctanh
 	elif transform == 'exp':
 		return np.log
+	elif transform == 'logit':
+		return logit
 	elif transform is None:
 		return np.array
 	else:

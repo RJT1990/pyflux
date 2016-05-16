@@ -4,7 +4,7 @@ import matplotlib.mlab as mlab
 import matplotlib.pyplot as plt
 import numpy as np
 
-class Normal(object):
+class q_Normal(object):
 
 	def __init__(self,loc,scale):
 		self.loc = loc

@@ -1,5 +1,8 @@
 from math import exp, sqrt, log, tanh
 import copy
+import sys
+if sys.version_info < (3,):
+    range = xrange
 
 import numpy as np
 from scipy import optimize
@@ -9,12 +12,11 @@ import seaborn as sns
 import numdifftools as nd
 import pandas as pd
 
-import covariances as cov
-import inference as ifr
-import arma as arma
-import output as op
-import tests as tst
-import distributions as dst
+from .covariances import acf
+from .inference import BBVI, MetropolisHastings, norm_post_sim, Normal, InverseGamma, Uniform
+from .output import TablePrinter
+from .tests import find_p_value
+from .distributions import q_Normal
 
 class TSM(object):
 	""" TSM PARENT CLASS
@@ -68,7 +70,7 @@ class TSM(object):
 		# Starting values for approximate distribution
 		for i in range(len(self._param_desc)):
 			approx_dist = self._param_desc[i]['q']
-			if isinstance(approx_dist, dst.Normal):
+			if isinstance(approx_dist, q_Normal):
 				self._param_desc[i]['q'].loc = self.params[i]
 				if len(self.ses) == 0:
 					self._param_desc[i]['q'].scale = -3.0
@@ -76,7 +78,7 @@ class TSM(object):
 					self._param_desc[i]['q'].scale = log(self.ses[i])
 		q_list = [k['q'] for k in self._param_desc]
 		
-		bbvi_obj = ifr.BBVI(posterior,q_list,12,step,iterations)
+		bbvi_obj = BBVI(posterior,q_list,12,step,iterations)
 		q, q_params, q_ses = bbvi_obj.lambda_update()
 		self.params = q_params
 
@@ -139,7 +141,7 @@ class TSM(object):
 		self.fit(method='MAP',printer=False)
 		
 		if method == "M-H":
-			sampler = ifr.MetropolisHastings(self.posterior,scale,nsims,self.params,cov_matrix=cov_matrix,model_object=None)
+			sampler = MetropolisHastings(self.posterior,scale,nsims,self.params,cov_matrix=cov_matrix,model_object=None)
 			chain, mean_est, median_est, upper_95_est, lower_95_est = sampler.sample()
 		else:
 			raise Exception("Method not recognized!")
@@ -160,7 +162,7 @@ class TSM(object):
 			data = []
 
 			for i in range(len(self._param_desc)):
-				data.append({'param_name': self._param_desc[i]['name'], 'param_mean':round(mean_est[i],4), 'param_median':round(median_est[i],4), 'ci': "(" + str(round(lower_95_est[i],4)) + " | " + str(round(upper_95_est[i],4)) + ")"})
+				data.append({'param_name': self._param_desc[i]['name'], 'param_mean':np.round(mean_est[i],4), 'param_median':np.round(median_est[i],4), 'ci': "(" + str(np.round(lower_95_est[i],4)) + " | " + str(np.round(upper_95_est[i],4)) + ")"})
 
 		fmt = [
 			('Parameter','param_name',20),
@@ -178,9 +180,9 @@ class TSM(object):
 		print("Method: Metropolis-Hastings")
 		print("Number of simulations: " + str(nsims))
 		print("Number of observations: " + str(self.data_length.shape[0]-self.max_lag))
-		print("Unnormalized Log Posterior: " + str(round(-self.posterior(self.params),4)))
+		print("Unnormalized Log Posterior: " + str(np.round(-self.posterior(self.params),4)))
 		print("")
-		print( op.TablePrinter(fmt, ul='=')(data) )
+		print( TablePrinter(fmt, ul='=')(data) )
 
 		fig = plt.figure(figsize=figsize)
 
@@ -204,7 +206,7 @@ class TSM(object):
 					if iteration == 3:
 						plt.title('Cumulative Average')					
 				elif iteration in range(4,len(self.params)*4 + 1,4):
-					plt.bar(range(1,10),[cov.acf(chain[j],lag) for lag in range(1,10)])
+					plt.bar(range(1,10),[acf(chain[j],lag) for lag in range(1,10)])
 					if iteration == 4:
 						plt.title('ACF Plot')						
 		sns.plt.show()		
@@ -231,7 +233,7 @@ class TSM(object):
 		None (plots the posteriors)
 		"""
 
-		chain, mean_est, median_est, upper_95_est, lower_95_est = ifr.norm_post_sim(parameters,cov_matrix)
+		chain, mean_est, median_est, upper_95_est, lower_95_est = norm_post_sim(parameters,cov_matrix)
 
 		for k in range(len(chain)):
 			chain[k] = self._param_desc[k]['prior'].transform(chain[k])
@@ -248,7 +250,7 @@ class TSM(object):
 			data = []
 
 			for i in range(len(self._param_desc)):
-				data.append({'param_name': self._param_desc[i]['name'], 'param_mean': round(mean_est[i],4), 'param_median': round(median_est[i],4), 'ci':  "(" + str(round(lower_95_est[i],4)) + " | " + str(round(upper_95_est[i],4)) + ")"})
+				data.append({'param_name': self._param_desc[i]['name'], 'param_mean': np.round(mean_est[i],4), 'param_median': np.round(median_est[i],4), 'ci':  "(" + str(np.round(lower_95_est[i],4)) + " | " + str(np.round(upper_95_est[i],4)) + ")"})
 
 			fmt = [
 				('Parameter','param_name',20),
@@ -265,10 +267,10 @@ class TSM(object):
 			print("==================")
 			print("Method: " + method_name + " Approximation")
 			print("Number of observations: " + str(self.data_length.shape[0]-self.max_lag))				
-			print("Unnormalized Log Posterior: " + str(round(-self.posterior(mean_est),4)))
+			print("Unnormalized Log Posterior: " + str(np.round(-self.posterior(mean_est),4)))
 			print("")
 
-			print( op.TablePrinter(fmt, ul='=')(data) )
+			print( TablePrinter(fmt, ul='=')(data) )
 		
 		# Plot densities
 		for j in range(len(self.params)):
@@ -310,7 +312,7 @@ class TSM(object):
 		t_p_std = self.ses.copy() # vector for transformed standard errors
 			
 		# Create transformed variables
-		for k in range(len(t_params)-self._param_hide):
+		for k in range(len(t_params)-int(self._param_hide)):
 			z_temp = (self.params[k]/float(self.ses[k]))
 			t_params[k] = self._param_desc[k]['prior'].transform(t_params[k])
 			t_p_std[k] = t_params[k] / z_temp
@@ -320,8 +322,8 @@ class TSM(object):
 
 			data = []
 
-			for i in range(len(self._param_desc)-self._param_hide):
-				data.append({'param_name': self._param_desc[i]['name'], 'param_value':round(self._param_desc[i]['prior'].transform(self.params[i]),4), 'param_std': round(t_p_std[i],4),'param_z': round(t_params[i]/float(t_p_std[i]),4),'param_p': round(tst.find_p_value(t_params[i]/float(t_p_std[i])),4),'ci': "(" + str(round(t_params[i] - t_p_std[i]*1.96,4)) + " | " + str(round(t_params[i] + t_p_std[i]*1.96,4)) + ")"})
+			for i in range(len(self._param_desc)-int(self._param_hide)):
+				data.append({'param_name': self._param_desc[i]['name'], 'param_value':np.round(self._param_desc[i]['prior'].transform(self.params[i]),4), 'param_std': np.round(t_p_std[i],4),'param_z': np.round(t_params[i]/float(t_p_std[i]),4),'param_p': np.round(find_p_value(t_params[i]/float(t_p_std[i])),4),'ci': "(" + str(np.round(t_params[i] - t_p_std[i]*1.96,4)) + " | " + str(np.round(t_params[i] + t_p_std[i]*1.96,4)) + ")"})
 
 			fmt = [
 			    ('Parameter',       'param_name',   40),
@@ -341,11 +343,11 @@ class TSM(object):
 			print("==================")
 			print("Method: OLS")
 			print("Number of observations: " + str(self.data_length.shape[0]-self.max_lag))
-			print("Log Likelihood: " + str(round(-self.likelihood(self.params),4)))
-			print("AIC: " + str(round(2*len(self.params)+2*self.likelihood(self.params),4)))
-			print("BIC: " + str(round(2*self.likelihood(self.params) + len(self.params)*log(self.data_length.shape[0]-self.max_lag),4)))
+			print("Log Likelihood: " + str(np.round(-self.likelihood(self.params),4)))
+			print("AIC: " + str(np.round(2*len(self.params)+2*self.likelihood(self.params),4)))
+			print("BIC: " + str(np.round(2*self.likelihood(self.params) + len(self.params)*log(self.data_length.shape[0]-self.max_lag),4)))
 			print("")
-			print( op.TablePrinter(fmt, ul='=')(data) )
+			print( TablePrinter(fmt, ul='=')(data) )
 
 	def _optimize_fit(self,obj_type=None,printer=True,**kwargs):
 		""" Performs optimization of an objective function
@@ -398,15 +400,15 @@ class TSM(object):
 					if self._param_desc[i]['prior'].transform == np.array:
 						data.append({
 							'param_name': self._param_desc[i]['name'], 
-							'param_value':round(self._param_desc[i]['prior'].transform(p.x[i]),rounding_points), 
-							'param_std': round(t_p_std[i],rounding_points),
-							'param_z': round(t_params[i]/float(t_p_std[i]),rounding_points),
-							'param_p': round(tst.find_p_value(t_params[i]/float(t_p_std[i])),rounding_points),
-							'ci': "(" + str(round(t_params[i] - t_p_std[i]*1.96,rounding_points)) + " | " + str(round(t_params[i] + t_p_std[i]*1.96,rounding_points)) + ")"})
+							'param_value':np.round(self._param_desc[i]['prior'].transform(p.x[i]),rounding_points), 
+							'param_std': np.round(t_p_std[i],rounding_points),
+							'param_z': np.round(t_params[i]/float(t_p_std[i]),rounding_points),
+							'param_p': np.round(find_p_value(t_params[i]/float(t_p_std[i])),rounding_points),
+							'ci': "(" + str(np.round(t_params[i] - t_p_std[i]*1.96,rounding_points)) + " | " + str(np.round(t_params[i] + t_p_std[i]*1.96,rounding_points)) + ")"})
 					else:
 						data.append({
 							'param_name': self._param_desc[i]['name'], 
-							'param_value':round(self._param_desc[i]['prior'].transform(p.x[i]),rounding_points)})						
+							'param_value':np.round(self._param_desc[i]['prior'].transform(p.x[i]),rounding_points)})						
 				fmt = [
 				    ('Parameter',       'param_name',   40),
 				    ('Estimate',          'param_value',       10),
@@ -433,7 +435,7 @@ class TSM(object):
 				data = []
 
 				for i in range(len(self._param_desc)):
-					data.append({'param_name': self._param_desc[i]['name'], 'param_value':round(self._param_desc[i]['prior'].transform(p.x[i]),4)})
+					data.append({'param_name': self._param_desc[i]['name'], 'param_value':np.round(self._param_desc[i]['prior'].transform(p.x[i]),4)})
 
 				fmt = [
 				    ('Parameter',       'param_name',   40),
@@ -455,18 +457,18 @@ class TSM(object):
 			else:
 				print("Number of observations: " + str(self.data.shape[0]-self.max_lag))
 			
-			print("Log Likelihood: " + str(round(-self.likelihood(p.x),4)))
+			print("Log Likelihood: " + str(np.round(-self.likelihood(p.x),4)))
 			if obj_type == self.posterior:
-				print("Unnormalized Log Posterior: " + str(round(-self.posterior(p.x),4)))
-			print("AIC: " + str(round(2*len(p.x)+2*self.likelihood(p.x),4)))
+				print("Unnormalized Log Posterior: " + str(np.round(-self.posterior(p.x),4)))
+			print("AIC: " + str(np.round(2*len(p.x)+2*self.likelihood(p.x),4)))
 
 			if self.model_type == 'VAR':
-				print("BIC: " + str(round(2*self.likelihood(p.x) + len(p.x)*log(self.data[0].shape[0]-self.max_lag),4)))
+				print("BIC: " + str(np.round(2*self.likelihood(p.x) + len(p.x)*log(self.data[0].shape[0]-self.max_lag),4)))
 			else:
-				print("BIC: " + str(round(2*self.likelihood(p.x) + len(p.x)*log(self.data.shape[0]-self.max_lag),4)))
+				print("BIC: " + str(np.round(2*self.likelihood(p.x) + len(p.x)*log(self.data.shape[0]-self.max_lag),4)))
 
 			print("")
-			print( op.TablePrinter(fmt, ul='=')(data) )
+			print( TablePrinter(fmt, ul='=')(data) )
 
 	def fit(self,method=None,printer=True,**kwargs):
 		""" Fits a model
@@ -521,7 +523,7 @@ class TSM(object):
 		"""
 
 		post = self.likelihood(beta)
-		for k in xrange(0,self.param_no):
+		for k in range(0,self.param_no):
 			post += -self._param_desc[k]['prior'].logpdf(beta[k])
 		return post
 
@@ -569,13 +571,13 @@ class TSM(object):
 		for i in range(self.param_no):
 			param_trans.append(self._param_desc[i]['prior'].transform_name)
 			x = self._param_desc[i]['prior']
-			if isinstance(x, ifr.Normal):
+			if isinstance(x, Normal):
 				prior_list.append('Normal')
 				prior_desc.append('mu0: ' + str(self._param_desc[i]['prior'].mu0) + ', sigma0: ' + str(self._param_desc[i]['prior'].sigma0))
-			elif isinstance(x, ifr.InverseGamma):
+			elif isinstance(x, InverseGamma):
 				prior_list.append('Inverse Gamma')
 				prior_desc.append('alpha: ' + str(self._param_desc[i]['prior'].alpha) + ', beta: ' + str(self._param_desc[i]['prior'].beta))
-			elif isinstance(x, ifr.Uniform):
+			elif isinstance(x, Uniform):
 				prior_list.append('Uniform')
 				prior_desc.append('n/a (non-informative)')
 			else:
@@ -593,7 +595,7 @@ class TSM(object):
 			('Prior Parameters', 'param_prior_params', 25),
 			('Transformation','param_trans',20)]
 		
-		print( op.TablePrinter(fmt, ul='=')(data) )
+		print( TablePrinter(fmt, ul='=')(data) )
 
 	def list_q(self):
 		""" Lists the current approximating distributions for variational inference
@@ -607,11 +609,11 @@ class TSM(object):
 
 		for i in range(self.param_no):
 			x = self._param_desc[i]['q']
-			if isinstance(x, dst.Normal):
+			if isinstance(x, q_Normal):
 				q_list.append('Normal')
-			elif isinstance(x, dst.InverseGamma):
+			elif isinstance(x, q_InverseGamma):
 				q_list.append('Inverse Gamma')
-			elif isinstance(x, dst.Uniform):
+			elif isinstance(x, q_Uniform):
 				q_list.append('Uniform')
 			else:
 				raise Exception("Error - prior distribution not detected!")
@@ -628,7 +630,7 @@ class TSM(object):
 
 		print("Approximate distributions for mean-field variational inference")
 		print("")
-		print( op.TablePrinter(fmt, ul='=')(data) )
+		print( TablePrinter(fmt, ul='=')(data) )
 
 	def shift_dates(self,h):
 		""" Auxiliary function for creating dates for forecasts
@@ -646,7 +648,7 @@ class TSM(object):
 		date_index = copy.deepcopy(self.index)
 		date_index = date_index[self.max_lag:len(date_index)]
 
-		if self.data_type == 'pandas':
+		if self.is_pandas is True:
 
 			if isinstance(date_index,pd.tseries.index.DatetimeIndex):
 
@@ -660,7 +662,8 @@ class TSM(object):
 					new_value = date_index.values[len(date_index.values)-1] + (date_index.values[len(date_index.values)-1] - date_index.values[len(date_index.values)-2])
 					date_index = pd.Int64Index(np.append(date_index.values,new_value))
 
-		elif self.data_type == 'numpy':
+		else:
+
 			for t in range(h):
 				date_index.append(date_index[len(date_index)-1]+1)
 

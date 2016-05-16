@@ -1,4 +1,7 @@
 from math import exp, sqrt, log, tanh, pi
+import sys
+if sys.version_info < (3,):
+    range = xrange
 
 import numpy as np
 import pandas as pd
@@ -16,8 +19,8 @@ from .. import tsm as tsm
 from .. import data_check as dc
 from .. import covariances as cov
 
-from kalman import *
-from llm import *
+from .kalman import *
+from .llm import *
 
 class NLLEV(tsm.TSM):
 	""" Inherits time series methods from TSM class.
@@ -52,7 +55,7 @@ class NLLEV(tsm.TSM):
 		self.state_no = 1
 
 		# Format the data
-		self.data, self.data_name, self.data_type, self.index = dc.data_check(data,target)
+		self.data, self.data_name, self.is_pandas, self.index = dc.data_check(data,target)
 		self.data_original = self.data
 
 		# Difference data
@@ -66,7 +69,7 @@ class NLLEV(tsm.TSM):
 
 		# Add parameter information
 
-		self._param_desc.append({'name' : 'Sigma^2 level','index': 1, 'prior': ifr.Uniform(transform='exp'), 'q': dst.Normal(0,3)})
+		self._param_desc.append({'name' : 'Sigma^2 level','index': 1, 'prior': ifr.Uniform(transform='exp'), 'q': dst.q_Normal(0,3)})
 
 	def _model(self,data,beta):
 		""" Creates the structure of the model
@@ -202,8 +205,8 @@ class NLLEV(tsm.TSM):
 		"""		
 
 		x = NLLEV(data=data,integ=integ,target=target)
-		x._param_desc.append({'name' : 'Sigma^2 irregular','index': 2, 'prior': ifr.Uniform(transform='exp'), 'q': dst.Normal(0,3)})
-		x._param_desc.append({'name' : 'v','index': 3, 'prior': ifr.Uniform(transform='exp'), 'q': dst.Normal(0,3)})
+		x._param_desc.append({'name' : 'Sigma^2 irregular','index': 2, 'prior': ifr.Uniform(transform='exp'), 'q': dst.q_Normal(0,3)})
+		x._param_desc.append({'name' : 'v','index': 3, 'prior': ifr.Uniform(transform='exp'), 'q': dst.q_Normal(0,3)})
 		x._approximating_model = x._t_approximating_model
 		x.meas_likelihood = x.t_likelihood
 		x.model_name = "t-distributed Local Level Model"
@@ -302,7 +305,7 @@ class NLLEV(tsm.TSM):
 			data = []
 
 			for i in range(len(self._param_desc)):
-				data.append({'param_name': self._param_desc[i]['name'], 'param_mean':round(mean_est[i],4), 'param_median':round(median_est[i],4), 'ci': "(" + str(round(lower_95_est[i],4)) + " | " + str(round(upper_95_est[i],4)) + ")"})
+				data.append({'param_name': self._param_desc[i]['name'], 'param_mean':np.round(mean_est[i],4), 'param_median':np.round(median_est[i],4), 'ci': "(" + str(np.round(lower_95_est[i],4)) + " | " + str(np.round(upper_95_est[i],4)) + ")"})
 
 			fmt = [
 				('Parameter','param_name',20),
@@ -311,13 +314,13 @@ class NLLEV(tsm.TSM):
 				('95% Credibility Interval','ci',25)]
 
 
-			print self.model_name 
-			print "=================="
-			print "Method: Metropolis-Hastings"
-			print "Number of simulations: " + str(nsims)
-			print "Number of observations: " + str(len(self.data)-self.cutoff)
-			print "Unnormalized Log Posterior: " + str(round(-self.posterior(self.params,states),4))
-			print ""
+			print(self.model_name)
+			print("==================")
+			print("Method: Metropolis-Hastings")
+			print("Number of simulations: " + str(nsims))
+			print("Number of observations: " + str(len(self.data)-self.cutoff))
+			print("Unnormalized Log Posterior: " + str(np.round(-self.posterior(self.params,states),4)))
+			print("")
 			print( op.TablePrinter(fmt, ul='=')(data) )
 
 		fig = plt.figure(figsize=figsize)
@@ -391,7 +394,7 @@ class NLLEV(tsm.TSM):
 		"""
 
 		post = self.likelihood(beta,alpha)
-		for k in xrange(0,self.param_no):
+		for k in range(0,self.param_no):
 			post += -self._param_desc[k]['prior'].logpdf(beta[k])
 		return post		
 
@@ -409,7 +412,7 @@ class NLLEV(tsm.TSM):
 		Returns
 		----------
 		State likelihood
-		"""		
+		"""
 
 		_, _, _, Q = self._ss_matrices(beta)
 		residuals = alpha[0][1:alpha[0].shape[0]]-alpha[0][0:alpha[0].shape[0]-1]
@@ -449,7 +452,7 @@ class NLLEV(tsm.TSM):
 		Poisson loglikelihood
 		"""		
 
-		return np.sum(ss.poisson.logpmf(self.data,np.exp(alpha)))
+		return np.sum(ss.poisson.logpmf(self.data,np.exp(alpha[0])))
 
 	def t_likelihood(self,beta,alpha):
 		""" Creates t loglikelihood of the date given the states
@@ -467,7 +470,7 @@ class NLLEV(tsm.TSM):
 		t loglikelihood
 		"""		
 
-		return np.sum(ss.t.logpdf(x=self.data,df=self._param_desc[2]['prior'].transform(beta[2]),loc=alpha,scale=self._param_desc[1]['prior'].transform(beta[1])))
+		return np.sum(ss.t.logpdf(x=self.data,df=self._param_desc[2]['prior'].transform(beta[2]),loc=alpha[0],scale=self._param_desc[1]['prior'].transform(beta[1])))
 
 	def plot_predict(self,h=5,past_values=20,intervals=True,**kwargs):		
 		""" Makes forecast with the estimated model
@@ -500,11 +503,11 @@ class NLLEV(tsm.TSM):
 			simulations = 10000
 			sim_vector = np.zeros([simulations,h])
 
-			for n in xrange(0,simulations):	
+			for n in range(0,simulations):	
 				rnd_q = np.random.normal(0,np.sqrt(self._param_desc[0]['prior'].transform(self.params[0])),h)	
 				exp = forecasted_values.copy()
 
-				for t in xrange(0,h):
+				for t in range(0,h):
 					if t == 0:
 						exp[t] = forecasted_values[t] + rnd_q[t]
 					else:
@@ -609,7 +612,7 @@ class NLLEV(tsm.TSM):
 
 		predictions = []
 
-		for t in xrange(0,h):
+		for t in range(0,h):
 			x = NLLEV(integ=self.integ,data=self.data_original[0:(self.data_original.shape[0]-h+t)])
 			x.fit(printer=False,nsims=100)
 			if t == 0:
@@ -676,7 +679,7 @@ class NLLEV(tsm.TSM):
 		a_plus = np.zeros((T.shape[0],self.data.shape[0])) 
 		y_plus = np.zeros(self.data.shape[0])
 
-		for t in xrange(0,self.data.shape[0]):
+		for t in range(0,self.data.shape[0]):
 			if t == 0:
 				a_plus[:,t] = np.dot(T,a_plus[:,t]) + rnd_q[t]
 				y_plus[t] = mu[t] + np.dot(Z,a_plus[:,t]) + rnd_h[t]

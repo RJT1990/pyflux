@@ -1,4 +1,7 @@
 from math import exp, sqrt, log, tanh
+import sys
+if sys.version_info < (3,):
+    range = xrange
 
 import numpy as np
 import pandas as pd
@@ -51,6 +54,7 @@ class EGARCH(tsm.TSM):
 		self.q = q
 		self.param_no = self.p + self.q + 2
 		self.max_lag = max(self.p,self.q)
+		self.leverage = False
 		self.model_name = "EGARCH(" + str(self.p) + "," + str(self.q) + ")"
 		self._hess_type = 'numerical'
 		self._param_hide = 0 # Whether to cutoff variance parameters from results
@@ -58,20 +62,20 @@ class EGARCH(tsm.TSM):
 		self.default_method = "MLE"
 
 		# Format the data
-		self.data, self.data_name, self.data_type, self.index = dc.data_check(data,target)
+		self.data, self.data_name, self.is_pandas, self.index = dc.data_check(data,target)
 
-		self._param_desc.append({'name' : 'Constant', 'index': 0, 'prior': ifr.Normal(0,3,transform=None), 'q': dst.Normal(0,3)})		
+		self._param_desc.append({'name' : 'Constant', 'index': 0, 'prior': ifr.Normal(0,3,transform=None), 'q': dst.q_Normal(0,3)})		
 		
 		# GARCH terms
 		for j in range(1,self.p+1):
-			self._param_desc.append({'name' : 'p(' + str(j) + ')', 'index': j, 'prior': ifr.Normal(0,0.5,transform=None), 'q': dst.Normal(0,3)})
+			self._param_desc.append({'name' : 'p(' + str(j) + ')', 'index': j, 'prior': ifr.Normal(0,0.5,transform=None), 'q': dst.q_Normal(0,3)})
 		
 		# SCORE terms
 		for k in range(self.p+1,self.p+self.q+1):
-			self._param_desc.append({'name' : 'q(' + str(k-self.q) + ')', 'index': k, 'prior': ifr.Normal(0,0.5,transform=None), 'q': dst.Normal(0,3)})
+			self._param_desc.append({'name' : 'q(' + str(k-self.q) + ')', 'index': k, 'prior': ifr.Normal(0,0.5,transform=None), 'q': dst.q_Normal(0,3)})
 
 		# For t-distribution
-		self._param_desc.append({'name' : 'v', 'index': self.q+self.p+1, 'prior': ifr.Uniform(transform='exp'), 'q': dst.Normal(0,3)})
+		self._param_desc.append({'name' : 'v', 'index': self.q+self.p+1, 'prior': ifr.Uniform(transform='exp'), 'q': dst.q_Normal(0,3)})
 
 		# Starting Parameters for Estimation
 		self.starting_params = np.zeros(self.param_no)
@@ -99,7 +103,7 @@ class EGARCH(tsm.TSM):
 
 		Y = np.array(self.data[self.max_lag:self.data.shape[0]])
 		X = np.ones(Y.shape[0])
- 		scores = np.zeros(Y.shape[0])
+		scores = np.zeros(Y.shape[0])
 
 		# Transform parameters
 		parm = np.array([self._param_desc[k]['prior'].transform(beta[k]) for k in range(beta.shape[0])])
@@ -107,7 +111,7 @@ class EGARCH(tsm.TSM):
 		lmda = np.ones(Y.shape[0])*parm[0]
 
 		# Loop over time series
-		for t in xrange(0,Y.shape[0]):
+		for t in range(0,Y.shape[0]):
 
 			if t < self.max_lag:
 
@@ -116,12 +120,15 @@ class EGARCH(tsm.TSM):
 			else:
 
 				# Loop over GARCH terms
-				for p_term in xrange(0,self.p):
+				for p_term in range(0,self.p):
 					lmda[t] += parm[1+p_term]*lmda[t-p_term-1]
 
 				# Loop over Score terms
-				for q_term in xrange(0,self.q):
+				for q_term in range(0,self.q):
 					lmda[t] += parm[1+self.p+p_term]*scores[t-q_term-1]
+
+				if self.leverage is True:
+					lmda[t] += parm[1+self.p+self.q]*np.sign(-Y[t-1])*(scores[t-1]+1)
 
 			scores[t] = gas.lik_score(Y[t],lmda[t],parm[len(parm)-1],0,'Beta-t')
 
@@ -155,21 +162,26 @@ class EGARCH(tsm.TSM):
 		# Create arrays to iteratre over
 		lmda_exp = lmda.copy()
 		scores_exp = scores.copy()
+		Y_exp = Y.copy()
 
 		# Loop over h time periods			
-		for t in xrange(0,h):
+		for t in range(0,h):
 			new_value = t_params[0]
 
 			if self.p != 0:
-				for j in xrange(1,self.p+1):
+				for j in range(1,self.p+1):
 					new_value += t_params[j]*lmda_exp[lmda_exp.shape[0]-j]
 
 			if self.q != 0:
-				for k in xrange(1,self.q+1):
+				for k in range(1,self.q+1):
 					new_value += t_params[k+self.p]*scores_exp[scores_exp.shape[0]-k]
+
+			if self.leverage is True:
+				new_value += t_params[1+self.p+self.q]*np.sign(-Y_exp[scores_exp.shape[0]-1])*(scores_exp[scores_exp.shape[0]-1]+1)
 
 			lmda_exp = np.append(lmda_exp,[new_value]) # For indexing consistency
 			scores_exp = np.append(scores_exp,[0]) # expectation of score is zero
+			Y_exp = np.append(Y_exp,[0])
 
 		return lmda_exp
 
@@ -203,25 +215,30 @@ class EGARCH(tsm.TSM):
 
 		sim_vector = np.zeros([simulations,h])
 
-		for n in xrange(0,simulations):
+		for n in range(0,simulations):
 			# Create arrays to iteratre over		
 			lmda_exp = lmda.copy()
 			scores_exp = scores.copy()
+			Y_exp = Y.copy()
 
 			# Loop over h time periods			
-			for t in xrange(0,h):
+			for t in range(0,h):
 				new_value = t_params[0]
 
 				if self.p != 0:
-					for j in xrange(1,self.p+1):
+					for j in range(1,self.p+1):
 						new_value += t_params[j]*lmda_exp[lmda_exp.shape[0]-j]
 
 				if self.q != 0:
-					for k in xrange(1,self.q+1):
+					for k in range(1,self.q+1):
 						new_value += t_params[k+self.p]*scores_exp[scores_exp.shape[0]-k]
+
+				if self.leverage is True:
+					new_value += t_params[1+self.p+self.q]*np.sign(-Y_exp[scores_exp.shape[0]-1])*(scores_exp[scores_exp.shape[0]-1]+1)
 
 				lmda_exp = np.append(lmda_exp,[new_value]) # For indexing consistency
 				scores_exp = np.append(scores_exp,scores[np.random.randint(scores.shape[0])]) # expectation of score is zero
+				Y_exp = np.append(Y_exp,Y[np.random.randint(Y.shape[0])]) # bootstrap returns
 
 			sim_vector[n] = lmda_exp[(lmda_exp.shape[0]-h):lmda_exp.shape[0]]
 
@@ -258,6 +275,15 @@ class EGARCH(tsm.TSM):
 		plot_values = mean_values[mean_values.shape[0]-h-past_values:mean_values.shape[0]]
 		plot_index = date_index[len(date_index)-h-past_values:len(date_index)]
 		return error_bars, forecasted_values, plot_values, plot_index
+
+	def add_leverage(self):
+		self.leverage = True
+		self.param_no += 1
+		self._param_desc.pop()
+		self._param_desc.append({'name' : 'Leverage term', 'index': self.q+self.p+1, 'prior': ifr.Uniform(transform=None), 'q': dst.q_Normal(0,3)})		
+		self._param_desc.append({'name' : 'v', 'index': self.q+self.p+2, 'prior': ifr.Uniform(transform='exp'), 'q': dst.q_Normal(0,3)})
+		self.starting_params = np.zeros(self.param_no)
+		self.starting_params[0] = self._param_desc[0]['prior'].itransform(np.log(np.mean(np.power(self.data,2))))
 
 	def likelihood(self,beta):
 		""" Creates the negative log-likelihood of the model
@@ -360,7 +386,7 @@ class EGARCH(tsm.TSM):
 
 		predictions = []
 
-		for t in xrange(0,h):
+		for t in range(0,h):
 			x = EGARCH(p=self.p,q=self.q,data=self.data[0:(self.data.shape[0]-h+t)])
 			x.fit(printer=False)
 			if t == 0:

@@ -11,6 +11,7 @@ from scipy import optimize
 import matplotlib.pyplot as plt
 import seaborn as sns
 import numdifftools as nd
+from patsy import dmatrices, dmatrix, demo_data
 
 from .. import inference as ifr
 from .. import distributions as dst
@@ -21,62 +22,58 @@ from .. import data_check as dc
 
 from .kalman import *
 
-class LLT(tsm.TSM):
+class DynLin(tsm.TSM):
 	""" Inherits time series methods from TSM class.
 
-	**** LOCAL LINEAR TREND MODEL ****
+	**** DYNAMIC LINEAR REGRESSION MODEL ****
 
 	Parameters
 	----------
-	data : pd.DataFrame or np.array
-		Field to specify the time series data that will be used.
 
-	integ : int (default : 0)
-		Specifies how many time to difference the time series.
+	formula : string
+		patsy string describing the regression
 
-	target : str (pd.DataFrame) or int (np.array)
-		Specifies which column name or array index to use. By default, first
-		column/array will be selected as the dependent variable.
+	data : pd.DataFrame
+		Field to specify the data that will be used
 	"""
 
-	def __init__(self,data,integ=0,target=None):
+	def __init__(self,formula,data):
 
 		# Initialize TSM object
-		super(LLT,self).__init__('LLT')
+		super(DynLin,self).__init__('DynLin')
 
 		# Parameters
-		self.integ = integ
-		self.param_no = 3
 		self.max_lag = 0
 		self._hess_type = 'numerical'
 		self._param_hide = 0 # Whether to cutoff variance parameters from results
 		self.supported_methods = ["MLE","MAP","Laplace","M-H","BBVI"]
 		self.default_method = "MLE"
-		self.model_name = "LLT"
+		self.model_name = "Dynamic Linear Regression"
 
 		# Format the data
-		self.data, self.data_name, self.is_pandas, self.index = dc.data_check(data,target)
-		self.data_original = self.data
-
-		# Difference data
-		X = self.data
-		for order in range(self.integ):
-			X = np.diff(X)
-			self.data_name = "Differenced " + self.data_name
-		self.data = X		
-		self.data_length = X
-		self.cutoff = 0
+		self.is_pandas = True # This is compulsory for this model type
+		self.data_original = data
+		self.formula = formula
+		self.y, self.X = dmatrices(formula, data)
+		self.param_no = self.X.shape[1] + 1
+		self.y_name = self.y.design_info.describe()
+		self.X_names = self.X.design_info.describe().split(" + ")
+		self.y = np.array([self.y]).ravel()
+		self.data = self.y
+		self.X = np.array([self.X])[0]
+		self.index = data.index
 
 		# Add parameter information
 
 		self._param_desc.append({'name' : 'Sigma^2 irregular','index': 0, 'prior': ifr.Uniform(transform='exp'), 'q': dst.q_Normal(0,3)})
-		self._param_desc.append({'name' : 'Sigma^2 level','index': 1, 'prior': ifr.Uniform(transform='exp'), 'q': dst.q_Normal(0,3)})
-		self._param_desc.append({'name' : 'Sigma^2 trend','index': 2, 'prior': ifr.Uniform(transform='exp'), 'q': dst.q_Normal(0,3)})
+
+		for parm in range(self.param_no-1):
+			self._param_desc.append({'name' : 'Sigma^2 ' + self.X_names[parm],'index': 1+parm, 'prior': ifr.Uniform(transform='exp'), 'q': dst.q_Normal(0,3)})
 
 		# Starting Parameters for Estimation
 		self.starting_params = np.zeros(self.param_no)	
 
-	def _forecast_model(self,beta,h):
+	def _forecast_model(self,beta,Z,h):
 		""" Creates forecasted states and variances
 
 		Parameters
@@ -93,8 +90,8 @@ class LLT(tsm.TSM):
 			Variance of forecasted states
 		"""		
 
-		T, Z, R, Q, H = self._ss_matrices(beta)
-		return univariate_kalman_fcst(self.data,Z,H,T,Q,R,0.0,h)
+		T, _, R, Q, H = self._ss_matrices(beta)
+		return dl_univariate_kalman_fcst(self.data,Z,H,T,Q,R,0.0,h)
 
 	def _model(self,data,beta):
 		""" Creates the structure of the model
@@ -115,7 +112,7 @@ class LLT(tsm.TSM):
 
 		T, Z, R, Q, H = self._ss_matrices(beta)
 
-		return univariate_kalman(data,Z,H,T,Q,R,0.0)
+		return dl_univariate_kalman(data,Z,H,T,Q,R,0.0)
 
 	def _ss_matrices(self,beta):
 		""" Creates the state space matrices required
@@ -131,17 +128,14 @@ class LLT(tsm.TSM):
 			State space matrices used in KFS algorithm
 		"""		
 
-		T = np.identity(2)
-		T[0][1] = 1
+		T = np.identity(self.param_no-1)
+		H = np.identity(1)*self._param_desc[0]['prior'].transform(beta[0])		
+		Z = self.X
+		R = np.identity(self.param_no-1)
 		
-		Z = np.zeros(2)
-		Z[0] = 1
-
-		R = np.identity(2)
-		Q = np.identity(2)
-		H = np.identity(1)*self._param_desc[0]['prior'].transform(beta[0])
-		Q[0][0] = self._param_desc[1]['prior'].transform(beta[1])
-		Q[1][1] = self._param_desc[2]['prior'].transform(beta[2])
+		Q = np.identity(self.param_no-1)
+		for i in range(0,self.param_no-1):
+			Q[i][i] = self._param_desc[i+1]['prior'].transform(beta[i+1])
 
 		return T, Z, R, Q, H
 
@@ -157,13 +151,13 @@ class LLT(tsm.TSM):
 		----------
 		The negative log logliklihood of the model
 		"""			
-		_, _, _, F, v = self._model(self.data,beta)
+		_, _, _, F, v = self._model(self.y,beta)
 		loglik = 0.0
-		for i in range(0,self.data.shape[0]):
+		for i in range(0,self.y.shape[0]):
 			loglik += np.linalg.slogdet(F[:,:,i])[1] + np.dot(v[i],np.dot(np.linalg.pinv(F[:,:,i]),v[i]))
-		return -(-((self.data.shape[0]/2)*log(2*pi))-0.5*loglik.T[0].sum())
+		return -(-((self.y.shape[0]/2)*log(2*pi))-0.5*loglik.T[0].sum())
 
-	def plot_predict(self,h=5,past_values=20,intervals=True,**kwargs):		
+	def plot_predict(self,h=5,past_values=20,intervals=True,oos_data=None,**kwargs):		
 		""" Makes forecast with the estimated model
 
 		Parameters
@@ -177,6 +171,9 @@ class LLT(tsm.TSM):
 		intervals : Boolean
 			Would you like to show 95% prediction intervals for the forecast?
 
+		oos_data : pd.DataFrame
+			Data for the variables to be used out of sample (ys can be NaNs)
+
 		Returns
 		----------
 		- Plot of the forecast
@@ -187,13 +184,26 @@ class LLT(tsm.TSM):
 		if len(self.params) == 0:
 			raise Exception("No parameters estimated!")
 		else:
+			# Sort/manipulate the out-of-sample data
+			_, X_oos = dmatrices(self.formula, oos_data)
+			X_oos = np.array([X_oos])[0]
+			full_X = self.X.copy()
+			full_X = np.append(full_X,X_oos,axis=0)
+			Z = full_X
+
 			# Retrieve data, dates and (transformed) parameters			
-			a, P = self._forecast_model(self.params,h)
+			a, P = self._forecast_model(self.params,Z,h)
+			smoothed_series = np.zeros(self.y.shape[0]+h)
+			series_variance = np.zeros(self.y.shape[0]+h)
+			for t in range(self.y.shape[0]+h):
+				smoothed_series[t] = np.dot(Z[t],a[:,t])
+				series_variance[t] = np.dot(np.dot(Z[t],P[:,:,t]),Z[t].T) + self._param_desc[0]['prior'].transform(self.params[0])	
+
 			date_index = self.shift_dates(h)
-			plot_values = a[0][a[0].shape[0]-h-past_values:a[0].shape[0]]
-			forecasted_values = a[0][a[0].shape[0]-h:a[0].shape[0]]
-			lower = forecasted_values - 1.98*np.power(P[0][0][P[0][0].shape[0]-h:P[0][0].shape[0]] + self._param_desc[0]['prior'].transform(self.params[0]),0.5)
-			upper = forecasted_values + 1.98*np.power(P[0][0][P[0][0].shape[0]-h:P[0][0].shape[0]] + self._param_desc[0]['prior'].transform(self.params[0]),0.5)
+			plot_values = smoothed_series[smoothed_series.shape[0]-h-past_values:smoothed_series.shape[0]]
+			forecasted_values = smoothed_series[smoothed_series.shape[0]-h:smoothed_series.shape[0]]
+			lower = forecasted_values - 1.98*np.power(series_variance[series_variance.shape[0]-h:series_variance.shape[0]],0.5)
+			upper = forecasted_values + 1.98*np.power(series_variance[series_variance.shape[0]-h:series_variance.shape[0]],0.5)
 			lower = np.append(plot_values[plot_values.shape[0]-h-1],lower)
 			upper = np.append(plot_values[plot_values.shape[0]-h-1],upper)
 
@@ -204,9 +214,9 @@ class LLT(tsm.TSM):
 				plt.fill_between(date_index[len(date_index)-h-1:len(date_index)], lower, upper, alpha=0.2)			
 
 			plt.plot(plot_index,plot_values)
-			plt.title("Forecast for " + self.data_name)
+			plt.title("Forecast for " + self.y_name)
 			plt.xlabel("Time")
-			plt.ylabel(self.data_name)
+			plt.ylabel(self.y_name)
 			plt.show()
 
 	def plot_fit(self,**kwargs):
@@ -224,46 +234,53 @@ class LLT(tsm.TSM):
 			raise Exception("No parameters estimated!")
 		else:
 			date_index = copy.deepcopy(self.index)
-			date_index = date_index[self.integ:self.data_original.shape[0]+1]
+			date_index = date_index[0:self.y.shape[0]+1]
 
 			if series_type == 'Smoothed':
-				mu = self.smoothed_state(self.data,self.params)
+				mu, V = self.smoothed_state(self.data,self.params)
 			elif series_type == 'Filtered':
 				mu, _, _, _, _ = self.model(self.data,self.params)
 			else:
-				mu = self.smoothed_state(self.data,self.params)
+				mu, V = self.smoothed_state(self.data,self.params)
 
-			mu0 = mu[0][0:mu[0].shape[0]-1]
-			mu1 = mu[1][0:mu[1].shape[0]-1]
-			
+			# Create smoothed/filtered aggregate series
+			_, Z, _, _, _ = self._ss_matrices(self.params)
+			smoothed_series = np.zeros(self.y.shape[0])
+
+			for t in range(0,self.y.shape[0]):
+				smoothed_series[t] = np.dot(Z[t],mu[:,t])
+
 			plt.figure(figsize=figsize)	
 			
-			plt.subplot(2, 2, 1)
-			plt.title(self.data_name + " Raw and " + series_type)	
+			plt.subplot(self.param_no+1, 1, 1)
+			plt.title(self.y_name + " Raw and " + series_type)	
 			plt.plot(date_index,self.data,label='Data')
-			plt.plot(date_index,mu0,label=series_type,c='black')
+			plt.plot(date_index,smoothed_series,label=series_type,c='black')
 			plt.legend(loc=2)
-			
-			plt.subplot(2, 2, 2)
-			plt.title(self.data_name + " Local Level")	
-			plt.plot(date_index,mu0)
-			
-			plt.subplot(2, 2, 3)
-			plt.title(self.data_name + " Trend")	
-			plt.plot(date_index,mu1)
-			
-			plt.subplot(2, 2, 4)
-			plt.title("Measurement Noise")	
-			plt.plot(date_index[1:self.data.shape[0]],self.data[1:self.data.shape[0]]-mu0[1:self.data.shape[0]])
-			plt.show()				
 
-	def predict(self,h=5):		
+			for coef in range(0,self.param_no-1):
+				plt.subplot(self.param_no+1, 1, 2+coef)
+				plt.title("Beta " + self.X_names[coef])	
+				plt.plot(date_index,mu[coef,0:mu.shape[1]-1],label='Data')
+				plt.legend(loc=2)				
+			
+			plt.subplot(self.param_no+1, 1, self.param_no+1)
+			plt.title("Measurement Error")
+			plt.plot(date_index,self.data-smoothed_series,label='Irregular')
+			plt.legend(loc=2)	
+
+			plt.show()	
+
+	def predict(self,h=5,oos_data=None):		
 		""" Makes forecast with the estimated model
 
 		Parameters
 		----------
 		h : int (default : 5)
 			How many steps ahead would you like to forecast?
+
+		oos_data : pd.DataFrame
+			Data for the variables to be used out of sample (ys can be NaNs)
 
 		Returns
 		----------
@@ -273,13 +290,23 @@ class LLT(tsm.TSM):
 		if len(self.params) == 0:
 			raise Exception("No parameters estimated!")
 		else:
-			# Retrieve data, dates and (transformed) parameters			
-			a, P = self._forecast_model(self.params,h)
-			date_index = self.shift_dates(h)
-			forecasted_values = a[0][a[0].shape[0]-h:a[0].shape[0]]
+			# Sort/manipulate the out-of-sample data
+			_, X_oos = dmatrices(self.formula, oos_data)
+			X_oos = np.array([X_oos])[0]
+			full_X = self.X.copy()
+			full_X = np.append(full_X,X_oos,axis=0)
+			Z = full_X
 
-			result = pd.DataFrame(forecasted_values)
-			result.rename(columns={0:self.data_name}, inplace=True)
+			# Retrieve data, dates and (transformed) parameters			
+			a, P = self._forecast_model(self.params,Z,h)
+			smoothed_series = np.zeros(h)
+			for t in range(h):
+				smoothed_series[t] = np.dot(Z[self.y.shape[0]+t],a[:,self.y.shape[0]+t])
+
+			date_index = self.shift_dates(h)
+
+			result = pd.DataFrame(smoothed_series)
+			result.rename(columns={0:self.y_name}, inplace=True)
 			result.index = date_index[len(date_index)-h:len(date_index)]
 
 			return result
@@ -300,14 +327,16 @@ class LLT(tsm.TSM):
 		predictions = []
 
 		for t in range(0,h):
-			x = LLT(integ=self.integ,data=self.data_original[0:(self.data_original.shape[0]-h+t)])
+			data1 = self.data_original.iloc[0:self.data_original.shape[0]-h+t,:]
+			data2 = self.data_original.iloc[self.data_original.shape[0]-h+t:self.data_original.shape[0],:]
+			x = DynLin(formula=self.formula,data=data1)
 			x.fit(printer=False)
 			if t == 0:
-				predictions = x.predict(1)
+				predictions = x.predict(1,oos_data=data2)
 			else:
-				predictions = pd.concat([predictions,x.predict(1)])
+				predictions = pd.concat([predictions,x.predict(h=1,oos_data=data2)])
 		
-		predictions.rename(columns={0:self.data_name}, inplace=True)
+		predictions.rename(columns={0:self.y_name}, inplace=True)
 		predictions.index = self.index[(len(self.index)-h):len(self.index)]
 
 		return predictions
@@ -333,7 +362,7 @@ class LLT(tsm.TSM):
 		data = self.data[(len(self.data)-h):len(self.data)]
 		plt.plot(predictions.index,data,label='Data')
 		plt.plot(predictions.index,predictions,label='Predictions',c='black')
-		plt.title(self.data_name)
+		plt.title(self.y_name)
 		plt.legend(loc=2)	
 		plt.show()			
 
@@ -373,8 +402,8 @@ class LLT(tsm.TSM):
 					a_plus[:,t] = np.dot(T,a_plus[:,t-1]) + rnd_q[t,:]
 					y_plus[t] = np.dot(Z,a_plus[:,t]) + rnd_h[t]
 
-		alpha_hat = self.smoothed_state(self.data,beta)
-		alpha_hat_plus = self.smoothed_state(y_plus,beta)
+		alpha_hat, _ = self.smoothed_state(self.data,beta)
+		alpha_hat_plus, _ = self.smoothed_state(y_plus,beta)
 		alpha_tilde = alpha_hat - alpha_hat_plus + a_plus
 	
 		return alpha_tilde
@@ -397,5 +426,5 @@ class LLT(tsm.TSM):
 		"""			
 
 		T, Z, R, Q, H = self._ss_matrices(beta)
-		alpha, V = univariate_KFS(data,Z,H,T,Q,R,0.0)
-		return alpha
+		alpha, V = dl_univariate_KFS(data,Z,H,T,Q,R,0.0)
+		return alpha, V

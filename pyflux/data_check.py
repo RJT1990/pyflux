@@ -20,15 +20,15 @@ def data_check(data,target):
 	data_name : str
 		Name of the data
 	
-	data_type : str (Change to Boolean in future)
-		Whether numpy or pandas
+	is_pandas : Boolean
+		True if pandas data, else numpy
 	
 	data_index : np.array
 		The time indices for the data
 	"""
 
 	# Check pandas or numpy
-	if isinstance(data, pd.DataFrame):
+	if isinstance(data, pd.DataFrame) or isinstance(data, pd.core.frame.DataFrame):
 		data_index = data.index			
 		if target is None:
 			transformed_data = data.ix[:,0].values
@@ -36,29 +36,29 @@ def data_check(data,target):
 		else:
 			transformed_data = data[target].values			
 			data_name = str(target)					
-		data_type = 'pandas'
+		is_pandas = True
 		print(str(data_name) + " picked as target variable")
 		print("")
 		
 	elif isinstance(data, np.ndarray):
 		data_name = "Series"		
-		data_type = 'numpy'	
+		is_pandas = False
 		if any(isinstance(i, np.ndarray) for i in data):
 			if target is None:
 				transformed_data = data[0]			
-				data_index = range(len(data[0]))
+				data_index = list(range(len(data[0])))
 			else:
 				transformed_data = data[target]			
-				data_index = range(len(data[target]))
+				data_index = list(range(len(data[target])))
 			print("Nested list " + str(target) + " chosen as target variable")
 			print("")
 		else:
 			transformed_data = data					
-			data_index = range(len(data))
+			data_index = list(range(len(data)))
 	else:
 		raise Exception("The data input is not pandas or numpy compatible!")
 	
-	return transformed_data, data_name, data_type, data_index
+	return transformed_data, data_name, is_pandas, data_index
 
 def mv_data_check(data,check):
 	# Check pandas or numpy
@@ -67,17 +67,17 @@ def mv_data_check(data,check):
 		data_index = data.index		
 		transformed_data = data.values
 		data_name = data.columns.values
-		data_type = 'pandas'
+		is_pandas = True
 		print(str(data_name) + " picked as target variables")
 		print("")
 
 	elif isinstance(data, np.ndarray):
 		data_name = np.asarray(range(1,len(data[0])+1))	
-		data_type= 'numpy'	
+		is_pandas = False
 		transformed_data = data
-		data_index = range(len(data[0]))
+		data_index = list(range(len(data[0])))
 
 	else:
 		raise Exception("The data input is not pandas or numpy compatible!")
 
-	return transformed_data, data_name, data_type, data_index
+	return transformed_data, data_name, is_pandas, data_index

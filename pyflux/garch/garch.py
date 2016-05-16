@@ -1,4 +1,7 @@
 from math import exp, sqrt, log, tanh
+import sys
+if sys.version_info < (3,):
+    range = xrange
 
 import numpy as np
 import pandas as pd
@@ -57,17 +60,17 @@ class GARCH(tsm.TSM):
 		self.default_method = "MLE"
 
 		# Format the data
-		self.data, self.data_name, self.data_type, self.index = dc.data_check(data,target)
+		self.data, self.data_name, self.is_pandas, self.index = dc.data_check(data,target)
 
-		self._param_desc.append({'name' : 'Constant', 'index': 0, 'prior': ifr.Normal(0,3,transform='exp'), 'q': dst.Normal(0,3)})		
+		self._param_desc.append({'name' : 'Constant', 'index': 0, 'prior': ifr.Normal(0,3,transform='exp'), 'q': dst.q_Normal(0,3)})		
 		
 		# ARCH terms e^2 (q)
 		for j in range(1,self.q+1):
-			self._param_desc.append({'name' : 'q(' + str(j) + ')', 'index': j, 'prior': ifr.Normal(0,0.5,transform=None), 'q': dst.Normal(0,3)})
+			self._param_desc.append({'name' : 'q(' + str(j) + ')', 'index': j, 'prior': ifr.Normal(0,0.5,transform=None), 'q': dst.q_Normal(0,3)})
 		
 		# GARCH terms sigma (p)
 		for k in range(self.q+1,self.p+self.q+1):
-			self._param_desc.append({'name' : 'p(' + str(k-self.q) + ')', 'index': k, 'prior': ifr.Normal(0,0.5,transform=None), 'q': dst.Normal(0,3)})
+			self._param_desc.append({'name' : 'p(' + str(k-self.q) + ')', 'index': k, 'prior': ifr.Normal(0,0.5,transform=None), 'q': dst.q_Normal(0,3)})
 
 		# Starting Parameters for Estimation
 		self.starting_params = np.ones(self.param_no)*0.00001
@@ -103,7 +106,7 @@ class GARCH(tsm.TSM):
 
 		# ARCH terms
 		if self.q != 0:
-			for i in xrange(0,self.q):	
+			for i in range(0,self.q):	
 				X = np.vstack((X,xeps[(self.max_lag-i-1):(xeps.shape[0]-i-1)]))
 			sigma2 = np.matmul(np.transpose(X),parm[0:parm.shape[0]-self.p])
 		else:
@@ -111,11 +114,11 @@ class GARCH(tsm.TSM):
 
 		# GARCH terms
 		if self.p != 0:
-			for t in xrange(0,Y.shape[0]):
+			for t in range(0,Y.shape[0]):
 				if t < self.max_lag:
 					sigma2[t] = parm[0]/(1-np.sum(parm[(self.q+1):(self.q+self.p+1)]))
 				elif t >= self.max_lag:
-					for k in xrange(0,self.p):
+					for k in range(0,self.p):
 						sigma2[t] += parm[1+self.q+k]*(sigma2[t-1-k])
 
 		return sigma2, Y, eps
@@ -150,17 +153,17 @@ class GARCH(tsm.TSM):
 		scores_exp = scores.copy()
 
 		# Loop over h time periods			
-		for t in xrange(0,h):
+		for t in range(0,h):
 			new_value = t_params[0]
 
 			# ARCH
 			if self.q != 0:
-				for j in xrange(1,self.q+1):
+				for j in range(1,self.q+1):
 					new_value += t_params[j]*scores_exp[scores_exp.shape[0]-j]
 
 			# GARCH
 			if self.p != 0:
-				for k in xrange(1,self.p+1):
+				for k in range(1,self.p+1):
 					new_value += t_params[k+self.q]*sigma2_exp[sigma2_exp.shape[0]-k]					
 
 			sigma2_exp = np.append(sigma2_exp,[new_value]) # For indexing consistency
@@ -198,21 +201,21 @@ class GARCH(tsm.TSM):
 
 		sim_vector = np.zeros([simulations,h])
 
-		for n in xrange(0,simulations):
+		for n in range(0,simulations):
 			# Create arrays to iteratre over		
 			sigma2_exp = sigma2.copy()
 			scores_exp = scores.copy()
 
 			# Loop over h time periods			
-			for t in xrange(0,h):
+			for t in range(0,h):
 				new_value = t_params[0]
 
 			if self.q != 0:
-				for j in xrange(1,self.q+1):
+				for j in range(1,self.q+1):
 					new_value += t_params[j]*scores_exp[scores_exp.shape[0]-j]
 
 			if self.p != 0:
-				for k in xrange(1,self.p+1):
+				for k in range(1,self.p+1):
 					new_value += t_params[k+self.q]*sigma2_exp[sigma2_exp.shape[0]-k]	
 
 				sigma2_exp = np.append(sigma2_exp,[new_value]) # For indexing consistency
@@ -353,7 +356,7 @@ class GARCH(tsm.TSM):
 
 		predictions = []
 
-		for t in xrange(0,h):
+		for t in range(0,h):
 			x = GARCH(p=self.p,q=self.q,data=self.data[0:(self.data.shape[0]-h+t)])
 			x.fit(printer=False)
 			if t == 0:

@@ -1,3 +1,7 @@
+import sys
+if sys.version_info < (3,):
+    range = xrange
+
 import numpy as np
 import numdifftools as nd
 import matplotlib.pyplot as plt
@@ -41,18 +45,9 @@ class BBVI(object):
 	def log_q(self,z):
 		z_t = np.transpose(z)
 		logq = np.zeros(self.sims)
-		for s in range(len(z[0])):
+		for s in range(z[0].shape[0]):
 			logq[s] = self.create_logq(z_t[s])
 		return logq
-
-	def simple_gradient(self,z):
-		lambda_grad = np.zeros(np.sum(self.approx_param_no))
-		log_q = self.log_q(z)
-		log_p = self.log_p(z)
-		grad_log_q = self.grad_log_q(z)
-		for lambda_i in range(np.sum(self.approx_param_no)):
-			lambda_grad[lambda_i] = np.mean(grad_log_q[lambda_i]*(log_p-log_q))
-		return lambda_grad
 
 	def cv_gradient(self,z):
 		gradient = np.zeros(np.sum(self.approx_param_no))
@@ -92,12 +87,14 @@ class BBVI(object):
 		final_parameters = self.current_parameters()
 		final_samples = 1
 		for i in range(self.iterations):
+			
 			# Draw variables and gradients
 			z = self.draw_variables()
 			gradient = self.cv_gradient(z)
 			gradient[np.isnan(gradient)] = 0
+			
 			# RMS prop
-			Gjj = 0.99*Gjj + 0.01*(gradient**2)
+			Gjj = 0.99*Gjj + 0.01*np.power(gradient,2)
 			new_parameters = self.current_parameters() + self.step*(gradient/np.sqrt(Gjj))	
 			self.change_parameters(new_parameters)
 

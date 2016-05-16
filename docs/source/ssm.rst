@@ -33,7 +33,7 @@ The **LLEV()** and **LLT()** model class has the following arguments:
 Class Attributes
 ----------
 
-THe **LLEV()** and **LLT()** model objects hold the following attributes:
+The **LLEV()** and **LLT()** model objects hold the following attributes:
 
 Model Attributes:
 

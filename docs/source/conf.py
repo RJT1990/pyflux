@@ -260,7 +260,7 @@ man_pages = [
      [author], 1)
 ]
 
-# If true, show URL addresses after external links.
+# If true, show URL addresses aft er external links.
 #man_show_urls = False
 
 

@@ -1,4 +1,7 @@
 import numpy as np
+import sys
+if sys.version_info < (3,):
+    range = xrange
 
 class SquaredExponential(object):
 
@@ -12,8 +15,8 @@ class SquaredExponential(object):
 	def K(self):
 		K = np.zeros((self.X.shape[0],self.X.shape[0]))
 
-		for i in xrange(0,self.X.shape[0]):
-			for j in xrange(0,self.X.shape[0]):
+		for i in range(0,self.X.shape[0]):
+			for j in range(0,self.X.shape[0]):
 				# Due to Toeplitz structure
 				if i == j:
 					K[i,j] = self.tau
@@ -27,8 +30,8 @@ class SquaredExponential(object):
 	def Kstar(self,Xstar):
 		K = np.zeros((self.X.shape[0],Xstar.shape[0]))
 
-		for i in xrange(0,self.X.shape[0]):
-			for j in xrange(0,Xstar.shape[0]):
+		for i in range(0,self.X.shape[0]):
+			for j in range(0,Xstar.shape[0]):
 				# Due to Toeplitz structure
 				if i == j:
 					K[i,j] = self.tau
@@ -40,8 +43,8 @@ class SquaredExponential(object):
 	def Kstarstar(self,Xstar):
 		K = np.zeros((Xstar.shape[0],Xstar.shape[0]))
 
-		for i in xrange(0,Xstar.shape[0]):
-			for j in xrange(0,Xstar.shape[0]):
+		for i in range(0,Xstar.shape[0]):
+			for j in range(0,Xstar.shape[0]):
 				# Due to Toeplitz structure
 				if i == j:
 					K[i,j] = self.tau
@@ -62,8 +65,8 @@ class ARD(object):
 	def K(self):
 		K = np.zeros((self.X.shape[0],self.X.shape[0]))
 
-		for i in xrange(0,self.X.shape[0]):
-			for j in xrange(0,self.X.shape[0]):
+		for i in range(0,self.X.shape[0]):
+			for j in range(0,self.X.shape[0]):
 				# Due to Toeplitz structure
 				if i == j:
 					K[i,j] = self.tau
@@ -77,8 +80,8 @@ class ARD(object):
 	def Kstar(self,Xstar):
 		K = np.zeros((self.X.shape[0],Xstar.shape[0]))
 
-		for i in xrange(0,self.X.shape[0]):
-			for j in xrange(0,Xstar.shape[0]):
+		for i in range(0,self.X.shape[0]):
+			for j in range(0,Xstar.shape[0]):
 				# Due to Toeplitz structure
 				if i == j:
 					K[i,j] = self.tau
@@ -90,8 +93,8 @@ class ARD(object):
 	def Kstarstar(self,Xstar):
 		K = np.zeros((Xstar.shape[0],Xstar.shape[0]))
 
-		for i in xrange(0,Xstar.shape[0]):
-			for j in xrange(0,Xstar.shape[0]):
+		for i in range(0,Xstar.shape[0]):
+			for j in range(0,Xstar.shape[0]):
 				# Due to Toeplitz structure
 				if i == j:
 					K[i,j] = self.tau
@@ -114,8 +117,8 @@ class RationalQuadratic(object):
 	def K(self):
 		K = np.zeros((self.X.shape[0],self.X.shape[0]))
 
-		for i in xrange(0,self.X.shape[0]):
-			for j in xrange(0,self.X.shape[0]):
+		for i in range(0,self.X.shape[0]):
+			for j in range(0,self.X.shape[0]):
 				K[i,j] = self.tau*(1.0 + 0.5*np.sum(np.power(self.X[i] - self.X[j],2))/((self.l**2)*self.a))**-self.a
 
 		K = K + np.identity(K.shape[0])*(10**-10)
@@ -125,8 +128,8 @@ class RationalQuadratic(object):
 	def Kstar(self,Xstar):
 		K = np.zeros((self.X.shape[0],Xstar.shape[0]))
 
-		for i in xrange(0,self.X.shape[0]):
-			for j in xrange(0,Xstar.shape[0]):
+		for i in range(0,self.X.shape[0]):
+			for j in range(0,Xstar.shape[0]):
 				K[i,j] = self.tau*(1.0 + 0.5*np.sum(np.power(self.X[i] - Xstar[j],2))/((self.l**2)*self.a))**-self.a
 
 		return K
@@ -134,8 +137,8 @@ class RationalQuadratic(object):
 	def Kstarstar(self,Xstar):
 		K = np.zeros((Xstar.shape[0],Xstar.shape[0]))
 
-		for i in xrange(0,Xstar.shape[0]):
-			for j in xrange(0,Xstar.shape[0]):
+		for i in range(0,Xstar.shape[0]):
+			for j in range(0,Xstar.shape[0]):
 				K[i,j] = self.tau*(1.0 + 0.5*np.sum(np.power(Xstar[i] - Xstar[j],2))/((self.l**2)*self.a))**-self.a
 
 		return K
@@ -153,8 +156,8 @@ class OrnsteinUhlenbeck(object):
 	def K(self):
 		K = np.zeros((self.X.shape[0],self.X.shape[0]))
 
-		for i in xrange(0,self.X.shape[0]):
-			for j in xrange(0,self.X.shape[0]):
+		for i in range(0,self.X.shape[0]):
+			for j in range(0,self.X.shape[0]):
 				# Due to Toeplitz structure
 				if i == j:
 					K[i,j] = self.tau
@@ -168,8 +171,8 @@ class OrnsteinUhlenbeck(object):
 	def Kstar(self,Xstar):
 		K = np.zeros((self.X.shape[0],Xstar.shape[0]))
 
-		for i in xrange(0,self.X.shape[0]):
-			for j in xrange(0,Xstar.shape[0]):
+		for i in range(0,self.X.shape[0]):
+			for j in range(0,Xstar.shape[0]):
 				# Due to Toeplitz structure
 				if i == j:
 					K[i,j] = self.tau
@@ -181,8 +184,8 @@ class OrnsteinUhlenbeck(object):
 	def Kstarstar(self,Xstar):
 		K = np.zeros((Xstar.shape[0],Xstar.shape[0]))
 
-		for i in xrange(0,Xstar.shape[0]):
-			for j in xrange(0,Xstar.shape[0]):
+		for i in range(0,Xstar.shape[0]):
+			for j in range(0,Xstar.shape[0]):
 				# Due to Toeplitz structure
 				if i == j:
 					K[i,j] = self.tau
@@ -203,8 +206,8 @@ class Periodic(object):
 	def K(self):
 		K = np.zeros((self.X.shape[0],self.X.shape[0]))
 
-		for i in xrange(0,self.X.shape[0]):
-			for j in xrange(0,self.X.shape[0]):
+		for i in range(0,self.X.shape[0]):
+			for j in range(0,self.X.shape[0]):
 				# Due to Toeplitz structure
 				if i == j:
 					K[i,j] = self.tau
@@ -218,8 +221,8 @@ class Periodic(object):
 	def Kstar(self,Xstar):
 		K = np.zeros((self.X.shape[0],Xstar.shape[0]))
 
-		for i in xrange(0,self.X.shape[0]):
-			for j in xrange(0,Xstar.shape[0]):
+		for i in range(0,self.X.shape[0]):
+			for j in range(0,Xstar.shape[0]):
 				# Due to Toeplitz structure
 				if i == j:
 					K[i,j] = self.tau
@@ -231,8 +234,8 @@ class Periodic(object):
 	def Kstarstar(self,Xstar):
 		K = np.zeros((Xstar.shape[0],Xstar.shape[0]))
 
-		for i in xrange(0,Xstar.shape[0]):
-			for j in xrange(0,Xstar.shape[0]):
+		for i in range(0,Xstar.shape[0]):
+			for j in range(0,Xstar.shape[0]):
 				# Due to Toeplitz structure
 				if i == j:
 					K[i,j] = self.tau

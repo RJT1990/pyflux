@@ -1,3 +1,5 @@
+import sys
+
 # Credit to Hugh Bothwell from http://stackoverflow.com/questions/5084743/how-to-print-pretty-string-output-in-python
 class TablePrinter(object):
     "Print a list of dicts as a table"
@@ -17,7 +19,10 @@ class TablePrinter(object):
         self.width = {key:width for heading,key,width in fmt}
 
     def row(self, data):
-        return self.fmt.format(**{ k:str(data.get(k,''))[:w] for k,w in self.width.iteritems() })
+        if sys.version_info < (3,):
+            return self.fmt.format(**{ k:str(data.get(k,''))[:w] for k,w in self.width.iteritems() })
+        else:
+            return self.fmt.format(**{ k:str(data.get(k,''))[:w] for k,w in self.width.items() })
 
     def __call__(self, dataList):
         _r = self.row
