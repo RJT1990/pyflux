@@ -1,4 +1,3 @@
-from math import exp, sqrt, log, tanh
 import sys
 if sys.version_info < (3,):
     range = xrange
@@ -6,14 +5,11 @@ if sys.version_info < (3,):
 import numpy as np
 import pandas as pd
 import scipy.stats as ss
-from scipy import optimize
 import matplotlib.pyplot as plt
 import seaborn as sns
-import numdifftools as nd
 
+from ..parameter import Parameter, Parameters
 from .. import inference as ifr
-from .. import output as op
-from .. import tests as tst
 from .. import tsm as tsm
 from .. import distributions as dst
 from .. import data_check as dc
@@ -28,21 +24,13 @@ class GAS(tsm.TSM):
 	Parameters
 	----------
 	data : pd.DataFrame or np.array
-		Field to specify the time series data that will be used.
-
-	dist : str
-		Field to specify the distribution. Options include 'Normal',
-		'Laplace', 'Poisson', 'Exponential' and 't'.
+		Field to specify the univariate time series data that will be used.
 
 	ar : int
-		Field to specify how many AR terms the model will have. Warning:
-		higher-order lag specifications often fail to return for optimization
-		fitting methods (MLE/MAP).
+		Field to specify how many AR lags the model will have.
 
 	sc : int
-		Field to specify how many Score terms the model will have. Warning:
-		higher-order lag specifications often fail to return for optimization
-		fitting methods (MLE/MAP).
+		Field to specify how many score lags terms the model will have.
 
 	integ : int (default : 0)
 		Specifies how many time to difference the time series.
@@ -50,72 +38,115 @@ class GAS(tsm.TSM):
 	target : str (pd.DataFrame) or int (np.array)
 		Specifies which column name or array index to use. By default, first
 		column/array will be selected as the dependent variable.
+
+	gradient_only : Boolean (default: True)
+		If true, will only use gradient rather than second-order terms
+		to construct the modified score.
 	"""
 
-	def __init__(self,data,dist,ar,sc,integ=0,target=None):
+	def __init__(self,data,ar,sc,integ=0,target=None,gradient_only=False):
 
 		# Initialize TSM object		
 		super(GAS,self).__init__('GAS')
 
-		self.dist = dist
 		self.ar = ar
 		self.sc = sc
 		self.integ = integ
-		self.model_name = "GAS(" + str(self.ar) + "," + str(self.integ) + "," + str(self.sc) + ")"
 		self.param_no = self.ar + self.sc + 1
 		self.max_lag = max(self.ar,self.sc)
-		self._hess_type = 'numerical'
 		self._param_hide = 0 # Whether to cutoff variance parameters from results
-		self.supported_methods = ["MLE","MAP","Laplace","M-H","BBVI"]
+		self.supported_methods = ["MLE","PML","Laplace","M-H","BBVI"]
 		self.default_method = "MLE"
+		self.multivariate_model = False
 
-		# Target variable transformation
-		if self.dist in ['Normal','Laplace']:
-			self.link = np.array
-			self.scale = True
-			self.param_no += 1
-		elif self.dist in ['Poisson','Exponential']:
-			self.link = np.exp
-			self.scale = False
-		elif self.dist == 't':
-			self.link = np.array
-			self.scale = True
-			self.param_no +=2
-
-		# Format the data
 		self.data, self.data_name, self.is_pandas, self.index = dc.data_check(data,target)
 		self.data_original = self.data.copy()
 
-		# Difference data
 		for order in range(0,self.integ):
 			self.data = np.diff(self.data)
 			self.data_name = "Differenced " + self.data_name
 
-		# Add parameter information
+		self._create_model_matrices()
+		self._create_parameters()
 
-		self._param_desc.append({'name' : 'Constant', 'index': 0, 'prior': ifr.Normal(0,3,transform=None), 'q': dst.q_Normal(0,3)})		
-		
-		# AR priors
-		
-		for j in range(1,self.ar+1):
-			self._param_desc.append({'name' : 'AR(' + str(j) + ')', 'index': j, 'prior': ifr.Normal(0,0.5,transform=None), 'q': dst.q_Normal(0,3)})
-		
-		for k in range(self.ar+1,self.ar+self.sc+1):
-			self._param_desc.append({'name' : 'SC(' + str(k-self.ar) + ')', 'index': k, 'prior': ifr.Normal(0,0.5,transform=None), 'q': dst.q_Normal(0,3)})
-	
-		if self.dist == 't':
-			self._param_desc.append({'name' : 'v','index': len(self._param_desc), 'prior': ifr.Uniform(transform='exp'), 'q': dst.q_Normal(0,3)})			
+	def _bootstrap_scores(self,beta):
+		""" Bootstraps the filtered series
+
+		Returns
+		----------
+		theta_sample : np.array
+			sample of filtered series
+		"""		
+		thetas,_,scores = self._model(beta)
+		parm = np.array([self.parameters.parameter_list[k].prior.transform(beta[k]) for k in range(beta.shape[0])])
+		model_scale, model_shape = self._get_scale_and_shape(parm)
+		theta_sample = np.ones(self.model_Y.shape[0])*parm[0]
+		scores_sample = np.zeros(self.model_Y.shape[0])
+		pseudo_theta = np.append(thetas,self.score_function(self.model_Y[-1],thetas[-1],model_scale,model_shape))
+		sample_Y = self.draw_variable(self.link(pseudo_theta[1:]),model_scale,model_shape,self.model_Y.shape[0])
+
+		for t in range(0,self.model_Y.shape[0]):
+			if t < self.max_lag:
+				theta_sample[t] = parm[0]/(1-np.sum(parm[1:(self.ar+1)]))
+			else:
+				theta_sample[t] += np.dot(parm[1:1+self.ar],theta_sample[(t-self.ar):t][::-1]) + np.dot(parm[1+self.ar:1+self.ar+self.sc],scores_sample[(t-self.sc):t][::-1])
+
+			scores_sample[t] = self.score_function(sample_Y[t],self.link(theta_sample[t]),model_scale,model_shape)
+		return theta_sample
+
+	def _create_model_matrices(self):
+		""" Creates model matrices/vectors
+
+		Returns
+		----------
+		None (changes model attributes)
+		"""
+
+		self.model_Y = np.array(self.data[self.max_lag:self.data.shape[0]])
+		self.model_scores = np.zeros(self.model_Y.shape[0])
+
+	def _create_parameters(self):
+		""" Creates model parameters
+
+		Returns
+		----------
+		None (changes model attributes)
+		"""
+
+		self.parameters.add_parameter('Constant',ifr.Normal(0,3,transform=None),dst.q_Normal(0,3))
+
+		for ar_term in range(self.ar):
+			self.parameters.add_parameter('AR(' + str(ar_term+1) + ')',ifr.Normal(0,0.5,transform=None),dst.q_Normal(0,3))
+
+		for sc_term in range(self.sc):
+			self.parameters.add_parameter('SC(' + str(sc_term+1) + ')',ifr.Normal(0,0.5,transform=None),dst.q_Normal(0,3))
+
+	def _get_scale_and_shape(self,parm):
+		""" Obtains appropriate model scale and shape parameters
+
+		Parameters
+		----------
+		parm : np.array
+			Transformed parameter vector
+
+		Returns
+		----------
+		None (changes model attributes)
+		"""
 
 		if self.scale is True:
-			self._param_desc.append({'name' : 'Scale','index': self.ar+self.sc+1, 'prior': ifr.Uniform(transform='exp'), 'q': dst.q_Normal(0,3)})
+			if self.shape is True:
+				model_shape = parm[-1]	
+				model_scale = parm[-2]
+			else:
+				model_shape = 0
+				model_scale = parm[-1]
+		else:
+			model_scale = 0
+			model_shape = 0	
 
-		# Starting Parameters for Estimation
-		self.starting_params = np.zeros(self.param_no)
-		if self.dist in ['Laplace','Normal']:
-			self.starting_params[0] = np.mean(self.data)
-		elif self.dist == 'Poisson':
-			self.starting_params[0] = np.log(np.mean(self.data))
-			
+		return model_scale, model_shape
+
 	def _model(self,beta):
 		""" Creates the structure of the model
 
@@ -136,42 +167,20 @@ class GAS(tsm.TSM):
 			Contains the scores for the time series
 		"""
 
-		Y = np.array(self.data[self.max_lag:self.data.shape[0]])
-		scores = np.zeros(Y.shape[0])
-		parm = np.array([self._param_desc[k]['prior'].transform(beta[k]) for k in range(beta.shape[0])])
-		theta = np.ones(Y.shape[0])*parm[0]
-
-		# Check if model has scale parameter
-		if self.scale is True:
-			if self.dist == 't':
-				model_v = parm[parm.shape[0]-2]	
-			else:
-				model_v = 0		
-			model_scale = parm[parm.shape[0]-1]
-		else:
-			model_scale = 0
-			model_v = 0
+		parm = np.array([self.parameters.parameter_list[k].prior.transform(beta[k]) for k in range(beta.shape[0])])
+		theta = np.ones(self.model_Y.shape[0])*parm[0]
+		model_scale, model_shape = self._get_scale_and_shape(parm)
 
 		# Loop over time series
-		for t in range(0,Y.shape[0]):
-
+		for t in range(0,self.model_Y.shape[0]):
 			if t < self.max_lag:
-
 				theta[t] = parm[0]/(1-np.sum(parm[1:(self.ar+1)]))
 			else:
+				theta[t] += np.dot(parm[1:1+self.ar],theta[(t-self.ar):t][::-1]) + np.dot(parm[1+self.ar:1+self.ar+self.sc],self.model_scores[(t-self.sc):t][::-1])
 
-				# Loop over AR terms
-				for ar_term in range(0,self.ar):
-					theta[t] += parm[1+ar_term]*theta[t-ar_term-1]
+			self.model_scores[t] = self.score_function(self.model_Y[t],self.link(theta[t]),model_scale,model_shape)
 
-				# Loop over Score terms
-				for sc_term in range(0,self.sc):
-					theta[t] += parm[1+self.ar+sc_term]*scores[t-sc_term-1]
-
-			# Calculate scores
-			scores[t] = lik_score(Y[t],self.link(theta[t]),model_scale,model_v,self.dist)
-
-		return theta, Y, scores
+		return theta, self.model_Y, self.model_scores
 
 	def _mean_prediction(self,theta,Y,scores,h,t_params):
 		""" Creates a h-step ahead mean prediction
@@ -195,25 +204,25 @@ class GAS(tsm.TSM):
 
 		Returns
 		----------
-		h-length vector of mean predictions
+		Y_exp : np.array
+			Vector of past values and predictions 
 		"""		
 
-		# Create arrays to iteratre over
 		Y_exp = Y.copy()
 		theta_exp = theta.copy()
 		scores_exp = scores.copy()
 
-		# Loop over h time periods			
+		#(TODO: vectorize the inner construction here)		
 		for t in range(0,h):
 			new_value = t_params[0]
 
 			if self.ar != 0:
 				for j in range(1,self.ar+1):
-					new_value += t_params[j]*theta_exp[theta_exp.shape[0]-j]
+					new_value += t_params[j]*theta_exp[-j]
 
 			if self.sc != 0:
 				for k in range(1,self.sc+1):
-					new_value += t_params[k+self.ar]*scores_exp[scores_exp.shape[0]-k]
+					new_value += t_params[k+self.ar]*scores_exp[-k]
 
 			Y_exp = np.append(Y_exp,[self.link(new_value)])
 			theta_exp = np.append(theta_exp,[new_value]) # For indexing consistency
@@ -249,44 +258,36 @@ class GAS(tsm.TSM):
 		Matrix of simulations
 		"""		
 
+		model_scale, model_shape = self._get_scale_and_shape(t_params)
+
 		sim_vector = np.zeros([simulations,h])
 
 		for n in range(0,simulations):
-			# Create arrays to iteratre over		
 			Y_exp = Y.copy()
 			theta_exp = theta.copy()
 			scores_exp = scores.copy()
 
-			# Loop over h time periods			
+			#(TODO: vectorize the inner construction here)	
 			for t in range(0,h):
 				new_value = t_params[0]
 
 				if self.ar != 0:
 					for j in range(1,self.ar+1):
-						new_value += t_params[j]*theta_exp[theta_exp.shape[0]-j]
+						new_value += t_params[j]*theta_exp[-j]
 
 				if self.sc != 0:
 					for k in range(1,self.sc+1):
-						new_value += t_params[k+self.ar]*scores_exp[scores_exp.shape[0]-k]
+						new_value += t_params[k+self.ar]*scores_exp[-k]
 
-				if self.dist == "Normal":
-					rnd_value = np.random.normal(new_value, t_params[t_params.shape[0]-1], 1)[0]
-				elif self.dist == "Laplace":
-					rnd_value = np.random.laplace(new_value, t_params[t_params.shape[0]-1], 1)[0]
-				elif self.dist == "Poisson":
-					rnd_value = np.random.poisson(self.link(new_value), 1)[0]
-				elif self.dist == "Exponential":
-					rnd_value = np.random.exponential(1/self.link(new_value), 1)[0]
-				elif self.dist == 't':
-					rnd_value = new_value + t_params[t_params.shape[0]-1]*np.random.standard_t(t_params[t_params.shape[0]-2],1)[0]
-
+				rnd_value = self.draw_variable(self.link(new_value),model_scale,model_shape,1)[0]
 				Y_exp = np.append(Y_exp,[rnd_value])
 				theta_exp = np.append(theta_exp,[new_value]) # For indexing consistency
 				scores_exp = np.append(scores_exp,scores[np.random.randint(scores.shape[0])]) # expectation of score is zero
 
-			sim_vector[n] = Y_exp[(Y_exp.shape[0]-h):Y_exp.shape[0]]
+			sim_vector[n] = Y_exp[-h:]
 
 		return np.transpose(sim_vector)
+
 
 	def _summarize_simulations(self,mean_values,sim_vector,date_index,h,past_values):
 		""" Summarizes a simulation vector and a mean vector of predictions
@@ -315,39 +316,20 @@ class GAS(tsm.TSM):
 		error_bars = []
 		for pre in range(5,100,5):
 			error_bars.append(np.insert([np.percentile(i,pre) for i in sim_vector] - mean_values[(mean_values.shape[0]-h):(mean_values.shape[0])],0,0))
-		forecasted_values = mean_values[(mean_values.shape[0]-h-1):(mean_values.shape[0])]
-		plot_values = mean_values[mean_values.shape[0]-h-past_values:mean_values.shape[0]]
-		plot_index = date_index[len(date_index)-h-past_values:len(date_index)]
+		forecasted_values = mean_values[-h-1:]
+		plot_values = mean_values[-h-past_values:]
+		plot_index = date_index[-h-past_values:]
 		return error_bars, forecasted_values, plot_values, plot_index
 
-	def likelihood(self,beta):
-		""" Creates the negative log-likelihood of the model
-
-		Parameters
-		----------
-		beta : np.array
-			Contains untransformed starting values for parameters
-
-		Returns
-		----------
-		The negative logliklihood of the model
-		"""		
-
-		theta, Y, scores = self._model(beta)
-
-		if self.dist == "Laplace":
-			return -np.sum(ss.laplace.logpdf(Y,loc=theta,scale=self._param_desc[beta.shape[0]-1]['prior'].transform(beta[beta.shape[0]-1])))
-		elif self.dist == "Normal":
-			return -np.sum(ss.norm.logpdf(Y,loc=theta,scale=self._param_desc[beta.shape[0]-1]['prior'].transform(beta[beta.shape[0]-1])))	
-		elif self.dist == "Poisson":
-			return -np.sum(ss.poisson.logpmf(Y,self.link(theta)))
-		elif self.dist == "Exponential":
-			return -np.sum(ss.expon.logpdf(x=Y,scale=1/self.link(theta)))
-		elif self.dist == "t":
-			return -np.sum(ss.t.logpdf(x=Y,df=self._param_desc[beta.shape[0]-2]['prior'].transform(beta[beta.shape[0]-2]),loc=theta,scale=self._param_desc[beta.shape[0]-1]['prior'].transform(beta[beta.shape[0]-1])))
-
-	def plot_fit(self,**kwargs):
+	def plot_fit(self,intervals=False,**kwargs):
 		""" Plots the fit of the model
+
+		Notes
+		----------
+		Intervals are bootstrapped as follows: take the filtered values from the
+		algorithm (thetas). Use these thetas to generate a pseudo data stream from
+		the measurement density. Use the GAS algorithm and estimated parameters to
+		filter the pseudo data. Repeat this N times. 
 
 		Returns
 		----------
@@ -356,17 +338,40 @@ class GAS(tsm.TSM):
 
 		figsize = kwargs.get('figsize',(10,7))
 
-		if len(self.params) == 0:
+		if self.parameters.estimated is False:
 			raise Exception("No parameters estimated!")
 		else:
+			date_index = self.index[max(self.ar,self.sc):]
+			mu, Y, scores = self._model(self.parameters.get_parameter_values())
+
+			if intervals == True:
+				sim_vector = self.link([self._bootstrap_scores(self.parameters.get_parameter_values()) for i in range(1000)]).T
+				error_bars = []
+				error_bars.append(np.array([np.percentile(i,5) for i in sim_vector]))
+				error_bars.append(np.array([np.percentile(i,95) for i in sim_vector]))
+
 			plt.figure(figsize=figsize)
-			date_index = self.index[max(self.ar,self.sc):self.data.shape[0]]
-			mu, Y, scores = self._model(self.params)
+			plt.subplot(2,1,1)
+			plt.title("Model fit for " + self.data_name)
+
+			if intervals == True:
+				alpha =[0.15*i/float(100) for i in range(50,12,-2)]
+				plt.fill_between(date_index, error_bars[0], error_bars[1], alpha=0.15,label='95% C.I. for Bootstrapped GAS')	
 
 			plt.plot(date_index,Y,label='Data')
-			plt.plot(date_index,self.link(mu),label='Filter',c='black')
-			plt.title(self.data_name)
+			plt.plot(date_index,self.link(mu),label='GAS Filter',c='black')
 			plt.legend(loc=2)	
+
+			plt.subplot(2,1,2)
+			plt.title("Filtered values for " + self.data_name)
+
+			if intervals == True:
+				alpha =[0.15*i/float(100) for i in range(50,12,-2)]
+				plt.fill_between(date_index, error_bars[0], error_bars[1], alpha=0.15,label='95% C.I. for Bootstrapped GAS')	
+
+			plt.plot(date_index,self.link(mu),label='GAS Filter',c='black')
+			plt.legend(loc=2)	
+
 			plt.show()				
 	
 	def plot_predict(self,h=5,past_values=20,intervals=True,**kwargs):
@@ -390,12 +395,12 @@ class GAS(tsm.TSM):
 
 		figsize = kwargs.get('figsize',(10,7))
 
-		if len(self.params) == 0:
+		if self.parameters.estimated is False:
 			raise Exception("No parameters estimated!")
 		else:
 
 			# Retrieve data, dates and (transformed) parameters
-			theta, Y, scores = self._model(self.params)			
+			theta, Y, scores = self._model(self.parameters.get_parameter_values())			
 			date_index = self.shift_dates(h)
 			t_params = self.transform_parameters()
 
@@ -408,41 +413,14 @@ class GAS(tsm.TSM):
 			if intervals == True:
 				alpha =[0.15*i/float(100) for i in range(50,12,-2)]
 				for count, pre in enumerate(error_bars):
-					plt.fill_between(date_index[len(date_index)-h-1:len(date_index)], forecasted_values-pre, forecasted_values+pre,alpha=alpha[count])			
+					plt.fill_between(date_index[-h-1:], forecasted_values-pre, forecasted_values+pre,
+						alpha=alpha[count])			
 			
 			plt.plot(plot_index,plot_values)
 			plt.title("Forecast for " + self.data_name)
 			plt.xlabel("Time")
 			plt.ylabel(self.data_name)
 			plt.show()
-
-	def predict_is(self,h=5):
-		""" Makes dynamic in-sample predictions with the estimated model
-
-		Parameters
-		----------
-		h : int (default : 5)
-			How many steps would you like to forecast?
-
-		Returns
-		----------
-		- pd.DataFrame with predicted values
-		"""		
-
-		predictions = []
-
-		for t in range(0,h):
-			x = GAS(ar=self.ar,sc=self.sc,dist=self.dist,integ=self.integ,data=self.data_original[0:(self.data_original.shape[0]-h+t)])
-			x.fit(printer=False)
-			if t == 0:
-				predictions = x.predict(1)
-			else:
-				predictions = pd.concat([predictions,x.predict(1)])
-		
-		predictions.rename(columns={0:self.data_name}, inplace=True)
-		predictions.index = self.index[(len(self.index)-h):len(self.index)]
-
-		return predictions
 
 	def plot_predict_is(self,h=5,**kwargs):
 		""" Plots forecasts with the estimated model against data
@@ -462,7 +440,7 @@ class GAS(tsm.TSM):
 
 		plt.figure(figsize=figsize)
 		predictions = self.predict_is(h)
-		data = self.data[(len(self.data)-h):len(self.data)]
+		data = self.data[-h:]
 
 		plt.plot(predictions.index,data,label='Data')
 		plt.plot(predictions.index,predictions,label='Predictions',c='black')
@@ -483,18 +461,18 @@ class GAS(tsm.TSM):
 		- pd.DataFrame with predicted values
 		"""		
 
-		if len(self.params) == 0:
+		if self.parameters.estimated is False:
 			raise Exception("No parameters estimated!")
 		else:
 
-			theta, Y, scores = self._model(self.params)			
+			theta, Y, scores = self._model(self.parameters.get_parameter_values())			
 			date_index = self.shift_dates(h)
 			t_params = self.transform_parameters()
 
 			mean_values = self._mean_prediction(theta,Y,scores,h,t_params)
-			forecasted_values = mean_values[(mean_values.shape[0]-h):mean_values.shape[0]]
+			forecasted_values = mean_values[-h:]
 			result = pd.DataFrame(forecasted_values)
 			result.rename(columns={0:self.data_name}, inplace=True)
-			result.index = date_index[(len(date_index)-h):len(date_index)]
+			result.index = date_index[-h:]
 
 			return result

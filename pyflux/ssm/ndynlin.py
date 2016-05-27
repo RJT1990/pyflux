@@ -6,8 +6,8 @@ import numpy as np
 import pandas as pd
 import scipy.stats as ss
 import matplotlib.pyplot as plt
-from matplotlib.animation import FuncAnimation, writers
 import seaborn as sns
+from patsy import dmatrices, dmatrix, demo_data
 
 from .. import inference as ifr
 from .. import distributions as dst
@@ -18,65 +18,51 @@ from .. import covariances as cov
 from .. import results as res
 
 from .kalman import *
-from .llm import *
+from .dynlin import *
 
-class NLLEV(tsm.TSM):
+class NDynLin(tsm.TSM):
 	""" Inherits time series methods from TSM class.
 
-	**** NON-GAUSSIAN LOCAL LEVEL MODEL ****
+	**** NON-GAUSSIAN DYNAMIC REGRESSION MODELS ****
 
 	Parameters
 	----------
-	data : pd.DataFrame or np.array
-		Field to specify the time series data that will be used.
 
-	integ : int (default : 0)
-		Specifies how many time to difference the time series.
+	formula : string
+		patsy string describing the regression
 
-	target : str (pd.DataFrame) or int (np.array)
-		Specifies which column name or array index to use. By default, first
-		column/array will be selected as the dependent variable.
+	data : pd.DataFrame
+		Field to specify the data that will be used
 	"""
 
-	def __init__(self,data,integ=0,target=None):
+	def __init__(self,formula,data):
 
 		# Initialize TSM object
-		super(NLLEV,self).__init__('NLLEV')
+		super(NDynLin,self).__init__('NDynLin')
 
 		# Parameters
-		self.integ = integ
 		self.max_lag = 0
 		self._param_hide = 0 # Whether to cutoff variance parameters from results
 		self.supported_methods = ["MLE","PML","Laplace","M-H","BBVI"]
 		self.default_method = "MLE"
 		self.multivariate_model = False
-		self.state_no = 1
 
 		# Format the data
-		self.data, self.data_name, self.is_pandas, self.index = dc.data_check(data,target)
-		self.data_original = self.data
-
-		# Difference data
-		X = self.data
-		for order in range(self.integ):
-			X = np.diff(X)
-			self.data_name = "Differenced " + self.data_name
-		self.data = X		
-		self.data_length = X
-		self.cutoff = 0
+		self.is_pandas = True # This is compulsory for this model type
+		self.data_original = data
+		self.formula = formula
+		self.y, self.X = dmatrices(formula, data)
+		self.param_no = self.X.shape[1]
+		self.y_name = self.y.design_info.describe()
+		self.data_name = self.y_name
+		self.X_names = self.X.design_info.describe().split(" + ")
+		self.y = np.array([self.y]).ravel()
+		self.data = self.y
+		self.X = np.array([self.X])[0]
+		self.index = data.index
+		self.state_no = self.X.shape[1]
 
 		self._create_parameters()
-
-	def _animate_bbvi(self,stored_parameters,stored_predictive_likelihood):
-		fig = plt.figure()
-		ax = fig.add_subplot(1, 1, 1)
-		ud = BBVINLLMAnimate(ax,self.data,stored_parameters,self.index,self.param_no,self.link)
-		anim = FuncAnimation(fig, ud, frames=np.arange(stored_parameters.shape[0]), init_func=ud.init,
-		        interval=10, blit=True)
-		plt.plot(self.data)
-		plt.xlabel("Time")
-		plt.ylabel(self.data_name)
-		plt.show()
 
 	def _create_parameters(self):
 		""" Creates model parameters
@@ -86,7 +72,8 @@ class NLLEV(tsm.TSM):
 		None (changes model attributes)
 		"""
 
-		self.parameters.add_parameter('Sigma^2 level',ifr.Uniform(transform='exp'),dst.q_Normal(0,3))
+		for parm in range(self.param_no):
+			self.parameters.add_parameter('Sigma^2 ' + self.X_names[parm],ifr.Uniform(transform='exp'),dst.q_Normal(0,3))
 
 	def _get_scale_and_shape(self):
 		if self.dist == 't':
@@ -115,7 +102,7 @@ class NLLEV(tsm.TSM):
 
 		T, Z, R, Q, H = self._ss_matrices(beta)
 
-		return univariate_kalman(data,Z,H,T,Q,R,0.0)
+		return nld_univariate_kalman(data,Z,H,T,Q,R,0.0)
 
 	def _ss_matrices(self,beta):
 		""" Creates the state space matrices required
@@ -131,15 +118,19 @@ class NLLEV(tsm.TSM):
 			State space matrices used in KFS algorithm
 		"""		
 
-		T = np.identity(1)
-		R = np.identity(1)
-		Z = np.identity(1)
-		Q = np.identity(1)*self.parameters.parameter_list[0].prior.transform(beta[0])
+
+		T = np.identity(self.state_no)
+		Z = self.X
+		R = np.identity(self.state_no)
+		
+		Q = np.identity(self.state_no)
+		for i in range(0,self.state_no):
+			Q[i][i] = self.parameters.parameter_list[i].prior.transform(beta[i])
 
 		return T, Z, R, Q
 
 	def _general_approximating_model(self,beta,T,Z,R,Q,h_approx):
-		""" Creates simplest kind of approximating Gaussian model
+		""" Creates simplest approximating model
 
 		Parameters
 		----------
@@ -198,15 +189,15 @@ class NLLEV(tsm.TSM):
 		else:
 			mu = np.zeros(self.data.shape[0])
 
-		alpha = np.array([np.zeros(self.data.shape[0])])
+		alpha = np.zeros([self.state_no, self.data.shape[0]])
 		tol = 100.0
 		it = 0
 		while tol > 10**-7 and it < 5:
-			old_alpha = alpha[0]
-			alpha, V = nl_univariate_KFS(self.data,Z,H,T,Q,R,mu)
-			H = np.exp(-alpha[0])
-			mu = self.data - alpha[0] - np.exp(-alpha[0])*(self.data - np.exp(alpha[0]))
-			tol = np.mean(np.abs(alpha[0]-old_alpha))
+			old_alpha = np.sum(self.X*alpha.T,axis=1)
+			alpha, V = nld_univariate_KFS(self.data,Z,H,T,Q,R,mu)
+			H = np.exp(-np.sum(self.X*alpha.T,axis=1))
+			mu = self.data - np.sum(self.X*alpha.T,axis=1) - np.exp(-np.sum(self.X*alpha.T,axis=1))*(self.data - np.exp(np.sum(self.X*alpha.T,axis=1)))
+			tol = np.mean(np.abs(np.sum(self.X*alpha.T,axis=1)-old_alpha))
 			it += 1
 
 		return H, mu
@@ -232,13 +223,13 @@ class NLLEV(tsm.TSM):
 			Approximating measurement constants
 		"""		
 
-		H = np.ones(self.data.shape[0])*self.parameters.parameter_list[1].prior.transform(beta[1])
+		H = np.ones(self.data.shape[0])*self.parameters.parameter_list[-1].prior.transform(beta[-1])
 		mu = np.zeros(self.data.shape[0])
 
 		return H, mu
 
 	@classmethod
-	def Exponential(cls,data,integ=0,target=None):
+	def Exponential(cls,formula,data):
 		""" Creates Exponential-distributed state space model
 
 		Parameters
@@ -255,18 +246,19 @@ class NLLEV(tsm.TSM):
 
 		Returns
 		----------
-		- NLLEV.Exponential object
+		- NDynLin.Exponential object
 		"""		
 
-		x = NLLEV(data=data,integ=integ,target=target)
+		x = NDynLin(formula=formula,data=data)
 		x.meas_likelihood = x.exponential_likelihood
-		x.model_name = "Exponential Local Level Model"	
+		x.model_name = "Exponential Dynamic Regression Model"	
 		x.dist = "Exponential"
-		x.param_no = 1	
 		x.link = np.exp
-		temp = LLEV(data,integ=integ,target=target)
+		temp = DynLin(formula=formula,data=data)
 		temp.fit()
-		x.parameters.set_parameter_starting_values(np.array([temp.parameters.get_parameter_values()[1]]))
+
+		for i in range(x.param_no):
+			x.parameters.parameter_list[i].start = temp.parameters.get_parameter_values()[i+1]
 
 		def approx_model(beta,T,Z,R,Q):
 			return x._general_approximating_model(beta,T,Z,R,Q,temp.parameters.get_parameter_values(transformed=True)[0])
@@ -276,12 +268,10 @@ class NLLEV(tsm.TSM):
 		def draw_variable(loc,scale,shape,nsims):
 			return np.random.exponential(1/loc, nsims)
 
-		x.draw_variable = draw_variable
-
 		return x
 
 	@classmethod
-	def Laplace(cls,data,integ=0,target=None):
+	def Laplace(cls,formula,data):
 		""" Creates Laplace-distributed state space model
 
 		Parameters
@@ -298,22 +288,25 @@ class NLLEV(tsm.TSM):
 
 		Returns
 		----------
-		- NLLEV.Laplace object
+		- NDynLin.Laplace object
 		"""		
 
-		x = NLLEV(data=data,integ=integ,target=target)
+		x = NDynLin(formula=formula,data=data)
 		
 		x.parameters.add_parameter('Laplace Scale',ifr.Uniform(transform='exp'),dst.q_Normal(0,3))
-
+		x.param_no += 1
 		x.meas_likelihood = x.laplace_likelihood
-		x.model_name = "Laplace Local Level Model"
+		x.model_name = "Laplace Dynamic Regression Model"	
 		x.dist = "Laplace"
-		x.param_no = 2	
 		x.link = np.array
-		temp = LLEV(data,integ=integ,target=target)
+		temp = DynLin(formula=formula,data=data)
 		temp.fit()
-		x.parameters.set_parameter_starting_values(np.array([temp.parameters.get_parameter_values()[1],2]))
-		
+
+		for i in range(x.param_no-1):
+			x.parameters.parameter_list[i].start = temp.parameters.get_parameter_values()[i+1]
+
+		x.parameters.parameter_list[-1].start = temp.parameters.get_parameter_values()[0]
+
 		def approx_model(beta,T,Z,R,Q):
 			return x._general_approximating_model(beta,T,Z,R,Q,temp.parameters.get_parameter_values(transformed=True)[0])
 
@@ -327,7 +320,7 @@ class NLLEV(tsm.TSM):
 		return x
 
 	@classmethod
-	def Poisson(cls,data,integ=0,target=None):
+	def Poisson(cls,formula,data):
 		""" Creates Poisson-distributed state space model
 
 		Parameters
@@ -344,19 +337,19 @@ class NLLEV(tsm.TSM):
 
 		Returns
 		----------
-		- NLLEV.Poisson object
+		- NDynLin.Poisson object
 		"""		
 
-		x = NLLEV(data=data,integ=integ,target=target)
+		x = NDynLin(formula=formula,data=data)
 		x._approximating_model = x._poisson_approximating_model
 		x.meas_likelihood = x.poisson_likelihood
-		x.model_name = "Poisson Local Level Model"	
+		x.model_name = "Poisson Dynamic Regression Model"	
 		x.dist = "Poisson"
-		x.param_no = 1	
 		x.link = np.exp
-		temp = LLEV(data,integ=integ,target=target)
+		temp = DynLin(formula=formula,data=data)
 		temp.fit()
-		x.parameters.set_parameter_starting_values(np.array([temp.parameters.get_parameter_values()[1]]))
+		for i in range(x.param_no):
+			x.parameters.parameter_list[i].start = temp.parameters.get_parameter_values()[i+1]
 
 		def draw_variable(loc,scale,shape,nsims):
 			return np.random.poisson(loc, nsims)
@@ -366,7 +359,7 @@ class NLLEV(tsm.TSM):
 		return x
 
 	@classmethod
-	def t(cls,data,integ=0,target=None):
+	def t(cls,formula,data):
 		""" Creates t-distributed state space model
 
 		Parameters
@@ -386,20 +379,25 @@ class NLLEV(tsm.TSM):
 		- NLLEV.t object
 		"""		
 
-		x = NLLEV(data=data,integ=integ,target=target)
+		x = NDynLin(formula=formula,data=data)
 		
 		x.parameters.add_parameter('Signal^2 irregular',ifr.Uniform(transform='exp'),dst.q_Normal(0,3))
 		x.parameters.add_parameter('v',ifr.Uniform(transform='exp'),dst.q_Normal(0,3))
+		x.param_no += 2
 
 		x._approximating_model = x._t_approximating_model
 		x.meas_likelihood = x.t_likelihood
-		x.model_name = "t-distributed Local Level Model"
+		x.model_name = "t-distributed Dynamic Regression Model"	
 		x.dist = "t"
-		x.param_no = 3	
 		x.link = np.array
-		temp = LLEV(data,integ=integ,target=target)
+		temp = DynLin(formula=formula,data=data)
 		temp.fit()
-		x.parameters.set_parameter_starting_values(np.array([temp.parameters.get_parameter_values()[1],temp.parameters.get_parameter_values()[0],2]))
+
+		for i in range(x.param_no-2):
+			x.parameters.parameter_list[i].start = temp.parameters.get_parameter_values()[i+1]
+
+		x.parameters.parameter_list[-1].start = 2.0
+		x.parameters.parameter_list[-2].start = temp.parameters.get_parameter_values()[0]
 
 		def draw_variable(loc,scale,shape,nsims):
 			return loc + scale*np.random.standard_t(shape,nsims)
@@ -466,8 +464,10 @@ class NLLEV(tsm.TSM):
 		"""
 
 		_, _, _, Q = self._ss_matrices(beta)
-		residuals = alpha[0][1:]-alpha[0][:-1]
-		return np.sum(ss.norm.logpdf(residuals,loc=0,scale=np.power(Q.ravel(),0.5)))
+		state_lik = 0
+		for i in range(alpha.shape[0]):
+			state_lik += np.sum(ss.norm.logpdf(alpha[i][1:]-alpha[i][:-1],loc=0,scale=np.power(Q[i][i],0.5))) 
+		return state_lik
 
 	def loglik(self,beta,alpha):
 		""" Creates negative loglikelihood of the model
@@ -489,12 +489,12 @@ class NLLEV(tsm.TSM):
 
 	def neg_loglik(self,beta):
 		states = np.zeros([self.state_no, self.data.shape[0]])
-		states[0,:] = beta[self.param_no:self.param_no+self.data.shape[0]] 
+		for state_i in range(self.state_no):
+			states[state_i,:] = beta[(self.param_no + (self.data.shape[0]*state_i)):(self.param_no + (self.data.shape[0]*(state_i+1)))]
 		return -self.loglik(beta[:self.param_no],states) 
 
-	def fit(self,step=0.001,iterations=3000,print_progress=True,start_diffuse=False,**kwargs):
-		return self._bbvi_fit(self.neg_logposterior,step=step,print_progress=print_progress,
-			start_diffuse=start_diffuse,iterations=iterations,**kwargs)
+	def fit(self,step=0.001,iterations=3000,print_progress=True,start_diffuse=False):
+		return self._bbvi_fit(self.neg_logposterior,step=step,print_progress=print_progress,start_diffuse=False,iterations=iterations)
 
 	def _bbvi_fit(self,posterior,step=0.001,iterations=3000,print_progress=True,start_diffuse=False,**kwargs):
 		""" Performs Black Box Variational Inference
@@ -515,8 +515,6 @@ class NLLEV(tsm.TSM):
 		BBVIResults object
 		"""
 
-		animate = kwargs.get('animate',False)
-
 		# Starting parameters
 		phi = self.parameters.get_parameter_starting_values()
 
@@ -531,40 +529,45 @@ class NLLEV(tsm.TSM):
 
 		# Get starting values for states
 		T, Z, R, Q = self._ss_matrices(phi)
+
 		H, mu = self._approximating_model(phi,T,Z,R,Q)
-		a, V = self.smoothed_state(self.data,phi,H,mu)
-		V[0][0][0] = V[0][0][-1] 
 
-		for item in range(self.data.shape[0]):
-			if start_diffuse is False:
-				q_list.append(dst.q_Normal(a[0][item],np.log(np.sqrt(np.abs(V[0][0][item])))))
-			else:
-				q_list.append(dst.q_Normal(0,np.log(np.sqrt(np.abs(V[0][0][item])))))
+		for state in range(self.state_no):
+			a, V = self.smoothed_state(self.data,phi,H,mu)
+			V[0][0][0] = V[0][0][-1] 
+			for item in range(self.data.shape[0]):
+				if start_diffuse is False:
+					q_list.append(dst.q_Normal(a[0][item],np.log(np.sqrt(np.abs(V[0][0][item])))))
+				else:
+					q_list.append(dst.q_Normal(0,np.log(np.sqrt(np.abs(V[0][0][item])))))
 
-		# PERFORM BBVI
 		bbvi_obj = ifr.BBVI(posterior,q_list,12,step,iterations)
+
 		if print_progress is False:
 			bbvi_obj.printer = False
-
-		if animate is True:
-			q, q_params, q_ses, stored_parameters, stored_predictive_likelihood = bbvi_obj.lambda_update_store()
-			self._animate_bbvi(stored_parameters,stored_predictive_likelihood)
-		else:
-			q, q_params, q_ses = bbvi_obj.lambda_update()
+		q, q_params, q_ses = bbvi_obj.lambda_update()
 
 		self.parameters.set_parameter_values(q_params[:self.param_no],'BBVI',np.exp(q_ses[:self.param_no]),None)	
 
-		# STORE RESULTS
 		for k in range(len(self.parameters.parameter_list)):
 			self.parameters.parameter_list[k].q = q[k]
 
-		theta = q_params[self.param_no:]
+		# Theta values and states
+		states = q_params[self.param_no:self.param_no+self.data.shape[0]]
+		states_var = np.exp(q_ses[self.param_no:self.param_no+self.data.shape[0]])
+
+		for state_i in range(1,self.state_no):
+			states = np.vstack((states,q_params[(self.param_no+(self.data.shape[0]*state_i)):(self.param_no+(self.data.shape[0]*(state_i+1)))]))
+			states_var = np.vstack((states_var,np.exp(q_ses[(self.param_no+(self.data.shape[0]*state_i)):(self.param_no+(self.data.shape[0]*(state_i+1)))])))
+
+		if self.state_no == 1:
+			states = np.array([states])
+			states_var = np.array([states_var])
+
+		theta = np.sum(self.X*states.T,axis=1)			
 		Y = self.data
 		scores = None
-		states = q_params[self.param_no:]
-		X_names = None
-		states_var = np.exp(q_ses[self.param_no:])
-
+		X_names = self.X_names
 		self.states = states
 		self.states_var = states_var
 
@@ -589,7 +592,7 @@ class NLLEV(tsm.TSM):
 		----------
 		Exponential loglikelihood
 		"""		
-		return np.sum(ss.expon.logpdf(self.data,1/np.exp(alpha[0])))
+		return np.sum(ss.expon.logpdf(self.data,1/np.exp(np.sum(self.X*alpha.T,axis=1))))
 
 	def laplace_likelihood(self,beta,alpha):
 		""" Creates Poisson loglikelihood of the data given the states
@@ -606,7 +609,7 @@ class NLLEV(tsm.TSM):
 		----------
 		Laplace loglikelihood
 		"""		
-		return np.sum(ss.laplace.logpdf(self.data,alpha[0],scale=self.parameters.parameter_list[-1].prior.transform(beta[-1])))
+		return np.sum(ss.laplace.logpdf(self.data,np.sum(self.X*alpha.T,axis=1),scale=self.parameters.parameter_list[-1].prior.transform(beta[-1])))
 
 	def poisson_likelihood(self,beta,alpha):
 		""" Creates Poisson loglikelihood of the data given the states
@@ -623,7 +626,7 @@ class NLLEV(tsm.TSM):
 		----------
 		Poisson loglikelihood
 		"""		
-		return np.sum(ss.poisson.logpmf(self.data,np.exp(alpha[0])))
+		return np.sum(ss.poisson.logpmf(self.data,np.exp(np.sum(self.X*alpha.T,axis=1))))
 
 	def t_likelihood(self,beta,alpha):
 		""" Creates t loglikelihood of the date given the states
@@ -640,13 +643,12 @@ class NLLEV(tsm.TSM):
 		----------
 		t loglikelihood
 		"""		
-
 		return np.sum(ss.t.logpdf(x=self.data,
-			df=self.parameters.parameter_list[2].prior.transform(beta[2]),
-			loc=alpha[0],
-			scale=self.parameters.parameter_list[1].prior.transform(beta[1])))
+			df=self.parameters.parameter_list[-1].prior.transform(beta[-1]),
+			loc=np.sum(self.X*alpha.T,axis=1),
+			scale=self.parameters.parameter_list[-2].prior.transform(beta[-2])))
 
-	def plot_predict(self,h=5,past_values=20,intervals=True,**kwargs):		
+	def plot_predict(self,h=5,past_values=20,intervals=True,oos_data=None,**kwargs):		
 		""" Makes forecast with the estimated model
 
 		Parameters
@@ -659,6 +661,9 @@ class NLLEV(tsm.TSM):
 
 		intervals : Boolean
 			Would you like to show 95% prediction intervals for the forecast?
+
+		oos_data : pd.DataFrame
+			OOS data to use; needs to be same format (columns) as original data
 
 		Returns
 		----------
@@ -673,26 +678,44 @@ class NLLEV(tsm.TSM):
 			# Retrieve data, dates and (transformed) parameters
 			scale, shape = self._get_scale_and_shape()
 
-			previous_value = self.data[-1]	
-			forecasted_values = np.ones(h)*self.states[-1]	
+			# Retrieve data, dates and (transformed) parameters
 			date_index = self.shift_dates(h)
 			simulations = 10000
 			sim_vector = np.zeros([simulations,h])
 
+			_, X_oos = dmatrices(self.formula, oos_data)
+			X_oos = np.array([X_oos])[0]
+			full_X = self.X.copy()
+			full_X = np.append(full_X,X_oos,axis=0)
+			Z = full_X
+			a = self.states
+
+			# Retrieve data, dates and (transformed) parameters			
+			smoothed_series = np.zeros(h)
+			for t in range(h):
+				smoothed_series[t] = self.link(np.dot(Z[self.y.shape[0]+t],a[:,-1]))
+
 			for n in range(0,simulations):	
-				rnd_q = np.random.normal(0,np.sqrt(self.parameters.get_parameter_values(transformed=True)[0]),h)	
-				exp = forecasted_values.copy()
+				rnd_q = np.zeros((self.state_no,h))
+				coeff_sim = np.zeros((self.state_no,h))
+
+				# TO DO: vectorize this (easy)
+				for state in range(self.state_no):
+					rnd_q[state] = np.random.normal(0,np.sqrt(self.parameters.get_parameter_values(transformed=True)[state]),h)
 
 				for t in range(0,h):
 					if t == 0:
-						exp[t] = forecasted_values[t] + rnd_q[t]
+						for state in range(self.state_no):
+							coeff_sim[state][t] = a[state][-1] + rnd_q[state][t]
 					else:
-						exp[t] = exp[t-1] + rnd_q[t]
+						for state in range(self.state_no):
+							coeff_sim[state][t] = coeff_sim[state][t-1] + rnd_q[state][t]
 
-				sim_vector[n] = self.draw_variable(loc=self.link(exp),shape=shape,scale=scale,nsims=exp.shape[0])
+				sim_vector[n] = self.draw_variable(loc=self.link(np.sum(coeff_sim.T*Z[self.y.shape[0]:self.y.shape[0]+h,:],axis=1)),shape=shape,scale=scale,nsims=h)
 
 			sim_vector = np.transpose(sim_vector)
-			forecasted_values = self.link(forecasted_values)
+			forecasted_values = smoothed_series
+			previous_value = self.data[-1]
 
 			plt.figure(figsize=figsize)	
 
@@ -712,6 +735,11 @@ class NLLEV(tsm.TSM):
 	def plot_fit(self,intervals=True,**kwargs):
 		""" Plots the fit of the model
 
+		Parameters
+		----------
+		intervals : Boolean
+			Whether to plot 95% confidence interval of states
+
 		Returns
 		----------
 		None (plots data and the fit)
@@ -723,40 +751,51 @@ class NLLEV(tsm.TSM):
 			raise Exception("No parameters estimated!")
 		else:
 			date_index = copy.deepcopy(self.index)
-			date_index = date_index[self.integ:self.data_original.shape[0]+1]
-			states_upper_95 = self.states + 1.98*np.sqrt(self.states_var)
-			states_lower_95 = self.states - 1.98*np.sqrt(self.states_var)
+			date_index = date_index[:self.y.shape[0]+1]
+
+			mu = self.states
+			var = self.states_var
+			# Create smoothed/filtered aggregate series
+			_, Z, _, _ = self._ss_matrices(self.parameters.get_parameter_values())
+			smoothed_series = np.zeros(self.y.shape[0])
+
+			for t in range(0,self.y.shape[0]):
+				smoothed_series[t] = np.dot(Z[t],mu[:,t])
+
 			plt.figure(figsize=figsize)	
 			
-			plt.subplot(2, 1, 1)
-			plt.title(self.data_name + " Raw and Smoothed")	
-
-			if intervals == True:
-				alpha =[0.15*i/float(100) for i in range(50,12,-2)]
-				plt.fill_between(date_index, self.link(states_lower_95), self.link(states_upper_95), alpha=0.15,label='95% C.I.')	
-
+			plt.subplot(self.state_no+1, 1, 1)
+			plt.title(self.y_name + " Raw and Smoothed")	
 			plt.plot(date_index,self.data,label='Data')
-			plt.plot(date_index,self.link(self.states),label='Smoothed',c='black')			
+			plt.plot(date_index,self.link(smoothed_series),label='Smoothed Series',c='black')
 			plt.legend(loc=2)
 			
-			plt.subplot(2, 1, 2)
-			plt.title(self.data_name + " Local Level")	
+			for coef in range(0,self.state_no):
+				V_coef = self.states_var[coef]
+				plt.subplot(self.state_no+1, 1, 2+coef)
+				plt.title("Beta " + self.X_names[coef])	
+				states_upper_95 = self.states[coef] + 1.98*np.sqrt(V_coef)
+				states_lower_95 = self.states[coef] - 1.98*np.sqrt(V_coef)
 
-			if intervals == True:
-				alpha =[0.15*i/float(100) for i in range(50,12,-2)]
-				plt.fill_between(date_index, self.link(states_lower_95), self.link(states_upper_95), alpha=0.15,label='95% C.I.')	
+				if intervals == True:
+					alpha =[0.15*i/float(100) for i in range(50,12,-2)]
+					plt.fill_between(date_index, states_lower_95, states_upper_95, alpha=0.15,label='95% C.I.')	
 
-			plt.plot(date_index,self.link(self.states),label='Smoothed State')
-			plt.legend(loc=2)
-			plt.show()
+				plt.plot(date_index,mu[coef,:],label='Coefficient')
+				plt.legend(loc=2)				
+			
+			plt.show()	
 
-	def predict(self,h=5):		
+	def predict(self,h=5,oos_data=None):		
 		""" Makes forecast with the estimated model
 
 		Parameters
 		----------
 		h : int (default : 5)
 			How many steps ahead would you like to forecast?
+
+		oos_data : pd.DataFrame
+			Data for the variables to be used out of sample (ys can be NaNs)
 
 		Returns
 		----------
@@ -766,12 +805,23 @@ class NLLEV(tsm.TSM):
 		if self.parameters.estimated is False:
 			raise Exception("No parameters estimated!")
 		else:
-			# Retrieve data, dates and (transformed) parameters			
-			date_index = self.shift_dates(h)
-			forecasted_values = np.ones(h)*self.states[-1]
+			# Sort/manipulate the out-of-sample data
+			_, X_oos = dmatrices(self.formula, oos_data)
+			X_oos = np.array([X_oos])[0]
+			full_X = self.X.copy()
+			full_X = np.append(full_X,X_oos,axis=0)
+			Z = full_X
+			a = self.states
 
-			result = pd.DataFrame(self.link(forecasted_values))
-			result.rename(columns={0:self.data_name}, inplace=True)
+			# Retrieve data, dates and (transformed) parameters			
+			smoothed_series = np.zeros(h)
+			for t in range(h):
+				smoothed_series[t] = self.link(np.dot(Z[self.y.shape[0]+t],a[:,-1]))
+
+			date_index = self.shift_dates(h)
+
+			result = pd.DataFrame(smoothed_series)
+			result.rename(columns={0:self.y_name}, inplace=True)
 			result.index = date_index[-h:]
 
 			return result
@@ -792,19 +842,21 @@ class NLLEV(tsm.TSM):
 		predictions = []
 
 		for t in range(0,h):
+			data1 = self.data_original.iloc[0:-h+t,:]
+			data2 = self.data_original.iloc[-h+t:,:]			
 			if self.dist == 'Poisson':
-				x = NLLEV.Poisson(integ=self.integ,data=self.data_original[:(-h+t)])
+				x = NDynLin.Poisson(formula=self.formula,data=data1)
 			elif self.dist == 't':
-				x = NLLEV.t(integ=self.integ,data=self.data_original[:(-h+t)])
+				x = NDynLin.t(formula=self.formula,data=data1)
 			elif self.dist == 'Laplace':
-				x = NLLEV.Laplace(integ=self.integ,data=self.data_original[:(-h+t)])
+				x = NDynLin.Laplace(formula=self.formula,data=data1)
 			elif self.dist == 'Exponential':
-				x = NLLEV.Exponential(integ=self.integ,data=self.data_original[:(-h+t)])								
+				x = NDynLin.Exponential(formula=self.formula,data=data1)							
 			x.fit(print_progress=False)
 			if t == 0:
-				predictions = x.predict(1)
+				predictions = x.predict(1,oos_data=data2)
 			else:
-				predictions = pd.concat([predictions,x.predict(1)])
+				predictions = pd.concat([predictions,x.predict(1,oos_data=data2)])
 		
 		predictions.rename(columns={0:self.data_name}, inplace=True)
 		predictions.index = self.index[-h:]
@@ -858,7 +910,7 @@ class NLLEV(tsm.TSM):
 
 		# Generate e_t+ and n_t+
 		rnd_h = np.random.normal(0,np.sqrt(H),self.data.shape[0])
-		q_dist = ss.multivariate_normal([0.0], Q)
+		q_dist = ss.multivariate_normal([0.0,0.0], Q,allow_singular=True)
 		rnd_q = q_dist.rvs(self.data.shape[0])
 
 		# Generate a_t+ and y_t+
@@ -880,7 +932,7 @@ class NLLEV(tsm.TSM):
 		
 		return alpha_tilde
 
-	def smoothed_state(self,data,beta, H, mu):
+	def smoothed_state(self,data,beta,H,mu):
 		""" Creates smoothed state estimate given state matrices and 
 		parameters.
 
@@ -899,31 +951,5 @@ class NLLEV(tsm.TSM):
 		"""			
 
 		T, Z, R, Q = self._ss_matrices(beta)
-		alpha, V = nl_univariate_KFS(data,Z,H,T,Q,R,mu)
+		alpha, V = nld_univariate_KFS(data,Z,H,T,Q,R,mu)
 		return alpha, V
-
-
-class BBVINLLMAnimate(object):
-    def __init__(self,ax,data,means,index,start_index,link):
-        self.data = data
-        self.line, = ax.plot([], [], 'k-')
-        self.index = index
-        self.ax = ax
-        self.ax.set_xlim(0, data.shape[0])
-        self.ax.set_ylim(np.min(data)-0.1*np.std(data), np.max(data)+0.1*np.std(data))
-        self.start_index = start_index
-        self.means = means
-        self.link = link
-
-    def init(self):
-        self.line.set_data(range(int(self.means[0].shape[0]-self.start_index)),self.link(self.means[0][self.start_index:]))
-        return self.line,
-
-    def __call__(self, i):
-        # This way the plot can continuously run and we just keep
-        # watching new realizations of the process
-        if i == 0:
-            return self.init()
-        else:
-	        self.line.set_data(range(int(self.means[0].shape[0]-self.start_index)),self.link(self.means[i][self.start_index:]))
-        return self.line,

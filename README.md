@@ -23,7 +23,7 @@ See some examples and documentation at [PyFlux.com](http://www.pyflux.com/).
 
 - [Black Box Variational Inference](http://www.pyflux.com/notebooks/BBVI.html)
 - [Laplace Approximation](http://www.pyflux.com/notebooks/Laplace.html)
-- [Maximum Likelihood](http://www.pyflux.com/notebooks/MLE.html) and [Maximum a posteriori](http://www.pyflux.com/notebooks/MAP.html)
+- [Maximum Likelihood](http://www.pyflux.com/notebooks/MLE.html) and [Penalized Maximum Likelihood](http://www.pyflux.com/notebooks/PML.html)
 - [Metropolis-Hastings](http://www.pyflux.com/notebooks/MetropolisHastings.html)
 
 ## Installing PyFlux

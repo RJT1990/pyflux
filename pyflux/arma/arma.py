@@ -1,4 +1,3 @@
-from math import exp, sqrt, log, tanh
 import sys
 if sys.version_info < (3,):
     range = xrange
@@ -6,10 +5,8 @@ if sys.version_info < (3,):
 import numpy as np
 import pandas as pd
 import scipy.stats as ss
-from scipy import optimize
 import matplotlib.pyplot as plt
 import seaborn as sns
-import numdifftools as nd
 
 from .. import inference as ifr
 from .. import distributions as dst
@@ -29,14 +26,10 @@ class ARIMA(tsm.TSM):
 		Field to specify the time series data that will be used.
 
 	ar : int
-		Field to specify how many AR terms the model will have. Warning:
-		higher-order lag specifications often fail to return for optimization
-		fitting options (MLE/MAP).
+		Field to specify how many AR terms the model will have.
 
 	ma : int
-		Field to specify how many MA terms the model will have. Warning:
-		higher-order lag specifications often fail to return for optimization
-		fitting options (MLE/MAP).
+		Field to specify how many MA terms the model will have.
 
 	integ : int (default : 0)
 		Specifies how many times to difference the time series.
@@ -58,10 +51,10 @@ class ARIMA(tsm.TSM):
 		self.model_name = "ARIMA(" + str(self.ar) + "," + str(self.integ) + "," + str(self.ma) + ")"
 		self.param_no = self.ar + self.ma + 2
 		self.max_lag = max(self.ar,self.ma)
-		self._hess_type = 'numerical'
 		self._param_hide = 0 # Whether to cutoff variance parameters from results
-		self.supported_methods = ["MLE","MAP","Laplace","M-H","BBVI"]
+		self.supported_methods = ["MLE","PML","Laplace","M-H","BBVI"]
 		self.default_method = "MLE"
+		self.multivariate_model = False
 
 		# Format the data
 		self.data, self.data_name, self.is_pandas, self.index = dc.data_check(data,target)
@@ -73,25 +66,7 @@ class ARIMA(tsm.TSM):
 			self.data_name = "Differenced " + self.data_name
 
 		self.X = self._ar_matrix()
-
-		# Add parameter information
-
-		self._param_desc.append({'name' : 'Constant', 'index': 0, 'prior': ifr.Normal(0,3,transform=None), 'q': dst.q_Normal(0,3)})		
-		
-		# AR priors
-		for j in range(1,self.ar+1):
-			self._param_desc.append({'name' : 'AR(' + str(j) + ')', 'index': j, 'prior': ifr.Normal(0,0.5,transform=None), 'q': dst.q_Normal(0,3)})
-		
-		# MA priors
-		for k in range(self.ar+1,self.ar+self.ma+1):
-			self._param_desc.append({'name' : 'MA(' + str(k-self.ar) + ')', 'index': k, 'prior': ifr.Normal(0,0.5,transform=None), 'q': dst.q_Normal(0,3)})
-		
-		# Variance prior
-		self._param_desc.append({'name' : 'Sigma','index': self.ar+self.ma+1, 'prior': ifr.Uniform(transform='exp'), 'q': dst.q_Normal(0,3)})
-
-		# Starting Parameters for Estimation
-		self.starting_params = np.zeros(self.param_no)
-		self.starting_params[0] = np.mean(self.data)
+		self._create_parameters()
 
 	def _ar_matrix(self):
 		""" Creates Autoregressive Matrix
@@ -107,9 +82,29 @@ class ARIMA(tsm.TSM):
 
 		if self.ar != 0:
 			for i in range(0,self.ar):
-				X = np.vstack((X,self.data[(self.max_lag-i-1):(self.data.shape[0]-i-1)]))
+				X = np.vstack((X,self.data[(self.max_lag-i-1):-i-1]))
 
 		return X
+
+	def _create_parameters(self):
+		""" Creates model parameters
+
+		Returns
+		----------
+		None (changes model attributes)
+		"""
+
+		self.parameters.add_parameter('Constant',ifr.Normal(0,3,transform=None),dst.q_Normal(0,3))
+
+		for ar_term in range(self.ar):
+			self.parameters.add_parameter('AR(' + str(ar_term+1) + ')',ifr.Normal(0,0.5,transform=None),dst.q_Normal(0,3))
+
+		for ma_term in range(self.ma):
+			self.parameters.add_parameter('MA(' + str(ma_term+1) + ')',ifr.Normal(0,0.5,transform=None),dst.q_Normal(0,3))
+
+		self.parameters.add_parameter('Sigma',ifr.Uniform(transform='exp'),dst.q_Normal(0,3))
+
+		self.parameters.parameter_list[0].start = np.mean(self.data)
 
 	def _model(self,beta):
 		""" Creates the structure of the model
@@ -128,13 +123,13 @@ class ARIMA(tsm.TSM):
 			Contains the length-adjusted time series (accounting for lags)
 		"""		
 
-		Y = np.array(self.data[self.max_lag:self.data.shape[0]])
+		Y = np.array(self.data[self.max_lag:])
 
 		# Transform parameters
-		parm = np.array([self._param_desc[k]['prior'].transform(beta[k]) for k in range(beta.shape[0])])
+		parm = np.array([self.parameters.parameter_list[k].prior.transform(beta[k]) for k in range(beta.shape[0])])
 
 		# Constant and AR terms
-		mu = np.matmul(np.transpose(self.X),parm[0:parm.shape[0]-1-self.ma])
+		mu = np.matmul(np.transpose(self.X),parm[0:-1-self.ma])
 
 		# MA terms
 		if self.ma != 0:
@@ -176,12 +171,12 @@ class ARIMA(tsm.TSM):
 
 			if self.ar != 0:
 				for j in range(1,self.ar+1):
-					new_value += t_params[j]*Y_exp[Y_exp.shape[0]-j]
+					new_value += t_params[j]*Y_exp[-j]
 
 			if self.ma != 0:
 				for k in range(1,self.ma+1):
 					if (k-1) >= t:
-						new_value += t_params[k+self.ar]*(Y_exp[Y_exp.shape[0]-k]-mu_exp[mu_exp.shape[0]-k])
+						new_value += t_params[k+self.ar]*(Y_exp[-k]-mu_exp[-k])
 
 			Y_exp = np.append(Y_exp,[new_value])
 			mu_exp = np.append(mu_exp,[0]) # For indexing consistency
@@ -223,21 +218,21 @@ class ARIMA(tsm.TSM):
 			# Loop over h time periods			
 			for t in range(0,h):
 
-				new_value = t_params[0] + np.random.randn(1)*t_params[t_params.shape[0]-1]
+				new_value = t_params[0] + np.random.randn(1)*t_params[-1]
 
 				if self.ar != 0:
 					for j in range(1,self.ar+1):
-						new_value += t_params[j]*Y_exp[Y_exp.shape[0]-j]
+						new_value += t_params[j]*Y_exp[-j]
 
 				if self.ma != 0:
 					for k in range(1,self.ma+1):
 						if (k-1) >= t:
-							new_value += t_params[k+self.ar]*(Y_exp[Y_exp.shape[0]-k]-mu_exp[mu_exp.shape[0]-k])
+							new_value += t_params[k+self.ar]*(Y_exp[-k]-mu_exp[-k])
 
 				Y_exp = np.append(Y_exp,[new_value])
 				mu_exp = np.append(mu_exp,[0]) # For indexing consistency
 
-				sim_vector[n] = Y_exp[(Y_exp.shape[0]-h):(Y_exp.shape[0])]
+				sim_vector[n] = Y_exp[-h:]
 
 		return np.transpose(sim_vector)
 
@@ -267,13 +262,13 @@ class ARIMA(tsm.TSM):
 
 		error_bars = []
 		for pre in range(5,100,5):
-			error_bars.append(np.insert([np.percentile(i,pre) for i in sim_vector] - mean_values[(mean_values.shape[0]-h):(mean_values.shape[0])],0,0))
-		forecasted_values = mean_values[(mean_values.shape[0]-h-1):(mean_values.shape[0])]
-		plot_values = mean_values[mean_values.shape[0]-h-past_values:mean_values.shape[0]]
-		plot_index = date_index[len(date_index)-h-past_values:len(date_index)]
+			error_bars.append(np.insert([np.percentile(i,pre) for i in sim_vector] - mean_values[-h:],0,0))
+		forecasted_values = mean_values[-h-1:]
+		plot_values = mean_values[-h-past_values:]
+		plot_index = date_index[-h-past_values:]
 		return error_bars, forecasted_values, plot_values, plot_index
 		
-	def likelihood(self,beta):
+	def neg_loglik(self,beta):
 		""" Creates the negative log-likelihood of the model
 
 		Parameters
@@ -287,7 +282,7 @@ class ARIMA(tsm.TSM):
 		"""		
 
 		mu, Y = self._model(beta)
-		return -np.sum(ss.norm.logpdf(Y,loc=mu,scale=self._param_desc[beta.shape[0]-1]['prior'].transform(beta[beta.shape[0]-1])))
+		return -np.sum(ss.norm.logpdf(Y,loc=mu,scale=self.parameters.parameter_list[-1].prior.transform(beta[-1])))
 
 	def plot_fit(self,**kwargs):
 		""" Plots the fit of the model
@@ -301,7 +296,7 @@ class ARIMA(tsm.TSM):
 
 		plt.figure(figsize=figsize)
 		date_index = self.index[max(self.ar,self.ma):self.data.shape[0]]
-		mu, Y = self._model(self.params)
+		mu, Y = self._model(self.parameters.get_parameter_values())
 		plt.plot(date_index,Y,label='Data')
 		plt.plot(date_index,mu,label='Filter',c='black')
 		plt.title(self.data_name)
@@ -329,12 +324,12 @@ class ARIMA(tsm.TSM):
 
 		figsize = kwargs.get('figsize',(10,7))
 
-		if len(self.params) == 0:
+		if self.parameters.estimated is False:
 			raise Exception("No parameters estimated!")
 		else:
 
 			# Retrieve data, dates and (transformed) parameters
-			mu, Y = self._model(self.params)			
+			mu, Y = self._model(self.parameters.get_parameter_values())			
 			date_index = self.shift_dates(h)
 			t_params = self.transform_parameters()
 
@@ -347,7 +342,7 @@ class ARIMA(tsm.TSM):
 			if intervals == True:
 				alpha =[0.15*i/float(100) for i in range(50,12,-2)]
 				for count, pre in enumerate(error_bars):
-					plt.fill_between(date_index[len(date_index)-h-1:len(date_index)], forecasted_values-pre, forecasted_values+pre,alpha=alpha[count])			
+					plt.fill_between(date_index[-h-1:], forecasted_values-pre, forecasted_values+pre,alpha=alpha[count])			
 			plt.plot(plot_index,plot_values)
 			plt.title("Forecast for " + self.data_name)
 			plt.xlabel("Time")
@@ -370,7 +365,7 @@ class ARIMA(tsm.TSM):
 		predictions = []
 
 		for t in range(0,h):
-			x = ARIMA(ar=self.ar,ma=self.ma,integ=self.integ,data=self.data_original[0:(self.data_original.shape[0]-h+t)])
+			x = ARIMA(ar=self.ar,ma=self.ma,integ=self.integ,data=self.data_original[:-h+t])
 			x.fit(printer=False)
 			if t == 0:
 				predictions = x.predict(1)
@@ -378,7 +373,7 @@ class ARIMA(tsm.TSM):
 				predictions = pd.concat([predictions,x.predict(1)])
 		
 		predictions.rename(columns={0:self.data_name}, inplace=True)
-		predictions.index = self.index[(len(self.index)-h):len(self.index)]
+		predictions.index = self.index[-h:]
 
 		return predictions
 
@@ -400,7 +395,7 @@ class ARIMA(tsm.TSM):
 
 		plt.figure(figsize=figsize)
 		predictions = self.predict_is(h)
-		data = self.data[(len(self.data)-h):len(self.data)]
+		data = self.data[-h:]
 
 		plt.plot(predictions.index,data,label='Data')
 		plt.plot(predictions.index,predictions,label='Predictions',c='black')
@@ -421,19 +416,19 @@ class ARIMA(tsm.TSM):
 		- pd.DataFrame with predicted values
 		"""		
 
-		if len(self.params) == 0:
+		if self.parameters.estimated is False:
 			raise Exception("No parameters estimated!")
 		else:
 
-			mu, Y = self._model(self.params)			
+			mu, Y = self._model(self.parameters.get_parameter_values())			
 			date_index = self.shift_dates(h)
 			t_params = self.transform_parameters()
 
 			mean_values = self._mean_prediction(mu,Y,h,t_params)
-			forecasted_values = mean_values[(mean_values.shape[0]-h):mean_values.shape[0]]
+			forecasted_values = mean_values[-h:]
 			result = pd.DataFrame(forecasted_values)
 			result.rename(columns={0:self.data_name}, inplace=True)
-			result.index = date_index[(len(date_index)-h):len(date_index)]
+			result.index = date_index[-h:]
 
 			return result
 

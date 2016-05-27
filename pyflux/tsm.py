@@ -17,6 +17,8 @@ from .inference import BBVI, MetropolisHastings, norm_post_sim, Normal, InverseG
 from .output import TablePrinter
 from .tests import find_p_value
 from .distributions import q_Normal
+from .parameter import Parameter, Parameters
+from .results import BBVIResults, MLEResults, LaplaceResults, MCMCResults
 
 class TSM(object):
 	""" TSM PARENT CLASS
@@ -32,25 +34,16 @@ class TSM(object):
 	def __init__(self,model_type):
 
 		# Holding variables for model output
-		self.params = []
-		self.ses = []
-		self.ihessian = []
-		self.chains = []
-		self.predictions = []
-
-		self._param_desc = [] # Holds information about parameters, such as transforms, priors, etc
 		self.model_type = model_type
+		self.parameters = Parameters(self.model_type)
 
-	def _bbvi_fit(self,posterior,printer=True,step=0.001,iterations=30000):
+	def _bbvi_fit(self,posterior,step=0.001,iterations=5000,**kwargs):
 		""" Performs Black Box Variational Inference
 
 		Parameters
 		----------
 		posterior : method
 			Hands bbvi_fit a posterior object
-
-		printer : Boolean
-			Whether to print results or not
 
 		step : float
 			Step size for RMSProp
@@ -60,34 +53,92 @@ class TSM(object):
 
 		Returns
 		----------
-		None (plots posteriors and stores parameters)
+		BBVIResults object
 		"""
 
 		# Starting parameters
-		phi = self.starting_params.copy()
-		self.params = self.starting_params.copy()
+		phi = self.parameters.get_parameter_starting_values()
+		phi = kwargs.get('start',phi).copy() # If user supplied
+		p = optimize.minimize(posterior,phi,method='L-BFGS-B') # PML starting values
+		start_loc = 0.8*p.x + 0.2*phi
+		start_ses = None
+
+		"""
+		Below - not used at the moment (MAP estimate for starting values)
+
+		p = optimize.minimize(posterior,phi,method='L-BFGS-B') # PML starting values
+
+		try:
+			ihessian = np.linalg.inv(nd.Hessian(obj_type)(p.x))
+			start_ses = np.log(np.power(np.abs(np.diag(ihessian)),0.5))
+			start_loc = p.x	
+		except:
+			start_ses = None			
+			start_loc = p.x	
+		"""
 
 		# Starting values for approximate distribution
-		for i in range(len(self._param_desc)):
-			approx_dist = self._param_desc[i]['q']
+		for i in range(len(self.parameters.parameter_list)):
+			approx_dist = self.parameters.parameter_list[i].q
 			if isinstance(approx_dist, q_Normal):
-				self._param_desc[i]['q'].loc = self.params[i]
-				if len(self.ses) == 0:
-					self._param_desc[i]['q'].scale = -3.0
+				if start_ses is None:
+					self.parameters.parameter_list[i].q.loc = start_loc[i]
+					self.parameters.parameter_list[i].q.scale = -3.0
 				else:
-					self._param_desc[i]['q'].scale = log(self.ses[i])
-		q_list = [k['q'] for k in self._param_desc]
+					self.parameters.parameter_list[i].q.loc = start_loc[i]
+					self.parameters.parameter_list[i].q.scale = start_ses[i]
+
+		q_list = [k.q for k in self.parameters.parameter_list]
 		
 		bbvi_obj = BBVI(posterior,q_list,12,step,iterations)
 		q, q_params, q_ses = bbvi_obj.lambda_update()
-		self.params = q_params
+		self.parameters.set_parameter_values(q_params,'BBVI',np.exp(q_ses),None)
 
-		for k in range(len(self._param_desc)):
-			self._param_desc[k]['q'] = q[k]
+		for k in range(len(self.parameters.parameter_list)):
+			self.parameters.parameter_list[k].q = q[k]
 
-		self._normal_posterior_sim(self.params,np.diag(np.exp(q_ses)),"Black Box Variational Inference",printer)
+		if self.model_type in ['GAS','GARCH','EGARCH']:
+			theta, Y, scores = self._model(q_params)
+			states = None
+			states_var = None
+			X_names = None
+		elif self.model_type in ['GASReg']:
+			theta, Y, scores, states = self._model(q_params)
+			states_var = None
+			X_names = self.X_names
+		elif self.model_type in ['LLEV','LLT','DynLin']:
+			Y = self.data
+			scores = None
+			states, states_var = self.smoothed_state(self.data,q_params)
+			theta = states[0][:-1]
+			X_names = None	
+		elif self.model_type in ['GPNARX','GPR','GP']:
+			Y = self.data*self._norm_std + self._norm_mean
+			scores = None
+			theta = self.expected_values(self.parameters.get_parameter_values())*self._norm_std + self._norm_mean
+			X_names = None	
+			states = None	
+			states_var = None
+		else:
+			theta, Y = self._model(q_params)
+			scores = None
+			states = None
+			states_var = None
+			X_names = None
 
-	def _laplace_fit(self,obj_type,printer=True):
+		# Change this in future
+		try:
+			parameter_store = self.parameters.copy()
+		except:
+			parameter_store = self.parameters
+
+		return BBVIResults(data_name=self.data_name,X_names=X_names,model_name=self.model_name,
+			model_type=self.model_type, parameters=parameter_store,data=Y, index=self.index,
+			multivariate_model=self.multivariate_model,objective_object=posterior, 
+			method='BBVI',ses=q_ses,signal=theta,scores=scores,
+			param_hide=self._param_hide,max_lag=self.max_lag,states=states,states_var=states_var)
+
+	def _laplace_fit(self,obj_type):
 		""" Performs a Laplace approximation to the posterior
 
 		Parameters
@@ -95,21 +146,57 @@ class TSM(object):
 		obj_type : method
 			Whether a likelihood or a posterior
 
-		printer : Boolean
-			Whether to print results or not
-
 		Returns
 		----------
 		None (plots posterior)
 		"""
 
 		# Get Mode and Inverse Hessian information
-		self.fit(method='MAP',printer=False)
+		y = self.fit(method='PML',printer=False)
 
-		if len(self.ses) == 0: 
+		if y.ihessian is None:
 			raise Exception("No Hessian information - Laplace approximation cannot be performed")
 		else:
-			self._normal_posterior_sim(self.params,self.ihessian,"Laplace",printer)
+			if self.model_type in ['GAS','GARCH','EGARCH']:
+				theta, Y, scores = self._model(y.parameters.get_parameter_values())
+				states = None
+				states_var = None
+				X_names = None
+			elif self.model_type in ['GASReg']:
+				theta, Y, scores, states = self._model(y.parameters.get_parameter_values())
+				states_var = None
+				X_names = self.X_names
+			elif self.model_type in ['LLEV','LLT','DynLin']:
+				Y = self.data
+				scores = None
+				states, states_var = self.smoothed_state(self.data,y.parameters.get_parameter_values())
+				theta = states[0][:-1]
+				X_names = None	
+			elif self.model_type in ['GPNARX','GPR','GP']:
+				Y = self.data*self._norm_std + self._norm_mean
+				scores = None
+				theta = self.expected_values(self.parameters.get_parameter_values())*self._norm_std + self._norm_mean
+				X_names = None	
+				states = None	
+				states_var = None
+			else:
+				theta, Y = self._model(y.parameters.get_parameter_values())
+				scores = None
+				states = None
+				states_var = None
+				X_names = None
+
+			# Change this in future
+			try:
+				parameter_store = y.parameters.copy()
+			except:
+				parameter_store = y.parameters
+
+			return LaplaceResults(data_name=self.data_name,X_names=X_names,model_name=self.model_name,
+				model_type=self.model_type, parameters=parameter_store,data=Y,index=self.index,
+				multivariate_model=self.multivariate_model,objective_object=obj_type, 
+				method='Laplace',ihessian=y.ihessian,signal=theta,scores=scores,
+				param_hide=self._param_hide,max_lag=self.max_lag,states=states,states_var=states_var)
 
 	def _mcmc_fit(self,scale=(2.38/sqrt(1000)),nsims=100000,printer=True,method="M-H",cov_matrix=None,**kwargs):
 		""" Performs MCMC 
@@ -136,341 +223,240 @@ class TSM(object):
 		None (plots posteriors, stores parameters)
 		"""
 
-		figsize = kwargs.get('figsize',(15,15))
+		# Get Mode and Inverse Hessian information
+		y = self.fit(method='PML',printer=False)
 
-		self.fit(method='MAP',printer=False)
-		
 		if method == "M-H":
-			sampler = MetropolisHastings(self.posterior,scale,nsims,self.params,cov_matrix=cov_matrix,model_object=None)
+			sampler = MetropolisHastings(self.neg_logposterior,scale,nsims,y.parameters.get_parameter_values(),cov_matrix=cov_matrix,model_object=None)
 			chain, mean_est, median_est, upper_95_est, lower_95_est = sampler.sample()
 		else:
 			raise Exception("Method not recognized!")
 
-		self.params = np.asarray(mean_est)
-
 		for k in range(len(chain)):
-			chain[k] = self._param_desc[k]['prior'].transform(chain[k])
-			mean_est[k] = self._param_desc[k]['prior'].transform(mean_est[k])
-			median_est[k] = self._param_desc[k]['prior'].transform(median_est[k])
-			upper_95_est[k] = self._param_desc[k]['prior'].transform(upper_95_est[k])
-			lower_95_est[k] = self._param_desc[k]['prior'].transform(lower_95_est[k])		
+			chain[k] = self.parameters.parameter_list[k].prior.transform(chain[k])
+			mean_est[k] = self.parameters.parameter_list[k].prior.transform(mean_est[k])
+			median_est[k] = self.parameters.parameter_list[k].prior.transform(median_est[k])
+			upper_95_est[k] = self.parameters.parameter_list[k].prior.transform(upper_95_est[k])
+			lower_95_est[k] = self.parameters.parameter_list[k].prior.transform(lower_95_est[k])		
 
-		self.chains = chain
+		self.parameters.set_parameter_values(mean_est,'M-H',None,chain)
 
-		if printer == True:
-
-			data = []
-
-			for i in range(len(self._param_desc)):
-				data.append({'param_name': self._param_desc[i]['name'], 'param_mean':np.round(mean_est[i],4), 'param_median':np.round(median_est[i],4), 'ci': "(" + str(np.round(lower_95_est[i],4)) + " | " + str(np.round(upper_95_est[i],4)) + ")"})
-
-		fmt = [
-			('Parameter','param_name',20),
-			('Median','param_median',10),
-			('Mean', 'param_mean', 15),
-			('95% Credibility Interval','ci',25)]
-
-		if self.model_type == 'VAR':
-			self.data_length = self.data[0]			
+		if y.ihessian is None:
+			raise Exception("No Hessian information - Laplace approximation cannot be performed")
 		else:
-			self.data_length = self.data
-
-		print(self.model_name)
-		print("==================")
-		print("Method: Metropolis-Hastings")
-		print("Number of simulations: " + str(nsims))
-		print("Number of observations: " + str(self.data_length.shape[0]-self.max_lag))
-		print("Unnormalized Log Posterior: " + str(np.round(-self.posterior(self.params),4)))
-		print("")
-		print( TablePrinter(fmt, ul='=')(data) )
-
-		fig = plt.figure(figsize=figsize)
-
-		for j in range(len(self.params)):
-
-			for k in range(4):
-				iteration = j*4 + k + 1
-				ax = fig.add_subplot(len(self.params),4,iteration)
-
-				if iteration in range(1,len(self.params)*4 + 1,4):
-					a = sns.distplot(chain[j], rug=False, hist=False)
-					a.set_ylabel(self._param_desc[j]['name'])
-					if iteration == 1:
-						a.set_title('Density Estimate')
-				elif iteration in range(2,len(self.params)*4 + 1,4):
-					a = plt.plot(chain[j])
-					if iteration == 2:
-						plt.title('Trace Plot')
-				elif iteration in range(3,len(self.params)*4 + 1,4): 
-					plt.plot(np.cumsum(chain[j])/np.array(range(1,len(chain[j])+1)))
-					if iteration == 3:
-						plt.title('Cumulative Average')					
-				elif iteration in range(4,len(self.params)*4 + 1,4):
-					plt.bar(range(1,10),[acf(chain[j],lag) for lag in range(1,10)])
-					if iteration == 4:
-						plt.title('ACF Plot')						
-		sns.plt.show()		
-
-	def _normal_posterior_sim(self,parameters,cov_matrix,method_name,printer):
-		""" Simulates from a multivariate normal posterior
-
-		Parameters
-		----------
-		parameters : np.array
-			Contains untransformed starting values for parameters
-
-		cov_matrix : np.array
-			The inverse Hessian
-
-		method_name : str
-			Name of the estimation procedure using this function
-
-		printer : str
-			Whether to print results or not
-
-		Returns
-		----------
-		None (plots the posteriors)
-		"""
-
-		chain, mean_est, median_est, upper_95_est, lower_95_est = norm_post_sim(parameters,cov_matrix)
-
-		for k in range(len(chain)):
-			chain[k] = self._param_desc[k]['prior'].transform(chain[k])
-			mean_est[k] = self._param_desc[k]['prior'].transform(mean_est[k])
-			median_est[k] = self._param_desc[k]['prior'].transform(median_est[k])
-			upper_95_est[k] = self._param_desc[k]['prior'].transform(upper_95_est[k])
-			lower_95_est[k] = self._param_desc[k]['prior'].transform(lower_95_est[k])				
-
-		mean_est = np.array(mean_est)
-		self.chains = chain[:]
-
-		if printer is True:
-
-			data = []
-
-			for i in range(len(self._param_desc)):
-				data.append({'param_name': self._param_desc[i]['name'], 'param_mean': np.round(mean_est[i],4), 'param_median': np.round(median_est[i],4), 'ci':  "(" + str(np.round(lower_95_est[i],4)) + " | " + str(np.round(upper_95_est[i],4)) + ")"})
-
-			fmt = [
-				('Parameter','param_name',20),
-				('Median','param_median',10),
-				('Mean', 'param_mean', 15),
-				('95% Credibility Interval','ci',25)]
-
-			if self.model_type == 'VAR':
-				self.data_length = self.data[0]			
+			if self.model_type in ['GAS','GARCH','EGARCH']:
+				theta, Y, scores = self._model(mean_est)
+				states = None
+				states_var = None
+				X_names = None
+			elif self.model_type in ['GASReg']:
+				theta, Y, scores, states = self._model(mean_est)
+				states_var = None
+				X_names = self.X_names
+			elif self.model_type in ['LLEV','LLT','DynLin']:
+				Y = self.data
+				scores = None
+				states, states_var = self.smoothed_state(self.data,mean_est)
+				theta = states[0][:-1]
+				X_names = None	
+			elif self.model_type in ['GPNARX','GPR','GP']:
+				Y = self.data*self._norm_std + self._norm_mean
+				scores = None
+				theta = self.expected_values(mean_est)*self._norm_std + self._norm_mean
+				X_names = None	
+				states = None	
+				states_var = None
 			else:
-				self.data_length = self.data
+				theta, Y = self._model(mean_est)
+				scores = None
+				states = None
+				states_var = None
+				X_names = None
+	
+			# Change this in future
+			try:
+				parameter_store = self.parameters.copy()
+			except:
+				parameter_store = self.parameters
 
-			print(self.model_name)
-			print("==================")
-			print("Method: " + method_name + " Approximation")
-			print("Number of observations: " + str(self.data_length.shape[0]-self.max_lag))				
-			print("Unnormalized Log Posterior: " + str(np.round(-self.posterior(mean_est),4)))
-			print("")
+			return MCMCResults(data_name=self.data_name,X_names=X_names,model_name=self.model_name,
+				model_type=self.model_type, parameters=parameter_store,data=Y,index=self.index,
+				multivariate_model=self.multivariate_model,objective_object=self.neg_logposterior, 
+				method='Metropolis Hastings',samples=chain,mean_est=mean_est,median_est=median_est,lower_95_est=lower_95_est,
+				upper_95_est=upper_95_est,signal=theta,scores=scores, param_hide=self._param_hide,max_lag=self.max_lag,
+				states=states,states_var=states_var)
 
-			print( TablePrinter(fmt, ul='=')(data) )
-		
-		# Plot densities
-		for j in range(len(self.params)):
-			fig = plt.figure()
-			a = sns.distplot(chain[j], rug=False, hist=False, label=self._param_desc[j]['name'])
-			a.set_title(self._param_desc[j]['name'])
-			a.set_ylabel('Density')
-				
-		sns.plt.show()		
-
-	def _ols_fit(self,printer):
+	def _ols_fit(self):
 		""" Performs OLS
-
-		Parameters
-		----------
-
-		printer : Boolean
-			Whether to print results or not
 
 		Returns
 		----------
 		None (stores parameters)
 		"""
 
-		self.params = self._create_B_direct().flatten()
+		# TO DO - A lot of things are VAR specific here; might need to refactor in future, or just move to VAR script
+
+		method = 'OLS'
+
+		res_params = self._create_B_direct().flatten()
+		params = res_params.copy()
 		cov = self.ols_covariance()
 
 		# Inelegant - needs refactoring
 		for i in range(self.ylen):
 			for k in range(self.ylen):
-				if i == k:
-					self.params = np.append(self.params,self._param_desc[len(self.params)]['prior'].itransform(cov[i,k]))
-				elif i > k:
-					self.params = np.append(self.params,self._param_desc[len(self.params)]['prior'].itransform(cov[i,k]))
+				if i == k or i > k:
+					params = np.append(params,self.parameters.parameter_list[-1].prior.itransform(cov[i,k]))
 
-		self.ihessian = self.estimator_cov('OLS')
-		self.ses = np.power(np.abs(np.diag(self.ihessian)),0.5)
-		t_params = self.params.copy()			
-		t_p_std = self.ses.copy() # vector for transformed standard errors
-			
-		# Create transformed variables
-		for k in range(len(t_params)-int(self._param_hide)):
-			z_temp = (self.params[k]/float(self.ses[k]))
-			t_params[k] = self._param_desc[k]['prior'].transform(t_params[k])
-			t_p_std[k] = t_params[k] / z_temp
+		ihessian = self.estimator_cov('OLS')
+		res_ses = np.power(np.abs(np.diag(ihessian)),0.5)
+		ses = np.append(res_ses,np.ones([params.shape[0]-res_params.shape[0]]))
+		self.parameters.set_parameter_values(params,method,ses,None)
 
-		# Replace with something more elegant in future versions
-		if printer is True:
+		if self.model_type in ['GAS','GARCH','EGARCH']:
+			theta, Y, scores = self._model(params)
+			states = None
+			states_var = None
+			X_names = None
+		elif self.model_type in ['GASReg']:
+			theta, Y, scores, states = self._model(params)
+			X_names = self.X_names
+			states_var = None
+		elif self.model_type in ['LLEV','LLT','DynLin']:
+			Y = self.data
+			scores = None
+			states, states_var = self.smoothed_state(self.data,params)
+			theta = states[0][:-1]
+			X_names = None
+		elif self.model_type in ['GPNARX','GPR','GP']:
+			Y = self.data*self._norm_std + self._norm_mean
+			scores = None
+			theta = self.expected_values(params)*self._norm_std + self._norm_mean
+			X_names = None	
+			states = None	
+			states_var = None
+		else:
+			theta, Y = self._model(params)
+			scores = None
+			states = None
+			X_names = None
+			states_var = None
 
-			data = []
+		# Change this in future
+		try:
+			parameter_store = self.parameters.copy()
+		except:
+			parameter_store = self.parameters
 
-			for i in range(len(self._param_desc)-int(self._param_hide)):
-				data.append({'param_name': self._param_desc[i]['name'], 'param_value':np.round(self._param_desc[i]['prior'].transform(self.params[i]),4), 'param_std': np.round(t_p_std[i],4),'param_z': np.round(t_params[i]/float(t_p_std[i]),4),'param_p': np.round(find_p_value(t_params[i]/float(t_p_std[i])),4),'ci': "(" + str(np.round(t_params[i] - t_p_std[i]*1.96,4)) + " | " + str(np.round(t_params[i] + t_p_std[i]*1.96,4)) + ")"})
+		return MLEResults(data_name=self.data_name,X_names=X_names,model_name=self.model_name,
+			model_type=self.model_type, parameters=parameter_store,results=None,data=Y, index=self.index,
+			multivariate_model=self.multivariate_model,objective_object=self.neg_loglik, 
+			method=method,ihessian=ihessian,signal=theta,scores=scores,
+			param_hide=self._param_hide,max_lag=self.max_lag,states=states,states_var=states_var)
 
-			fmt = [
-			    ('Parameter',       'param_name',   40),
-			    ('Estimate',          'param_value',       10),
-			    ('Standard Error', 'param_std', 15),
-			    ('z',          'param_z',       10),
-			    ('P>|z|',          'param_p',       10),
-			    ('95% Confidence Interval',          'ci',       25)
-				]		
+	def _optimize_fit(self,obj_type=None,**kwargs):
 
-			if self.model_type == 'VAR':
-				self.data_length = self.data[0]			
-			else:
-				self.data_length = self.data
-
-			print(self.model_name)
-			print("==================")
-			print("Method: OLS")
-			print("Number of observations: " + str(self.data_length.shape[0]-self.max_lag))
-			print("Log Likelihood: " + str(np.round(-self.likelihood(self.params),4)))
-			print("AIC: " + str(np.round(2*len(self.params)+2*self.likelihood(self.params),4)))
-			print("BIC: " + str(np.round(2*self.likelihood(self.params) + len(self.params)*log(self.data_length.shape[0]-self.max_lag),4)))
-			print("")
-			print( TablePrinter(fmt, ul='=')(data) )
-
-	def _optimize_fit(self,obj_type=None,printer=True,**kwargs):
-		""" Performs optimization of an objective function
-
-		Parameters
-		----------
-		obj_type : method
-			Whether a likelihood or a posterior
-
-		printer : Boolean
-			Whether to print results or not
-
-		Returns
-		----------
-		None (stores parameters)
-		"""
+		if obj_type == self.neg_loglik:
+			method = 'MLE'
+		else:
+			method = 'PML'
 
 		# Starting parameters
-		phi = self.starting_params.copy()
+		phi = self.parameters.get_parameter_starting_values()
 		phi = kwargs.get('start',phi).copy() # If user supplied
-
-		if self.model_type in ['LLT','LLEV']:
-			rounding_points=10
-		else:
-			rounding_points = 4
 
 		# Optimize using L-BFGS-B
 		p = optimize.minimize(obj_type,phi,method='L-BFGS-B')
-		self.params = p.x.copy()
-		t_params = p.x.copy() # vector for transformed parameters (display purposes)			
 
 		# Check that matrix is non-singular; act accordingly
 		try:
-			self.ihessian = np.linalg.inv(nd.Hessian(obj_type)(self.params))
-			self.ses = np.power(np.abs(np.diag(self.ihessian)),0.5)
-			t_p_std = self.ses.copy() # vector for transformed standard errors
-
-			# Create transformed variables
-			for k in range(len(t_params)-self._param_hide):
-				z_temp = (p.x[k]/float(self.ses[k]))
-				t_params[k] = self._param_desc[k]['prior'].transform(t_params[k])
-				t_p_std[k] = t_params[k] / z_temp
-
-			# Replace with something more elegant in future versions
-			if printer is True:
-
-				data = []
-
-				for i in range(len(self._param_desc)-self._param_hide):
-					if self._param_desc[i]['prior'].transform == np.array:
-						data.append({
-							'param_name': self._param_desc[i]['name'], 
-							'param_value':np.round(self._param_desc[i]['prior'].transform(p.x[i]),rounding_points), 
-							'param_std': np.round(t_p_std[i],rounding_points),
-							'param_z': np.round(t_params[i]/float(t_p_std[i]),rounding_points),
-							'param_p': np.round(find_p_value(t_params[i]/float(t_p_std[i])),rounding_points),
-							'ci': "(" + str(np.round(t_params[i] - t_p_std[i]*1.96,rounding_points)) + " | " + str(np.round(t_params[i] + t_p_std[i]*1.96,rounding_points)) + ")"})
-					else:
-						data.append({
-							'param_name': self._param_desc[i]['name'], 
-							'param_value':np.round(self._param_desc[i]['prior'].transform(p.x[i]),rounding_points)})						
-				fmt = [
-				    ('Parameter',       'param_name',   40),
-				    ('Estimate',          'param_value',       10),
-				    ('Standard Error', 'param_std', 15),
-				    ('z',          'param_z',       10),
-				    ('P>|z|',          'param_p',       10),
-				    ('95% Confidence Interval',          'ci',       25)
-				]
-
-		except: # If Hessian is not invertible...
-			if printer is True:
-				print ("Hessian not invertible! Consider a different model specification.")
-				print ("")
-
-			self.ihessian = []
-			self.ses = []
-
-			# Transform parameters
-			for k in range(len(t_params)):
-				t_params[k] = self._param_desc[k]['prior'].transform(t_params[k])
-
-			if printer is True:
-
-				data = []
-
-				for i in range(len(self._param_desc)):
-					data.append({'param_name': self._param_desc[i]['name'], 'param_value':np.round(self._param_desc[i]['prior'].transform(p.x[i]),4)})
-
-				fmt = [
-				    ('Parameter',       'param_name',   40),
-				    ('Estimate',          'param_value',       10)
-				]
-
-		# Final printed output
-		if printer is True:
-
-			print(self.model_name)
-			print("==================")
-			if obj_type == self.likelihood:
-				print("Method: MLE")
-			elif obj_type == self.posterior:
-				print("Method: MAP")
-
-			if self.model_type == 'VAR':
-				print("Number of observations: " + str(self.data[0].shape[0]-self.max_lag))
+			ihessian = np.linalg.inv(nd.Hessian(obj_type)(p.x))
+			ses = np.power(np.abs(np.diag(ihessian)),0.5)
+			self.parameters.set_parameter_values(p.x,method,ses,None)
+			if self.model_type in ['GAS','GARCH','EGARCH']:
+				theta, Y, scores = self._model(p.x)
+				states = None
+				states_var = None
+				X_names = None
+			elif self.model_type in ['GASReg']:
+				theta, Y, scores, states = self._model(p.x)
+				X_names = self.X_names
+				states_var = None
+			elif self.model_type in ['LLEV','LLT','DynLin']:
+				Y = self.data
+				scores = None
+				states, states_var = self.smoothed_state(self.data,p.x)
+				theta = states[0][:-1]
+				X_names = None
+			elif self.model_type in ['GPNARX','GPR','GP']:
+				Y = self.data*self._norm_std + self._norm_mean
+				scores = None
+				theta = self.expected_values(self.parameters.get_parameter_values())*self._norm_std + self._norm_mean
+				X_names = None	
+				states = None	
+				states_var = None
 			else:
-				print("Number of observations: " + str(self.data.shape[0]-self.max_lag))
-			
-			print("Log Likelihood: " + str(np.round(-self.likelihood(p.x),4)))
-			if obj_type == self.posterior:
-				print("Unnormalized Log Posterior: " + str(np.round(-self.posterior(p.x),4)))
-			print("AIC: " + str(np.round(2*len(p.x)+2*self.likelihood(p.x),4)))
+				theta, Y = self._model(p.x)
+				scores = None
+				states = None
+				X_names = None
+				states_var = None
 
-			if self.model_type == 'VAR':
-				print("BIC: " + str(np.round(2*self.likelihood(p.x) + len(p.x)*log(self.data[0].shape[0]-self.max_lag),4)))
+			# Change this in future
+			try:
+				parameter_store = self.parameters.copy()
+			except:
+				parameter_store = self.parameters
+
+			return MLEResults(data_name=self.data_name,X_names=X_names,model_name=self.model_name,
+				model_type=self.model_type, parameters=parameter_store,results=p,data=Y, index=self.index,
+				multivariate_model=self.multivariate_model,objective_object=obj_type, 
+				method=method,ihessian=ihessian,signal=theta,scores=scores,
+				param_hide=self._param_hide,max_lag=self.max_lag,states=states,states_var=states_var)
+		except:
+			self.parameters.set_parameter_values(p.x,method,None,None)
+			if self.model_type in ['GAS','GARCH','EGARCH']:
+				theta, Y, scores = self._model(p.x)
+				states = None
+				states_var = None
+				X_names = None
+			elif self.model_type in ['GASReg']:
+				theta, Y, scores, states = self._model(p.x)	
+				X_names = self.X_names	
+				states_var = None
+			elif self.model_type in ['LLEV','LLT','DynLin']:
+				Y = self.data
+				scores = None
+				states, states_var = self.smoothed_state(self.data,p.x)
+				theta = states[0][:-1]
+				X_names = None	
+			elif self.model_type in ['GPNARX','GPR','GP']:
+				Y = self.data*self._norm_std + self._norm_mean
+				scores = None
+				theta = self.expected_values(self.parameters.get_parameter_values())*self._norm_std + self._norm_mean
+				X_names = None	
+				states = None	
+				states_var = None				
 			else:
-				print("BIC: " + str(np.round(2*self.likelihood(p.x) + len(p.x)*log(self.data.shape[0]-self.max_lag),4)))
+				theta, Y = self._model(p.x)
+				scores = None
+				states = None
+				X_names = None
+				states_var = None
 
-			print("")
-			print( TablePrinter(fmt, ul='=')(data) )
+			# Change this in future
+			try:
+				parameter_store = self.parameters.copy()
+			except:
+				parameter_store = self.parameters
 
-	def fit(self,method=None,printer=True,**kwargs):
+			return MLEResults(data_name=self.data_name,X_names=X_names,model_name=self.model_name,
+				model_type=self.model_type,parameters=parameter_store,results=p,data=Y, index=self.index,
+				multivariate_model=self.multivariate_model,objective_object=obj_type, 
+				method=method,ihessian=None,signal=theta,scores=scores,
+				param_hide=self._param_hide,max_lag=self.max_lag,states=states,states_var=states_var)
+
+	def fit(self,method=None,**kwargs):
 		""" Fits a model
 
 		Parameters
@@ -478,17 +464,14 @@ class TSM(object):
 		method : str
 			A fitting method (e.g 'MLE'). Defaults to model specific default method.
 
-		printer : Boolean
-			Whether to print results or not
-
 		Returns
 		----------
 		None (stores fit information)
 		"""
 
 		cov_matrix = kwargs.get('cov_matrix',None)
-		iterations = kwargs.get('iterations',30000)
-		nsims = kwargs.get('nsims',100000)
+		iterations = kwargs.get('iterations',10000)
+		nsims = kwargs.get('nsims',10000)
 		step = kwargs.get('step',0.001)
 
 		if method is None:
@@ -497,19 +480,19 @@ class TSM(object):
 			raise ValueError("Method not supported!")
 
 		if method == 'MLE':
-			self._optimize_fit(self.likelihood,printer,**kwargs)
-		elif method == 'MAP':
-			self._optimize_fit(self.posterior,printer,**kwargs)	
+			return self._optimize_fit(self.neg_loglik,**kwargs)
+		elif method == 'PML':
+			return self._optimize_fit(self.neg_logposterior,**kwargs)	
 		elif method == 'M-H':
-			self._mcmc_fit(nsims=nsims,method=method,cov_matrix=cov_matrix)
+			return self._mcmc_fit(nsims=nsims,method=method,cov_matrix=cov_matrix)
 		elif method == "Laplace":
-			self._laplace_fit(self.posterior,printer) 
+			return self._laplace_fit(self.neg_logposterior) 
 		elif method == "BBVI":
-			self._bbvi_fit(self.posterior,printer,step=step,iterations=iterations)
+			return self._bbvi_fit(self.neg_logposterior,step=step,iterations=iterations)
 		elif method == "OLS":
-			self._ols_fit(printer)			
+			return self._ols_fit()			
 
-	def posterior(self,beta):
+	def neg_logposterior(self,beta):
 		""" Returns negative log posterior
 
 		Parameters
@@ -522,115 +505,10 @@ class TSM(object):
 		Negative log posterior
 		"""
 
-		post = self.likelihood(beta)
+		post = self.neg_loglik(beta)
 		for k in range(0,self.param_no):
-			post += -self._param_desc[k]['prior'].logpdf(beta[k])
+			post += -self.parameters.parameter_list[k].prior.logpdf(beta[k])
 		return post
-
-	def adjust_prior(self,index,prior):
-		""" Adjusts priors for the parameters
-
-		Parameters
-		----------
-		index : int or list[int]
-			Which parameter index/indices to be altered
-
-		prior : PRIOR object
-			Which prior distribution? E.g. Normal(0,1)
-
-		Returns
-		----------
-		None (changes priors in self._param_desc)
-		"""
-
-		if isinstance(index, list):
-			for item in index:
-				if item < 0 or item > (self.param_no-1) or not isinstance(item, int):
-					raise ValueError("Oops - the parameter index " + str(item) + " you have entered is invalid!")
-				else:
-					self._param_desc[item]['prior'] = prior				
-		else:
-			if index < 0 or index > (self.param_no-1) or not isinstance(index, int):
-				raise ValueError("Oops - the parameter index " + str(index) + " you have entered is invalid!")
-			else:
-				self._param_desc[index]['prior'] = prior
-
-
-	def list_priors(self):
-		""" Lists the current prior specification
-
-		Returns
-		----------
-		None (prints out prior information)
-		"""
-
-		prior_list = []
-		prior_desc = []
-		param_trans = []
-
-		for i in range(self.param_no):
-			param_trans.append(self._param_desc[i]['prior'].transform_name)
-			x = self._param_desc[i]['prior']
-			if isinstance(x, Normal):
-				prior_list.append('Normal')
-				prior_desc.append('mu0: ' + str(self._param_desc[i]['prior'].mu0) + ', sigma0: ' + str(self._param_desc[i]['prior'].sigma0))
-			elif isinstance(x, InverseGamma):
-				prior_list.append('Inverse Gamma')
-				prior_desc.append('alpha: ' + str(self._param_desc[i]['prior'].alpha) + ', beta: ' + str(self._param_desc[i]['prior'].beta))
-			elif isinstance(x, Uniform):
-				prior_list.append('Uniform')
-				prior_desc.append('n/a (non-informative)')
-			else:
-				raise ValueError("Error - prior distribution not detected!")
-
-		data = []
-
-		for i in range(self.param_no):
-			data.append({'param_index': len(data), 'param_name': self._param_desc[i]['name'], 'param_prior': prior_list[i], 'param_prior_params': prior_desc[i], 'param_trans': param_trans[i]})
-
-		fmt = [
-			('Index','param_index',6),		
-			('Parameter','param_name',25),
-			('Prior Type','param_prior',10),
-			('Prior Parameters', 'param_prior_params', 25),
-			('Transformation','param_trans',20)]
-		
-		print( TablePrinter(fmt, ul='=')(data) )
-
-	def list_q(self):
-		""" Lists the current approximating distributions for variational inference
-
-		Returns
-		----------
-		None (lists prior specification)
-		"""
-
-		q_list = []
-
-		for i in range(self.param_no):
-			x = self._param_desc[i]['q']
-			if isinstance(x, q_Normal):
-				q_list.append('Normal')
-			elif isinstance(x, q_InverseGamma):
-				q_list.append('Inverse Gamma')
-			elif isinstance(x, q_Uniform):
-				q_list.append('Uniform')
-			else:
-				raise Exception("Error - prior distribution not detected!")
-
-		data = []
-
-		for i in range(self.param_no):
-			data.append({'param_index': len(data), 'param_name': self._param_desc[i]['name'], 'param_q': q_list[i]})
-
-		fmt = [
-			('Index','param_index',6),		
-			('Parameter','param_name',25),
-			('q(z)','param_q',10)]
-
-		print("Approximate distributions for mean-field variational inference")
-		print("")
-		print( TablePrinter(fmt, ul='=')(data) )
 
 	def shift_dates(self,h):
 		""" Auxiliary function for creating dates for forecasts
@@ -676,7 +554,32 @@ class TSM(object):
 		----------
 		Transformed parameters 
 		"""		
-		trans_params = copy.deepcopy(self.params)
-		for k in range(len(self.params)):
-			trans_params[k] = self._param_desc[k]['prior'].transform(self.params[k])	
-		return trans_params	
+		return self.parameters.get_parameter_values(transformed=True)
+
+	def plot_parameters(self,indices=None,figsize=(15,5),**kwargs):
+		""" Plots parameters by calling parameter object
+
+		Returns
+		----------
+		Pretty plot
+		"""		
+
+		self.parameters.plot_parameters(indices=indices,figsize=figsize,**kwargs)
+
+	def adjust_prior(self,index,prior):
+		""" Adjusts priors for the parameters
+
+		Parameters
+		----------
+		index : int or list[int]
+			Which parameter index/indices to be altered
+
+		prior : Prior object
+			Which prior distribution? E.g. Normal(0,1)
+
+		Returns
+		----------
+		None (changes priors in Parameters object)
+		"""
+
+		self.parameters.adjust_prior(index=index,prior=prior)

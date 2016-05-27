@@ -1,5 +1,4 @@
 import scipy.stats as ss
-from math import exp
 import matplotlib.mlab as mlab
 import matplotlib.pyplot as plt
 import numpy as np
@@ -12,14 +11,14 @@ class q_Normal(object):
 		self.param_no = 2
 
 	def sim(self,size): 
-		return ss.norm.rvs(loc=self.loc,scale=exp(self.scale),size=size)
+		return ss.norm.rvs(loc=self.loc,scale=np.exp(self.scale),size=size)
 
 	def loc_score(self,x):
-		return (x-self.loc)/(exp(self.scale)**2)
+		return (x-self.loc)/(np.exp(self.scale)**2)
 
 	def scale_score(self,x):
 		# For scale = exp(x)
-		return exp(-2*self.scale)*(x-self.loc)**2 - 1 
+		return np.exp(-2*self.scale)*(x-self.loc)**2 - 1 
 
 	# Indexed scale - for BBVI code
 	def score(self,x,index):
@@ -41,9 +40,9 @@ class q_Normal(object):
 			self.scale = value
 
 	def logpdf(self,x):
-		return ss.norm.logpdf(x,loc=self.loc,scale=exp(self.scale))
+		return ss.norm.logpdf(x,loc=self.loc,scale=np.exp(self.scale))
 
 	def plot_pdf(self):
-		x = np.linspace(self.loc-exp(self.scale)*3.5,self.loc+exp(self.scale)*3.5,100)
-		plt.plot(x,mlab.normpdf(x,self.loc,exp(self.scale)))
+		x = np.linspace(self.loc-np.exp(self.scale)*3.5,self.loc+np.exp(self.scale)*3.5,100)
+		plt.plot(x,mlab.normpdf(x,self.loc,np.exp(self.scale)))
 		plt.show()

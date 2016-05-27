@@ -37,8 +37,6 @@ def data_check(data,target):
 			transformed_data = data[target].values			
 			data_name = str(target)					
 		is_pandas = True
-		print(str(data_name) + " picked as target variable")
-		print("")
 		
 	elif isinstance(data, np.ndarray):
 		data_name = "Series"		
@@ -50,8 +48,6 @@ def data_check(data,target):
 			else:
 				transformed_data = data[target]			
 				data_index = list(range(len(data[target])))
-			print("Nested list " + str(target) + " chosen as target variable")
-			print("")
 		else:
 			transformed_data = data					
 			data_index = list(range(len(data)))
@@ -68,8 +64,6 @@ def mv_data_check(data,check):
 		transformed_data = data.values
 		data_name = data.columns.values
 		is_pandas = True
-		print(str(data_name) + " picked as target variables")
-		print("")
 
 	elif isinstance(data, np.ndarray):
 		data_name = np.asarray(range(1,len(data[0])+1))	
