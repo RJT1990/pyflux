@@ -76,6 +76,12 @@ class NDynLin(tsm.TSM):
 			self.parameters.add_parameter('Sigma^2 ' + self.X_names[parm],ifr.Uniform(transform='exp'),dst.q_Normal(0,3))
 
 	def _get_scale_and_shape(self):
+		""" Retrieves the scale and shape for the model
+
+		Returns
+		----------
+		Scale (float) and shape (float)
+		"""
 		if self.dist == 't':
 			return self.parameters.get_parameter_values()[-2],self.parameters.get_parameter_values()[-1]
 		elif self.dist == 'Laplace':
@@ -223,7 +229,7 @@ class NDynLin(tsm.TSM):
 			Approximating measurement constants
 		"""		
 
-		H = np.ones(self.data.shape[0])*self.parameters.parameter_list[-1].prior.transform(beta[-1])
+		H = np.ones(self.data.shape[0])*self.parameters.parameter_list[-2].prior.transform(beta[-2])
 		mu = np.zeros(self.data.shape[0])
 
 		return H, mu
@@ -267,6 +273,8 @@ class NDynLin(tsm.TSM):
 
 		def draw_variable(loc,scale,shape,nsims):
 			return np.random.exponential(1/loc, nsims)
+
+		x.m_likelihood_markov_blanket = x.exponential_likelihood_markov_blanket
 
 		return x
 
@@ -316,6 +324,7 @@ class NDynLin(tsm.TSM):
 			return np.random.laplace(loc, scale, nsims)
 
 		x.draw_variable = draw_variable
+		x.m_likelihood_markov_blanket = x.laplace_likelihood_markov_blanket
 
 		return x
 
@@ -355,6 +364,7 @@ class NDynLin(tsm.TSM):
 			return np.random.poisson(loc, nsims)
 
 		x.draw_variable = draw_variable
+		x.m_likelihood_markov_blanket = x.poisson_likelihood_markov_blanket
 
 		return x
 
@@ -403,29 +413,9 @@ class NDynLin(tsm.TSM):
 			return loc + scale*np.random.standard_t(shape,nsims)
 
 		x.draw_variable = draw_variable
+		x.m_likelihood_markov_blanket = x.t_likelihood_markov_blanket
 
 		return x
-
-	def logposterior(self,beta,alpha):
-		""" Returns negative log posterior
-
-		Parameters
-		----------
-		beta : np.array
-			Contains untransformed starting values for parameters
-
-		alpha : np.array
-			State matrix
-
-		Returns
-		----------
-		Negative log posterior
-		"""
-
-		post = self.neg_loglik(beta,alpha)
-		for k in range(0,self.param_no):
-			post += -self.parameters.parameter_list[k].prior.logpdf(beta[k])
-		return post		
 
 	def neg_logposterior(self,beta):
 		""" Returns negative log posterior
@@ -446,6 +436,27 @@ class NDynLin(tsm.TSM):
 		for k in range(0,self.param_no):
 			post += -self.parameters.parameter_list[k].prior.logpdf(beta[k])
 		return post		
+
+	def state_likelihood_markov_blanket(self,beta,alpha,col_no):
+		""" Returns Markov blanket of the states given the evolution parameters
+
+		Parameters
+		----------
+		beta : np.array
+			Contains untransformed starting values for parameters
+
+		alpha : np.array
+			State matrix
+
+		Returns
+		----------
+		State likelihood
+		"""		
+		_, _, _, Q = self._ss_matrices(beta)
+		state_terms = np.append(0,ss.norm.logpdf(alpha[col_no][1:]-alpha[col_no][:-1],loc=0,scale=np.power(Q[col_no][col_no],0.5)))
+		blanket = state_terms
+		blanket[:-1] = blanket[:-1] + blanket[1:]
+		return blanket
 
 	def state_likelihood(self,beta,alpha):
 		""" Returns likelihood of the states given the evolution parameters
@@ -488,13 +499,44 @@ class NDynLin(tsm.TSM):
 		return (self.state_likelihood(beta,alpha) + self.meas_likelihood(beta,alpha))
 
 	def neg_loglik(self,beta):
+		""" Creates negative loglikelihood of the model
+
+		Parameters
+		----------
+		beta : np.array
+			Contains untransformed starting values for parameters
+
+		Returns
+		----------
+		Negative loglikelihood
+		"""		
 		states = np.zeros([self.state_no, self.data.shape[0]])
 		for state_i in range(self.state_no):
 			states[state_i,:] = beta[(self.param_no + (self.data.shape[0]*state_i)):(self.param_no + (self.data.shape[0]*(state_i+1)))]
 		return -self.loglik(beta[:self.param_no],states) 
 
 	def fit(self,step=0.001,iterations=3000,print_progress=True,start_diffuse=False):
-		return self._bbvi_fit(self.neg_logposterior,step=step,print_progress=print_progress,start_diffuse=False,iterations=iterations)
+		""" Fits the model
+
+		Parameters
+		----------
+		step : float
+			Step size for RMSProp
+
+		iterations: int
+			How many iterations to run
+
+		print_progress : bool
+			Whether tp print the ELBO progress or not
+		
+		start_diffuse : bool
+			Whether to start from diffuse values (if not: use approx Gaussian)
+		
+		Returns
+		----------
+		BBVI fit object
+		"""				
+		return self._bbvi_fit(self.neg_logposterior,step=step,print_progress=print_progress,start_diffuse=start_diffuse,iterations=iterations)
 
 	def _bbvi_fit(self,posterior,step=0.001,iterations=3000,print_progress=True,start_diffuse=False,**kwargs):
 		""" Performs Black Box Variational Inference
@@ -532,16 +574,18 @@ class NDynLin(tsm.TSM):
 
 		H, mu = self._approximating_model(phi,T,Z,R,Q)
 
+		a, V = self.smoothed_state(self.data,phi,H,mu)
+
 		for state in range(self.state_no):
-			a, V = self.smoothed_state(self.data,phi,H,mu)
 			V[0][0][0] = V[0][0][-1] 
 			for item in range(self.data.shape[0]):
 				if start_diffuse is False:
-					q_list.append(dst.q_Normal(a[0][item],np.log(np.sqrt(np.abs(V[0][0][item])))))
+					q_list.append(dst.q_Normal(a[state][item],np.log(np.sqrt(np.abs(V[0][state][item])))))
 				else:
-					q_list.append(dst.q_Normal(0,np.log(np.sqrt(np.abs(V[0][0][item])))))
+					q_list.append(dst.q_Normal(0,-3))
 
-		bbvi_obj = ifr.BBVI(posterior,q_list,12,step,iterations)
+		bbvi_obj = ifr.CBBVI(posterior,self.log_p_blanket,q_list,12,step,iterations)
+		#bbvi_obj = ifr.BBVI(posterior,q_list,12,step,iterations)
 
 		if print_progress is False:
 			bbvi_obj.printer = False
@@ -594,6 +638,23 @@ class NDynLin(tsm.TSM):
 		"""		
 		return np.sum(ss.expon.logpdf(self.data,1/np.exp(np.sum(self.X*alpha.T,axis=1))))
 
+	def exponential_likelihood_markov_blanket(self,beta,alpha):
+		""" Creates Expnonential Markov blanket for each state
+
+		Parameters
+		----------
+		beta : np.array
+			Contains untransformed starting values for parameters
+
+		alpha : np.array
+			A vector of states
+
+		Returns
+		----------
+		Exponential loglikelihood
+		"""		
+		return ss.expon.logpdf(self.data,1/np.exp(np.sum(self.X*alpha.T,axis=1)))
+
 	def laplace_likelihood(self,beta,alpha):
 		""" Creates Poisson loglikelihood of the data given the states
 
@@ -611,6 +672,23 @@ class NDynLin(tsm.TSM):
 		"""		
 		return np.sum(ss.laplace.logpdf(self.data,np.sum(self.X*alpha.T,axis=1),scale=self.parameters.parameter_list[-1].prior.transform(beta[-1])))
 
+	def laplace_likelihood_markov_blanket(self,beta,alpha):
+		""" Creates Laplace Markov blanket for each state
+
+		Parameters
+		----------
+		beta : np.array
+			Contains untransformed starting values for parameters
+
+		alpha : np.array
+			A vector of states
+
+		Returns
+		----------
+		Laplace Markov Blanket
+		"""		
+		return ss.laplace.logpdf(self.data,np.sum(self.X*alpha.T,axis=1),scale=self.parameters.parameter_list[-1].prior.transform(beta[-1]))
+
 	def poisson_likelihood(self,beta,alpha):
 		""" Creates Poisson loglikelihood of the data given the states
 
@@ -627,6 +705,23 @@ class NDynLin(tsm.TSM):
 		Poisson loglikelihood
 		"""		
 		return np.sum(ss.poisson.logpmf(self.data,np.exp(np.sum(self.X*alpha.T,axis=1))))
+
+	def poisson_likelihood_markov_blanket(self,beta,alpha):
+		""" Creates Poisson Markov blanket for each state
+
+		Parameters
+		----------
+		beta : np.array
+			Contains untransformed starting values for parameters
+
+		alpha : np.array
+			A vector of states
+
+		Returns
+		----------
+		Poisson Markov Blanket
+		"""		
+		return ss.poisson.logpmf(self.data,np.exp(np.sum(self.X*alpha.T,axis=1)))
 
 	def t_likelihood(self,beta,alpha):
 		""" Creates t loglikelihood of the date given the states
@@ -647,6 +742,92 @@ class NDynLin(tsm.TSM):
 			df=self.parameters.parameter_list[-1].prior.transform(beta[-1]),
 			loc=np.sum(self.X*alpha.T,axis=1),
 			scale=self.parameters.parameter_list[-2].prior.transform(beta[-2])))
+
+	def t_likelihood_markov_blanket(self,beta,alpha):
+		""" Creates t Markov blanket for each state
+
+		Parameters
+		----------
+		beta : np.array
+			Contains untransformed starting values for parameters
+
+		alpha : np.array
+			A vector of states
+
+		Returns
+		----------
+		Poisson Markov Blanket
+		"""		
+		return ss.t.logpdf(x=self.data,
+			df=self.parameters.parameter_list[-1].prior.transform(beta[-1]),
+			loc=np.sum(self.X*alpha.T,axis=1),
+			scale=self.parameters.parameter_list[-2].prior.transform(beta[-2]))
+
+	def markov_blanket(self,beta,alpha):
+		""" Creates total Markov blanket for states
+
+		Parameters
+		----------
+		beta : np.array
+			Contains untransformed starting values for parameters
+
+		alpha : np.array
+			A vector of states
+
+		Returns
+		----------
+		Markov blanket for states
+		"""	
+		likelihood_blanket = self.m_likelihood_markov_blanket(beta,alpha)
+		state_blanket = self.state_likelihood_markov_blanket(beta,alpha,0)
+		for i in range(self.state_no-1):
+			likelihood_blanket = np.append(likelihood_blanket,self.m_likelihood_markov_blanket(beta,alpha))
+			state_blanket = np.append(state_blanket,self.state_likelihood_markov_blanket(beta,alpha,i+1))
+		return likelihood_blanket + state_blanket
+		
+	def evo_blanket(self,beta,alpha):
+		""" Creates Markov blanket for the evolution parameters
+
+		Parameters
+		----------
+		beta : np.array
+			Contains untransformed starting values for parameters
+
+		alpha : np.array
+			A vector of states
+
+		Returns
+		----------
+		Markov blanket for evolution parameters
+		"""	
+		evo_blanket = np.zeros(self.state_no)
+		for i in range(evo_blanket.shape[0]):
+			evo_blanket[i] = self.state_likelihood_markov_blanket(beta,alpha,i).sum()
+
+		if self.dist in ['t']:
+			evo_blanket = np.append([self.m_likelihood_markov_blanket(beta,alpha).sum()]*2,evo_blanket)
+		elif self.dist in ['Laplace']:
+			evo_blanket = np.append([self.m_likelihood_markov_blanket(beta,alpha).sum()],evo_blanket)
+
+		return evo_blanket
+
+	def log_p_blanket(self,beta):
+		""" Creates complete Markov blanket for parameters
+
+		Parameters
+		----------
+		beta : np.array
+			Contains untransformed starting values for parameters
+
+		Returns
+		----------
+		Markov blanket for parameters
+		"""		
+		states = np.zeros([self.state_no, self.data.shape[0]])
+		for state_i in range(self.state_no):
+			states[state_i,:] = beta[(self.param_no + (self.data.shape[0]*state_i)):(self.param_no + (self.data.shape[0]*(state_i+1)))]		
+		
+		return np.append(self.evo_blanket(beta,states),self.markov_blanket(beta,states))
 
 	def plot_predict(self,h=5,past_values=20,intervals=True,oos_data=None,**kwargs):		
 		""" Makes forecast with the estimated model
