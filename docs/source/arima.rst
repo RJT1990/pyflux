@@ -21,13 +21,28 @@ Example
 Class Arguments
 ----------
 
-The **ARIMA()** model class has the following arguments:
+.. py:class:: ARIMA(data,ar,ma,integ,target)
 
-* *data* : requires a pd.DataFrame object or an np.array
-* *ar* : the number of autoregressive lags
-* *ma* : the number of moving average lags
-* *integ* : (default : 0) order of integration (0 : no difference, 1 : first difference, ...)
-* *target* : (default: None) specify the pandas column name or numpy index if the input is a matrix. If None, the first column will be chosen as the data.
+   .. py:attribute:: data
+
+      pd.DataFrame or array-like : the time-series data
+
+   .. py:attribute:: ar
+
+      int : the number of autoregressive lags
+
+   .. py:attribute:: ma
+
+      int : the number of moving average lags
+
+   .. py:attribute:: integ
+
+      int : how many times to difference the time series (default: 0)
+
+   .. py:attribute:: target
+
+      string (data is DataFrame) or int (data is np.array) : which column to use as the time series. If None, the first column will be chosen as the data.
+
 
 Class Attributes
 ----------
@@ -66,72 +81,59 @@ Inference Attributes:
 Class Methods
 ----------
 
-**adjust_prior(index,prior)**
+.. py:function:: adjust_prior(index, prior)
 
-Adjusts a prior with the given parameter index. Arguments are:
+   Adjusts the priors of the model. **index** can be an int or a list. **prior** is a prior object, such as Normal(0,3).
 
-* *index* : taking a value in range(0,no of parameters)
-* *prior* : one of the prior objects listed in the Bayesian Inference section
+Here is example usage for :py:func:`adjust_prior`:
 
 .. code-block:: python
    :linenos:
 
+   import pyflux as pf
+
+   # model = ... (specify a model)
    model.list_priors()
-   model.adjust_prior(2,ifr.Normal(0,1))
+   model.adjust_prior(2,pf.Normal(0,1))
 
-**fit(method)**
+.. py:function:: fit(method,**kwargs)
+   
+   Estimates parameters for the model. Returns a Results object. **method** can be one of ['BBVI',MLE','MAP','M-H','Laplace']. 
 
-Fits parameters for the model. Arguments are:
+   Optional arguments include **nsims** - how many simulations if fitting with M-H, **cov_matrix** - option to provide a covariance matrix if fitting with M-H, **iterations** - how many iterations to run if performing BBVI, and **step** - how big should the step size be for RMSprop (default 0.001).
 
-* *method* : one of ['BBVI',MLE','MAP','M-H','Laplace']
-* *printed* : (default: True) whether to print output
-* *nsims* : (default: 100000) how many simulations if M-H is chosen
-* *cov_matrix* (default: None) covariance matrix for M-H
-* *iterations* : (default: 30000) how many iterations if BBVI is chosen
-* *step* : (default: 0.001) step size for BBVI
+Here is example usage for :py:func:`fit`:
 
 .. code-block:: python
    :linenos:
 
+   import pyflux as pf
+
+   # model = ... (specify a model)
    model.fit("M-H",nsims=20000)
 
-**list_priors()**
+.. py:function:: plot_fit(**kwargs)
+   
+   Graphs the fit of the model.
 
-Lists the current prior specification.
+   Optional arguments include **figsize** - the dimensions of the figure to plot.
 
-**plot_fit()**
+.. py:function:: plot_predict(h,past_values,intervals,**kwargs)
+   
+   Plots predictions of the model. **h** is an int of how many steps ahead to predict. **past_values** is an int of how many past values of the series to plot. **intervals** is a bool on whether to include confidence/credibility intervals or not.
 
-Graphs the fit of the model and the model components (level, trend, irregular...)
+   Optional arguments include **figsize** - the dimensions of the figure to plot.
 
-**plot_predict(h)**
+.. py:function:: plot_predict_is(h,past_values,intervals,**kwargs)
+   
+   Plots in-sample rolling predictions for the model. **h** is an int of how many previous steps to simulate performance on. **past_values** is an int of how many past values of the series to plot. **intervals** is a bool on whether to include confidence/credibility intervals or not.
 
-Predicts h timesteps ahead and plots results. Arguments are:
+   Optional arguments include **figsize** - the dimensions of the figure to plot.
 
-* *h* : (default: 5) how many timesteps to predict ahead
-* *past_values* : (default: 20) how many past observations to plot
-* *intervals* : (default: True) whether to plot prediction intervals
+.. py:function:: predict(h)
+   
+   Returns DataFrame of model predictions. **h** is an int of how many steps ahead to predict. 
 
-**plot_predict_is(h)**
-
-Predicts rolling in-sample prediction for h past timestamps and plots results. Arguments are:
-
-* *h* : (default: 5) how many timesteps to predict
-* *past_values* : (default: 20) how many past observations to plot
-* *intervals* : (default: True) whether to plot prediction intervals
-
-**predict(h)**
-
-Predicts h timesteps ahead and outputs pd.DataFrame. Arguments are:
-
-* *h* : (default: 5) how many timesteps to predict ahead
-
-**predict_is(h)**
-
-Predicts h timesteps ahead and outputs pd.DataFrame. Arguments are:
-
-* *h* : (default: 5) how many timesteps to predict ahead
-
-.. code-block:: python
-   :linenos:
-
-   model.plot_predict(h=12,past_values=36)
+.. py:function:: predict_is(h)
+   
+   Returns DataFrame of in-sample rolling predictions for the model. **h** is an int of how many previous steps to simulate performance on.
