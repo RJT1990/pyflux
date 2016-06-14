@@ -6,7 +6,9 @@
 
 __PyFlux__ is an open source time series library for the Python programming language. Built upon the NumPy/SciPy/Pandas libraries, PyFlux allows for easy application of a vast array of time series methods and inference capabilities.
 
-See some examples and documentation at [PyFlux.com](http://www.pyflux.com/).
+See some examples and documentation at [PyFlux.com](http://www.pyflux.com/). Or see worked through examples in this [talk](https://github.com/RJT1990/talks/blob/master/PyDataTimeSeriesTalk.ipynb) given to the PyData London Meetup in June 2016.
+
+**14 June 2016** : The documentation and notebooks need to be updated (and will be updated this week).
 
 ## Models
 
