@@ -7,7 +7,7 @@ import matplotlib.pyplot as plt
 import matplotlib.mlab as mlab
 import scipy.stats as ss
 
-from stoch_optim import RMSProp, ADAM
+from .stoch_optim import RMSProp, ADAM
 
 class BBVI(object):
     """
