@@ -8,7 +8,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>ARIMA models &mdash; PyFlux 0.2.1 documentation</title>
+  <title>ARIMA models &mdash; PyFlux 0.2.7 documentation</title>
   
 
   
@@ -30,8 +30,8 @@
   
 
   
-    <link rel="top" title="PyFlux 0.2.1 documentation" href="index.html"/>
-        <link rel="next" title="EGARCH models" href="egarch.html"/>
+    <link rel="top" title="PyFlux 0.2.7 documentation" href="index.html"/>
+        <link rel="next" title="ARIMAX models" href="arimax.html"/>
         <link rel="prev" title="PyFlux: time-series for Python" href="index.html"/> 
 
   
@@ -85,13 +85,14 @@
 <li class="toctree-l1 current"><a class="current reference internal" href="">ARIMA models</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="#example">Example</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#class-arguments">Class Arguments</a></li>
-<li class="toctree-l2"><a class="reference internal" href="#class-attributes">Class Attributes</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#class-methods">Class Methods</a></li>
 </ul>
 </li>
+<li class="toctree-l1"><a class="reference internal" href="arimax.html">ARIMAX models</a></li>
 <li class="toctree-l1"><a class="reference internal" href="egarch.html">EGARCH models</a></li>
 <li class="toctree-l1"><a class="reference internal" href="garch.html">GARCH models</a></li>
 <li class="toctree-l1"><a class="reference internal" href="gas.html">GAS models</a></li>
+<li class="toctree-l1"><a class="reference internal" href="gasreg.html">GAS Regression models</a></li>
 <li class="toctree-l1"><a class="reference internal" href="gpnar.html">GP-NARX models</a></li>
 <li class="toctree-l1"><a class="reference internal" href="ssm.html">Gaussian State Space models</a></li>
 <li class="toctree-l1"><a class="reference internal" href="ngssm.html">Non-Gaussian State Space models</a></li>
@@ -208,38 +209,6 @@
 </dd></dl>
 
 </div>
-<div class="section" id="class-attributes">
-<h2>Class Attributes<a class="headerlink" href="#class-attributes" title="Permalink to this headline">¶</a></h2>
-<p>An <strong>ARIMA()</strong> object holds the following attributes:</p>
-<p>Model Attributes:</p>
-<ul class="simple">
-<li><em>ar</em> : the number of autoregressive lags</li>
-<li><em>ma</em> : the number of moving average lags</li>
-<li><em>integ</em> : order of integration (0 : no difference, 1 : first difference, ...)</li>
-<li><em>index</em> : the timescale of the time-series</li>
-<li><em>data</em> : the dependent variable held as a np.array</li>
-<li><em>data_name</em> : string variable containing name of the time series</li>
-<li><em>data_type</em> : whether original datatype is numpy or pandas</li>
-</ul>
-<p>Parameter Attributes:</p>
-<p>The attribute <em>param.desc</em> is a dictionary holding information about individual parameters:</p>
-<ul class="simple">
-<li><em>name</em> : name of the parameter</li>
-<li><em>index</em> : index of the parameter (begins with 0)</li>
-<li><em>prior</em> : the prior specification for the parameter</li>
-<li><em>q</em> : the variational distribution approximation</li>
-</ul>
-<p>Inference Attributes:</p>
-<ul class="simple">
-<li><em>starting_params</em> : starting parameters for estimation/inference</li>
-<li><em>params</em> : holds any estimated parameters</li>
-<li><em>ses</em> : holds any estimated standard errors for parameters (MLE/MAP)</li>
-<li><em>ihessian</em> : holds any estimated inverse Hessian (MLE/MAP)</li>
-<li><em>chains</em> : holds trace information for MCMC runs</li>
-<li><em>supported_methods</em> : which inference methods are supported</li>
-<li><em>default_method</em> : default inference method</li>
-</ul>
-</div>
 <div class="section" id="class-methods">
 <h2>Class Methods<a class="headerlink" href="#class-methods" title="Permalink to this headline">¶</a></h2>
 <dl class="function">
@@ -248,7 +217,7 @@
 <dd><p>Adjusts the priors of the model. <strong>index</strong> can be an int or a list. <strong>prior</strong> is a prior object, such as Normal(0,3).</p>
 </dd></dl>
 
-<p>Here is example usage for <a class="reference internal" href="#adjust_prior" title="adjust_prior"><code class="xref py py-func docutils literal"><span class="pre">adjust_prior()</span></code></a>:</p>
+<p>Here is example usage for <a class="reference internal" href="var.html#adjust_prior" title="adjust_prior"><code class="xref py py-func docutils literal"><span class="pre">adjust_prior()</span></code></a>:</p>
 <div class="highlight-python"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre>1
 2
 3
@@ -263,11 +232,11 @@
 <dl class="function">
 <dt id="fit">
 <code class="descname">fit</code><span class="sig-paren">(</span><em>method</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="headerlink" href="#fit" title="Permalink to this definition">¶</a></dt>
-<dd><p>Estimates parameters for the model. Returns a Results object. <strong>method</strong> can be one of [&#8216;BBVI&#8217;,MLE&#8217;,&#8217;MAP&#8217;,&#8217;M-H&#8217;,&#8217;Laplace&#8217;].</p>
-<p>Optional arguments include <strong>nsims</strong> - how many simulations if fitting with M-H, <strong>cov_matrix</strong> - option to provide a covariance matrix if fitting with M-H, <strong>iterations</strong> - how many iterations to run if performing BBVI, and <strong>step</strong> - how big should the step size be for RMSprop (default 0.001).</p>
+<dd><p>Estimates parameters for the model. Returns a Results object. <strong>method</strong> is an inference/estimation option; see Bayesian Inference and Classical Inference sections for options. If no <strong>method</strong> is provided then a default will be used.</p>
+<p>Optional arguments are specific to the <strong>method</strong> you choose - see the documentation for these methods for more detail.</p>
 </dd></dl>
 
-<p>Here is example usage for <a class="reference internal" href="#fit" title="fit"><code class="xref py py-func docutils literal"><span class="pre">fit()</span></code></a>:</p>
+<p>Here is example usage for <a class="reference internal" href="var.html#fit" title="fit"><code class="xref py py-func docutils literal"><span class="pre">fit()</span></code></a>:</p>
 <div class="highlight-python"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre>1
 2
 3
@@ -282,6 +251,12 @@
 <code class="descname">plot_fit</code><span class="sig-paren">(</span><em>**kwargs</em><span class="sig-paren">)</span><a class="headerlink" href="#plot_fit" title="Permalink to this definition">¶</a></dt>
 <dd><p>Graphs the fit of the model.</p>
 <p>Optional arguments include <strong>figsize</strong> - the dimensions of the figure to plot.</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="plot_parameters">
+<code class="descname">plot_parameters</code><span class="sig-paren">(</span><em>indices</em>, <em>figsize</em><span class="sig-paren">)</span><a class="headerlink" href="#plot_parameters" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns a plot of the parameters and their associated uncertainty. <strong>indices</strong> is a list referring to the parameter indices that you want ot plot. Figsize specifies how big the plot will be.</p>
 </dd></dl>
 
 <dl class="function">
@@ -320,7 +295,7 @@
   
     <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
       
-        <a href="egarch.html" class="btn btn-neutral float-right" title="EGARCH models" accesskey="n">Next <span class="fa fa-arrow-circle-right"></span></a>
+        <a href="arimax.html" class="btn btn-neutral float-right" title="ARIMAX models" accesskey="n">Next <span class="fa fa-arrow-circle-right"></span></a>
       
       
         <a href="index.html" class="btn btn-neutral" title="PyFlux: time-series for Python" accesskey="p"><span class="fa fa-arrow-circle-left"></span> Previous</a>
@@ -354,7 +329,7 @@
     <script type="text/javascript">
         var DOCUMENTATION_OPTIONS = {
             URL_ROOT:'./',
-            VERSION:'0.2.1',
+            VERSION:'0.2.7',
             COLLAPSE_INDEX:false,
             FILE_SUFFIX:'.html',
             HAS_SOURCE:  true

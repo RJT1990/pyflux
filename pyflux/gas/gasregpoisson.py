@@ -46,10 +46,10 @@ class GASRegPoisson(GASReg):
         for parm in range(len(self.parameters.parameter_list)):
             self.parameters.parameter_list[parm].start = -9.0
 
-    def score_function(self,X,y,mean,scale,shape):
+    def score_function(self,X,y,mean,scale,shape,skewness):
         return X*(y-mean)
 
-    def draw_variable(self,loc,scale,shape,nsims):
+    def draw_variable(self,loc,scale,shape,skewness,nsims):
         return np.random.poisson(loc, nsims)
 
     def neg_loglik(self,beta):

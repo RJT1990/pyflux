@@ -6,11 +6,11 @@
 
 __PyFlux__ is an open source time series library for the Python programming language. Built upon the NumPy/SciPy/Pandas libraries, PyFlux allows for easy application of a vast array of time series methods and inference capabilities.
 
-See some examples and documentation at [PyFlux.com](http://www.pyflux.com/).
+See some examples and documentation at [PyFlux.com](http://www.pyflux.com/). Or see worked through examples in this [talk](https://github.com/RJT1990/talks/blob/master/PyDataTimeSeriesTalk.ipynb) given to the PyData London Meetup in June 2016.
 
 ## Models
 
-- [ARIMA models](http://www.pyflux.com/notebooks/ARIMA.html)
+- [ARIMAX models](http://www.pyflux.com/notebooks/ARIMA.html)
 - [GARCH models](http://www.pyflux.com/notebooks/GARCH.html)
 - [GAS models](http://www.pyflux.com/notebooks/GAS.html)
 - [GAS Regression models](http://www.pyflux.com/notebooks/GASReg.html)

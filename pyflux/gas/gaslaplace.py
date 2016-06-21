@@ -65,17 +65,17 @@ class GASLaplace(GAS):
         else:
             self.score_function = self.default_score_function
 
-    def adj_score_function(self,y,mean,scale,shape):
+    def adj_score_function(self,y,mean,scale,shape,skewness):
         return LaplaceScore.mu_adj_score(y, mean, scale)
 
-    def draw_variable(self,loc,scale,shape,nsims):
+    def draw_variable(self,loc,scale,shape,skewness,nsims):
         return np.random.laplace(loc, scale, nsims)
 
     def neg_loglik(self,beta):
         theta, Y, _ = self._model(beta)
         return -np.sum(ss.laplace.logpdf(Y,loc=theta,scale=self.parameters.parameter_list[-1].prior.transform(beta[-1])))
 
-    def default_score_function(self,y,mean,scale,shape):
+    def default_score_function(self,y,mean,scale,shape,skewness):
         return LaplaceScore.mu_score(y, mean, scale)
 
     def predict_is(self,h=5):

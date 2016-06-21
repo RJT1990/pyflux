@@ -8,7 +8,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>GP-NARX models &mdash; PyFlux 0.2.1 documentation</title>
+  <title>GP-NARX models &mdash; PyFlux 0.2.7 documentation</title>
   
 
   
@@ -30,9 +30,9 @@
   
 
   
-    <link rel="top" title="PyFlux 0.2.1 documentation" href="index.html"/>
+    <link rel="top" title="PyFlux 0.2.7 documentation" href="index.html"/>
         <link rel="next" title="Gaussian State Space models" href="ssm.html"/>
-        <link rel="prev" title="GAS models" href="gas.html"/> 
+        <link rel="prev" title="GAS Regression models" href="gasreg.html"/> 
 
   
   <script src="_static/js/modernizr.min.js"></script>
@@ -83,13 +83,14 @@
             
                 <ul class="current">
 <li class="toctree-l1"><a class="reference internal" href="arima.html">ARIMA models</a></li>
+<li class="toctree-l1"><a class="reference internal" href="arimax.html">ARIMAX models</a></li>
 <li class="toctree-l1"><a class="reference internal" href="egarch.html">EGARCH models</a></li>
 <li class="toctree-l1"><a class="reference internal" href="garch.html">GARCH models</a></li>
 <li class="toctree-l1"><a class="reference internal" href="gas.html">GAS models</a></li>
+<li class="toctree-l1"><a class="reference internal" href="gasreg.html">GAS Regression models</a></li>
 <li class="toctree-l1 current"><a class="current reference internal" href="">GP-NARX models</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="#example">Example</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#class-arguments">Class Arguments</a></li>
-<li class="toctree-l2"><a class="reference internal" href="#class-attributes">Class Attributes</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#class-methods">Class Methods</a></li>
 </ul>
 </li>
@@ -148,110 +149,134 @@
 <h1>GP-NARX models<a class="headerlink" href="#gp-narx-models" title="Permalink to this headline">¶</a></h1>
 <div class="section" id="example">
 <h2>Example<a class="headerlink" href="#example" title="Permalink to this headline">¶</a></h2>
+<div class="highlight-python"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre>1
+2
+3
+4
+5
+6</pre></div></td><td class="code"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">numpy</span> <span class="kn">as</span> <span class="nn">np</span>
+<span class="kn">import</span> <span class="nn">pandas</span> <span class="kn">as</span> <span class="nn">pd</span>
+<span class="kn">import</span> <span class="nn">pyflux</span> <span class="kn">as</span> <span class="nn">pf</span>
+
+<span class="n">USgrowth</span> <span class="o">=</span> <span class="c1">#somequarterlyGDPgrowthdatahere</span>
+<span class="n">model</span> <span class="o">=</span> <span class="n">pf</span><span class="o">.</span><span class="n">GPNARX</span><span class="p">(</span><span class="n">USgrowth</span><span class="p">,</span><span class="n">ar</span><span class="o">=</span><span class="mi">4</span><span class="p">,</span><span class="n">kernel_type</span><span class="o">=</span><span class="s1">&#39;OU&#39;</span><span class="p">)</span>
+</pre></div>
+</td></tr></table></div>
 </div>
 <div class="section" id="class-arguments">
 <h2>Class Arguments<a class="headerlink" href="#class-arguments" title="Permalink to this headline">¶</a></h2>
-<p>The <strong>GPNARX()</strong> model class has the following arguments:</p>
-<ul class="simple">
-<li><em>data</em> : requires a pd.DataFrame object or an np.array</li>
-<li><em>ar</em> : the number of autoregressive lags</li>
-<li><em>kernel_type</em>: the type of kernel; one of [&#8216;SE&#8217;,&#8217;RQ&#8217;,&#8217;OU&#8217;,&#8217;ARD&#8217;]</li>
-<li><em>integ</em> : (default : 0) order of integration (0 : no difference, 1 : first difference, ...)</li>
-<li><em>target</em> : (default: None) specify the pandas column name or numpy index if the input is a matrix. If None, the first column will be chosen as the data.</li>
-</ul>
-</div>
-<div class="section" id="class-attributes">
-<h2>Class Attributes<a class="headerlink" href="#class-attributes" title="Permalink to this headline">¶</a></h2>
-<p>A <strong>GPNARX()</strong> object holds the following attributes:</p>
-<p>Model Attributes:</p>
-<ul class="simple">
-<li><em>ar</em> : the number of autoregressive lags</li>
-<li><em>integ</em> : order of integration (0 : no difference, 1 : first difference, ...)</li>
-<li><em>param_no</em> : number of model parameters</li>
-<li><em>kernel_type</em> : the string name of the kernel</li>
-<li><em>kernel</em> : the kernel object (and associated methods)</li>
-<li><em>norm_mean</em> : the mean of the (differenced) time series</li>
-<li><em>norm_std</em> : the standard deviation of the (differenced) time series</li>
-<li><em>index</em> : the timescale of the time-series</li>
-<li><em>data</em> : the dependent variable held as a np.array</li>
-<li><em>data_name</em> : string variable containing name of the time series</li>
-<li><em>data_type</em> : whether original datatype is numpy or pandas</li>
-</ul>
-<p>Parameter Attributes:</p>
-<p>The attribute <em>param.desc</em> is a dictionary holding information about individual parameters:</p>
-<ul class="simple">
-<li><em>name</em> : name of the parameter</li>
-<li><em>index</em> : index of the parameter (begins with 0)</li>
-<li><em>prior</em> : the prior specification for the parameter</li>
-<li><em>q</em> : the variational distribution approximation</li>
-</ul>
-<p>Inference Attributes:</p>
-<ul class="simple">
-<li><em>params</em> : holds any estimated parameters</li>
-<li><em>ses</em> : holds any estimated standard errors for parameters (MLE/MAP)</li>
-<li><em>ihessian</em> : holds any estimated inverse Hessian (MLE/MAP)</li>
-<li><em>chains</em> : holds trace information for MCMC runs</li>
-<li><em>supported_methods</em> : which inference methods are supported</li>
-<li><em>default_method</em> : default inference method</li>
-</ul>
+<dl class="class">
+<dt id="GPNARX">
+<em class="property">class </em><code class="descname">GPNARX</code><span class="sig-paren">(</span><em>data</em>, <em>ar</em>, <em>kernel_type</em>, <em>integ</em>, <em>target</em><span class="sig-paren">)</span><a class="headerlink" href="#GPNARX" title="Permalink to this definition">¶</a></dt>
+<dd><dl class="attribute">
+<dt id="GPNARX.data">
+<code class="descname">data</code><a class="headerlink" href="#GPNARX.data" title="Permalink to this definition">¶</a></dt>
+<dd><p>pd.DataFrame or array-like : the time-series data</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="GPNARX.ar">
+<code class="descname">ar</code><a class="headerlink" href="#GPNARX.ar" title="Permalink to this definition">¶</a></dt>
+<dd><p>int : the number of autoregressive terms</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="GPNARX.kernel_type">
+<code class="descname">kernel_type</code><a class="headerlink" href="#GPNARX.kernel_type" title="Permalink to this definition">¶</a></dt>
+<dd><p>string : the type of kernel; one of [&#8216;SE&#8217;,&#8217;RQ&#8217;,&#8217;OU&#8217;,&#8217;ARD&#8217;]</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="GPNARX.integ">
+<code class="descname">integ</code><a class="headerlink" href="#GPNARX.integ" title="Permalink to this definition">¶</a></dt>
+<dd><p>int : Specifies how many time to difference the time series.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="GPNARX.target">
+<code class="descname">target</code><a class="headerlink" href="#GPNARX.target" title="Permalink to this definition">¶</a></dt>
+<dd><p>string (data is DataFrame) or int (data is np.array) : which column to use as the time series. If None, the first column will be chosen as the data.</p>
+</dd></dl>
+
+</dd></dl>
+
 </div>
 <div class="section" id="class-methods">
 <h2>Class Methods<a class="headerlink" href="#class-methods" title="Permalink to this headline">¶</a></h2>
-<p><strong>adjust_prior(index,prior)</strong></p>
-<p>Adjusts a prior with the given parameter index. Arguments are:</p>
-<ul class="simple">
-<li><em>index</em> : taking a value in range(0,no of parameters)</li>
-<li><em>prior</em> : one of the prior objects listed in the Bayesian Inference section</li>
-</ul>
+<dl class="function">
+<dt id="adjust_prior">
+<code class="descname">adjust_prior</code><span class="sig-paren">(</span><em>index</em>, <em>prior</em><span class="sig-paren">)</span><a class="headerlink" href="#adjust_prior" title="Permalink to this definition">¶</a></dt>
+<dd><p>Adjusts the priors of the model. <strong>index</strong> can be an int or a list. <strong>prior</strong> is a prior object, such as Normal(0,3).</p>
+</dd></dl>
+
+<p>Here is example usage for <a class="reference internal" href="var.html#adjust_prior" title="adjust_prior"><code class="xref py py-func docutils literal"><span class="pre">adjust_prior()</span></code></a>:</p>
 <div class="highlight-python"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre>1
-2</pre></div></td><td class="code"><div class="highlight"><pre><span></span><span class="n">model</span><span class="o">.</span><span class="n">list_priors</span><span class="p">()</span>
-<span class="n">model</span><span class="o">.</span><span class="n">adjust_prior</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span><span class="n">ifr</span><span class="o">.</span><span class="n">Normal</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">))</span>
+2
+3
+4
+5</pre></div></td><td class="code"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">pyflux</span> <span class="kn">as</span> <span class="nn">pf</span>
+
+<span class="c1"># model = ... (specify a model)</span>
+<span class="n">model</span><span class="o">.</span><span class="n">list_priors</span><span class="p">()</span>
+<span class="n">model</span><span class="o">.</span><span class="n">adjust_prior</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span><span class="n">pf</span><span class="o">.</span><span class="n">Normal</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">))</span>
 </pre></div>
 </td></tr></table></div>
-<p><strong>fit(method)</strong></p>
-<p>Fits hyperparameters for the GP-NAR model. Arguments are:</p>
-<ul class="simple">
-<li><em>method</em> : one of [&#8216;BBVI&#8217;,MLE&#8217;,&#8217;MAP&#8217;,&#8217;M-H&#8217;,&#8217;Laplace&#8217;]</li>
-<li><em>printed</em> : (default: True) whether to print output</li>
-<li><em>nsims</em> : (default: 100000) how many simulations if M-H is chosen</li>
-<li><em>cov_matrix</em> (default: None) covariance matrix for M-H</li>
-<li><em>iterations</em> : (default: 30000) how many iterations if BBVI is chosen</li>
-<li><em>step</em> : (default: 0.001) step size for BBVI</li>
-</ul>
-<div class="highlight-python"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre>1</pre></div></td><td class="code"><div class="highlight"><pre><span></span><span class="n">model</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="s2">&quot;M-H&quot;</span><span class="p">,</span><span class="n">nsims</span><span class="o">=</span><span class="mi">20000</span><span class="p">)</span>
+<dl class="function">
+<dt id="fit">
+<code class="descname">fit</code><span class="sig-paren">(</span><em>method</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="headerlink" href="#fit" title="Permalink to this definition">¶</a></dt>
+<dd><p>Estimates parameters for the model. Returns a Results object. <strong>method</strong> is an inference/estimation option; see Bayesian Inference and Classical Inference sections for options. If no <strong>method</strong> is provided then a default will be used.</p>
+<p>Optional arguments are specific to the <strong>method</strong> you choose - see the documentation for these methods for more detail.</p>
+</dd></dl>
+
+<p>Here is example usage for <a class="reference internal" href="var.html#fit" title="fit"><code class="xref py py-func docutils literal"><span class="pre">fit()</span></code></a>:</p>
+<div class="highlight-python"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre>1
+2
+3
+4</pre></div></td><td class="code"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">pyflux</span> <span class="kn">as</span> <span class="nn">pf</span>
+
+<span class="c1"># model = ... (specify a model)</span>
+<span class="n">model</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="s2">&quot;M-H&quot;</span><span class="p">,</span><span class="n">nsims</span><span class="o">=</span><span class="mi">20000</span><span class="p">)</span>
 </pre></div>
 </td></tr></table></div>
-<p><strong>list_priors()</strong></p>
-<p>Lists the current prior specification.</p>
-<p><strong>plot_fit()</strong></p>
-<p>Graphs the fit of the model.</p>
-<p><strong>plot_predict(h)</strong></p>
-<p>Predicts h timesteps ahead and plots results. Arguments are:</p>
-<ul class="simple">
-<li><em>h</em> : (default: 5) how many timesteps to predict ahead</li>
-<li><em>past_values</em> : (default: 20) how many past observations to plot</li>
-<li><em>intervals</em> : (default: True) whether to plot prediction intervals</li>
-</ul>
-<p><strong>plot_predict_is(h)</strong></p>
-<p>Predicts rolling in-sample prediction for h past timestamps and plots results. Arguments are:</p>
-<ul class="simple">
-<li><em>h</em> : (default: 5) how many timesteps to predict</li>
-<li><em>past_values</em> : (default: 20) how many past observations to plot</li>
-<li><em>intervals</em> : (default: True) whether to plot prediction intervals</li>
-</ul>
-<p><strong>predict(h)</strong></p>
-<p>Predicts h timesteps ahead and outputs pd.DataFrame. Arguments are:</p>
-<ul class="simple">
-<li><em>h</em> : (default: 5) how many timesteps to predict ahead</li>
-</ul>
-<p><strong>predict_is(h)</strong></p>
-<p>Predicts h timesteps ahead and outputs pd.DataFrame. Arguments are:</p>
-<ul class="simple">
-<li><em>h</em> : (default: 5) how many timesteps to predict ahead</li>
-</ul>
-<div class="highlight-python"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre>1</pre></div></td><td class="code"><div class="highlight"><pre><span></span><span class="n">model</span><span class="o">.</span><span class="n">plot_predict</span><span class="p">(</span><span class="n">h</span><span class="o">=</span><span class="mi">12</span><span class="p">,</span><span class="n">past_values</span><span class="o">=</span><span class="mi">36</span><span class="p">)</span>
-</pre></div>
-</td></tr></table></div>
+<dl class="function">
+<dt id="plot_fit">
+<code class="descname">plot_fit</code><span class="sig-paren">(</span><em>**kwargs</em><span class="sig-paren">)</span><a class="headerlink" href="#plot_fit" title="Permalink to this definition">¶</a></dt>
+<dd><p>Graphs the fit of the model.</p>
+<p>Optional arguments include <strong>figsize</strong> - the dimensions of the figure to plot.</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="plot_parameters">
+<code class="descname">plot_parameters</code><span class="sig-paren">(</span><em>indices</em>, <em>figsize</em><span class="sig-paren">)</span><a class="headerlink" href="#plot_parameters" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns a plot of the parameters and their associated uncertainty. <strong>indices</strong> is a list referring to the parameter indices that you want ot plot. Figsize specifies how big the plot will be.</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="plot_predict">
+<code class="descname">plot_predict</code><span class="sig-paren">(</span><em>h</em>, <em>past_values</em>, <em>intervals</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="headerlink" href="#plot_predict" title="Permalink to this definition">¶</a></dt>
+<dd><p>Plots predictions of the model. <strong>h</strong> is an int of how many steps ahead to predict. <strong>past_values</strong> is an int of how many past values of the series to plot. <strong>intervals</strong> is a bool on whether to include confidence/credibility intervals or not.</p>
+<p>Optional arguments include <strong>figsize</strong> - the dimensions of the figure to plot.</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="plot_predict_is">
+<code class="descname">plot_predict_is</code><span class="sig-paren">(</span><em>h</em>, <em>past_values</em>, <em>intervals</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="headerlink" href="#plot_predict_is" title="Permalink to this definition">¶</a></dt>
+<dd><p>Plots in-sample rolling predictions for the model. <strong>h</strong> is an int of how many previous steps to simulate performance on. <strong>past_values</strong> is an int of how many past values of the series to plot. <strong>intervals</strong> is a bool on whether to include confidence/credibility intervals or not.</p>
+<p>Optional arguments include <strong>figsize</strong> - the dimensions of the figure to plot.</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="predict">
+<code class="descname">predict</code><span class="sig-paren">(</span><em>h</em><span class="sig-paren">)</span><a class="headerlink" href="#predict" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns DataFrame of model predictions. <strong>h</strong> is an int of how many steps ahead to predict.</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="predict_is">
+<code class="descname">predict_is</code><span class="sig-paren">(</span><em>h</em><span class="sig-paren">)</span><a class="headerlink" href="#predict_is" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns DataFrame of in-sample rolling predictions for the model. <strong>h</strong> is an int of how many previous steps to simulate performance on.</p>
+</dd></dl>
+
 </div>
 </div>
 
@@ -265,7 +290,7 @@
         <a href="ssm.html" class="btn btn-neutral float-right" title="Gaussian State Space models" accesskey="n">Next <span class="fa fa-arrow-circle-right"></span></a>
       
       
-        <a href="gas.html" class="btn btn-neutral" title="GAS models" accesskey="p"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+        <a href="gasreg.html" class="btn btn-neutral" title="GAS Regression models" accesskey="p"><span class="fa fa-arrow-circle-left"></span> Previous</a>
       
     </div>
   
@@ -296,7 +321,7 @@
     <script type="text/javascript">
         var DOCUMENTATION_OPTIONS = {
             URL_ROOT:'./',
-            VERSION:'0.2.1',
+            VERSION:'0.2.7',
             COLLAPSE_INDEX:false,
             FILE_SUFFIX:'.html',
             HAS_SOURCE:  true

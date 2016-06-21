@@ -43,6 +43,7 @@ class GASReg(tsm.TSM):
         self.supported_methods = ["MLE","PML","Laplace","M-H","BBVI"]
         self.default_method = "MLE"
         self.multivariate_model = False
+        self.skewness = False
 
         # Format the data
         self.is_pandas = True # This is compulsory for this model type
@@ -72,7 +73,7 @@ class GASReg(tsm.TSM):
         """     
         thetas,_,scores,coefficients = self._model(beta)
         parm = np.array([self.parameters.parameter_list[k].prior.transform(beta[k]) for k in range(beta.shape[0])])
-        model_scale, model_shape = self._get_scale_and_shape(parm)
+        model_scale, model_shape, model_skewness = self._get_scale_and_shape(parm)
         
         theta_sample = np.ones(self.model_Y.shape[0])
         scores_sample = np.zeros((self.X.shape[1],self.model_Y.shape[0]+1))
@@ -80,7 +81,7 @@ class GASReg(tsm.TSM):
         coefficients_sample[:,0] = self.initial_values
 
         pseudo_theta = np.append(thetas,np.dot(self.X[-1],coefficients[:,-1]))
-        sample_Y = self.draw_variable(self.link(pseudo_theta[1:]),model_scale,model_shape,self.model_Y.shape[0])
+        sample_Y = self.draw_variable(self.link(pseudo_theta[1:]),model_scale,model_shape,model_skewness,self.model_Y.shape[0])
 
         for t in range(0,self.model_Y.shape[0]):
             theta_sample[t] = np.dot(self.X[t],coefficients_sample[:,t])
@@ -133,8 +134,11 @@ class GASReg(tsm.TSM):
         else:
             model_scale = 0
             model_shape = 0 
-
-        return model_scale, model_shape
+        if self.skewness is True:
+            model_skewness = parm[-3]
+        else:
+            model_skewness = 0
+        return model_scale, model_shape, model_skewness
 
     def _model(self,beta):
         """ Creates the structure of the model
@@ -160,12 +164,12 @@ class GASReg(tsm.TSM):
         coefficients = np.zeros((self.X.shape[1],self.model_Y.shape[0]+1))
         coefficients[:,0] = self.initial_values
         theta = np.zeros(self.model_Y.shape[0]+1)
-        model_scale, model_shape = self._get_scale_and_shape(parm)
+        model_scale, model_shape, model_skewness = self._get_scale_and_shape(parm)
 
         # Loop over time series
         for t in range(0,self.model_Y.shape[0]):
             theta[t] = np.dot(self.X[t],coefficients[:,t])
-            self.model_scores[:,t] = self.score_function(self.X[t],self.model_Y[t],self.link(theta[t]),model_scale,model_shape)
+            self.model_scores[:,t] = self.score_function(self.X[t],self.model_Y[t],self.link(theta[t]),model_scale,model_shape,model_skewness)
             coefficients[:,t+1] = coefficients[:,t] + parm[0:self.X.shape[1]]*self.model_scores[:,t] 
         return theta[:-1], self.model_Y, self.model_scores[:-1], coefficients
 
@@ -246,10 +250,10 @@ class GASReg(tsm.TSM):
             coefficients_star = coefficients.T[-1]
             theta_pred = np.dot(np.array([coefficients_star]), X_pred.T)[0]
             t_params = self.transform_parameters()
-            model_scale, model_shape = self._get_scale_and_shape(t_params)
+            model_scale, model_shape, model_skewness = self._get_scale_and_shape(t_params)
 
             # Measurement prediction intervals
-            rnd_value = self.draw_variable(self.link(theta_pred),model_scale,model_shape,[1500,theta_pred.shape[0]])
+            rnd_value = self.draw_variable(self.link(theta_pred),model_scale,model_shape,model_skewness,[1500,theta_pred.shape[0]])
 
             error_bars = []
             for pre in range(5,100,5):

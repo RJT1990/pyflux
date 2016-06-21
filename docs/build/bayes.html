@@ -8,7 +8,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>Bayesian Inference &mdash; PyFlux 0.2.1 documentation</title>
+  <title>Bayesian Inference &mdash; PyFlux 0.2.7 documentation</title>
   
 
   
@@ -30,7 +30,7 @@
   
 
   
-    <link rel="top" title="PyFlux 0.2.1 documentation" href="index.html"/>
+    <link rel="top" title="PyFlux 0.2.7 documentation" href="index.html"/>
         <link rel="next" title="Classical Inference" href="classical.html"/>
         <link rel="prev" title="VAR models" href="var.html"/> 
 
@@ -83,9 +83,11 @@
             
                 <ul>
 <li class="toctree-l1"><a class="reference internal" href="arima.html">ARIMA models</a></li>
+<li class="toctree-l1"><a class="reference internal" href="arimax.html">ARIMAX models</a></li>
 <li class="toctree-l1"><a class="reference internal" href="egarch.html">EGARCH models</a></li>
 <li class="toctree-l1"><a class="reference internal" href="garch.html">GARCH models</a></li>
 <li class="toctree-l1"><a class="reference internal" href="gas.html">GAS models</a></li>
+<li class="toctree-l1"><a class="reference internal" href="gasreg.html">GAS Regression models</a></li>
 <li class="toctree-l1"><a class="reference internal" href="gpnar.html">GP-NARX models</a></li>
 <li class="toctree-l1"><a class="reference internal" href="ssm.html">Gaussian State Space models</a></li>
 <li class="toctree-l1"><a class="reference internal" href="ngssm.html">Non-Gaussian State Space models</a></li>
@@ -145,82 +147,130 @@
             
   <div class="section" id="bayesian-inference">
 <h1>Bayesian Inference<a class="headerlink" href="#bayesian-inference" title="Permalink to this headline">¶</a></h1>
-<p>PyFlux supports Bayesian inference.</p>
+<p>PyFlux supports Bayesian inference for most of its models.</p>
 <div class="section" id="interface">
 <h2>Interface<a class="headerlink" href="#interface" title="Permalink to this headline">¶</a></h2>
-<p><strong>adjust_prior(index,prior_type)</strong></p>
-<p>Adjusts prior for given parameters.</p>
-<ul class="simple">
-<li><em>index</em> : the parameter index; can be entered as a list to change multiple priors</li>
-<li><em>prior_type</em> : one of the prior options (see subsequent section)</li>
-</ul>
-<div class="highlight-python"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre>1</pre></div></td><td class="code"><div class="highlight"><pre><span></span><span class="n">model</span><span class="o">.</span><span class="n">adjust_prior</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span><span class="n">pf</span><span class="o">.</span><span class="n">Normal</span><span class="p">(</span><span class="n">mu0</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span><span class="n">sigma0</span><span class="o">=</span><span class="mi">5</span><span class="p">,</span><span class="n">transform</span><span class="o">=</span><span class="n">tanh</span><span class="p">))</span>
+<p>To view the current priors, you should print the model&#8217;s parameter object. For example:</p>
+<div class="highlight-python"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre>1
+2
+3
+4</pre></div></td><td class="code"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">pyflux</span> <span class="kn">as</span> <span class="nn">pf</span>
+
+<span class="c1"># model = ... (specify a model)</span>
+<span class="k">print</span><span class="p">(</span><span class="n">model</span><span class="o">.</span><span class="n">parameters</span><span class="p">)</span>
 </pre></div>
 </td></tr></table></div>
-<p><strong>list_priors()</strong></p>
-<p>Lists priors for the current model.</p>
-<div class="highlight-python"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre>1</pre></div></td><td class="code"><div class="highlight"><pre><span></span><span class="n">model</span><span class="o">.</span><span class="n">list_priors</span><span class="p">()</span>
-</pre></div>
-</td></tr></table></div>
-<p><strong>list_q()</strong></p>
-<p>Lists variational distributions for each parameter</p>
-<div class="highlight-python"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre>1</pre></div></td><td class="code"><div class="highlight"><pre><span></span><span class="n">model</span><span class="o">.</span><span class="n">list_q</span><span class="p">()</span>
+<p>This will outline the current prior assumptions for each parameter, as well as the variational approximate distribution that is assumed (if you are conducting variational inference). To adjust priors, simply use the following method on your model object:</p>
+<dl class="function">
+<dt id="adjust_prior">
+<code class="descname">adjust_prior</code><span class="sig-paren">(</span><em>index</em>, <em>prior</em><span class="sig-paren">)</span><a class="headerlink" href="#adjust_prior" title="Permalink to this definition">¶</a></dt>
+<dd><p>Adjusts the priors of the model. <strong>index</strong> can be an int or a list. <strong>prior</strong> is a prior object, such as <a class="reference internal" href="#Normal" title="Normal"><code class="xref py py-class docutils literal"><span class="pre">Normal</span></code></a>.</p>
+</dd></dl>
+
+<p>Here is example usage for <a class="reference internal" href="#adjust_prior" title="adjust_prior"><code class="xref py py-func docutils literal"><span class="pre">adjust_prior()</span></code></a>:</p>
+<div class="highlight-python"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre>1
+2
+3
+4
+5</pre></div></td><td class="code"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">pyflux</span> <span class="kn">as</span> <span class="nn">pf</span>
+
+<span class="c1"># model = ... (specify a model)</span>
+<span class="n">model</span><span class="o">.</span><span class="n">list_priors</span><span class="p">()</span>
+<span class="n">model</span><span class="o">.</span><span class="n">adjust_prior</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span><span class="n">pf</span><span class="o">.</span><span class="n">Normal</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">))</span>
 </pre></div>
 </td></tr></table></div>
 </div>
 <div class="section" id="methods">
 <h2>Methods<a class="headerlink" href="#methods" title="Permalink to this headline">¶</a></h2>
-<p>There are a number of Bayesian inference options using the fit() option. These can be chosen with the method option.</p>
+<p>There are a number of Bayesian inference options using the <a class="reference internal" href="var.html#fit" title="fit"><code class="xref py py-func docutils literal"><span class="pre">fit()</span></code></a>: option. These can be chosen with the method option.</p>
 <p><strong>Black-Box Variational Inference</strong></p>
-<p>Performs Black Box Variational Inference.</p>
-<div class="highlight-python"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre>1</pre></div></td><td class="code"><div class="highlight"><pre><span></span><span class="n">model</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">method</span><span class="o">=</span><span class="s1">&#39;BBVI&#39;</span><span class="p">,</span><span class="n">iterations</span><span class="o">=</span><span class="s1">&#39;10000&#39;</span><span class="p">,</span><span class="n">step</span><span class="o">=</span><span class="s1">&#39;0.001&#39;</span><span class="p">)</span>
+<p>Performs Black Box Variational Inference. Currently the fixed assumptions are mean-field variational inference with normal approximate distributions.</p>
+<div class="highlight-python"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre>1</pre></div></td><td class="code"><div class="highlight"><pre><span></span><span class="n">model</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">method</span><span class="o">=</span><span class="s1">&#39;BBVI&#39;</span><span class="p">,</span><span class="n">iterations</span><span class="o">=</span><span class="s1">&#39;10000&#39;</span><span class="p">,</span><span class="n">optimizer</span><span class="o">=</span><span class="s1">&#39;ADAM&#39;</span><span class="p">)</span>
 </pre></div>
 </td></tr></table></div>
 <ul class="simple">
 <li><em>iterations</em> : (default : 30000) number of iterations to run</li>
-<li><em>step</em> : (default : 0.001) stepsize for RMSProp</li>
+<li><em>optimizer</em> : (default: RMSProp) RMSProp or ADAM</li>
 </ul>
 <p><strong>Laplace Approximation</strong></p>
 <p>Performs Laplace Approximation of the posterior.</p>
 <div class="highlight-python"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre>1</pre></div></td><td class="code"><div class="highlight"><pre><span></span><span class="n">model</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">method</span><span class="o">=</span><span class="s1">&#39;Laplace&#39;</span><span class="p">)</span>
 </pre></div>
 </td></tr></table></div>
-<p><strong>Maximum a Posteriori</strong></p>
-<p>Performs Maximum a posteriori estimation.</p>
-<div class="highlight-python"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre>1</pre></div></td><td class="code"><div class="highlight"><pre><span></span><span class="n">model</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">method</span><span class="o">=</span><span class="s1">&#39;MAP&#39;</span><span class="p">)</span>
-</pre></div>
-</td></tr></table></div>
 <p><strong>Metropolis-Hastings</strong></p>
-<p>Performs Metropolis-Hastings MCMC.</p>
+<p>Performs Metropolis-Hastings MCMC. Currently uses &#8216;one long chain&#8217;.</p>
 <div class="highlight-python"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre>1</pre></div></td><td class="code"><div class="highlight"><pre><span></span><span class="n">model</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">method</span><span class="o">=</span><span class="s1">&#39;M-H&#39;</span><span class="p">)</span>
 </pre></div>
 </td></tr></table></div>
 <ul class="simple">
 <li><em>simulations</em> : number of simulations for the chain</li>
 </ul>
+<p><strong>Penalized Maximum Likelihood</strong></p>
+<p>Provides a Maximum a posteriori (MAP) point estimate. This estimate is dubiously Bayesian as it is based on a 0/1 loss rather than a squared or absolute loss. We therefore abide by the naming convention of &#8216;Penalized Maximum Likelihood&#8217;.</p>
+<div class="highlight-python"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre>1</pre></div></td><td class="code"><div class="highlight"><pre><span></span><span class="n">model</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">method</span><span class="o">=</span><span class="s1">&#39;PML&#39;</span><span class="p">)</span>
+</pre></div>
+</td></tr></table></div>
 </div>
 <div class="section" id="priors">
 <h2>Priors<a class="headerlink" href="#priors" title="Permalink to this headline">¶</a></h2>
-<p>Priors are contained as classes in the the inference module. The following priors are currently supported:</p>
-<p><strong>InverseGamma(alpha,beta,transform)</strong></p>
-<p>An Inverse Gamma prior class, with the following arguments:</p>
-<ul class="simple">
-<li><em>alpha</em> : the shape parameter for the prior</li>
-<li><em>beta</em> : the scale parameter for the prior</li>
-<li><em>transform</em> : (default: None) one of [&#8216;exp&#8217;,&#8217;tanh&#8217;] - changes the support of the parameter.</li>
-</ul>
-<p><strong>Normal(mu0,sigma0,transform)</strong></p>
-<p>A Normal prior class, with the following arguments:</p>
-<ul class="simple">
-<li><em>mu0</em> : the location parameter for the prior</li>
-<li><em>sigma0</em> : the scale parameter for the prior</li>
-<li><em>transform</em> : (default: None) one of [&#8216;exp&#8217;,&#8217;tanh&#8217;] - changes the support of the parameter.</li>
-</ul>
-<p><strong>Uniform(transform)</strong></p>
-<p>A uninformative uniform prior class, with the following arguments:</p>
-<ul class="simple">
-<li><em>transform</em> : (default: None) one of [&#8216;exp&#8217;,&#8217;tanh&#8217;] - changes the support of the parameter.</li>
-</ul>
+<p>Priors are contained as classes in the the inference module. The following priors are supported:</p>
+<dl class="class">
+<dt id="InverseGamma">
+<em class="property">class </em><code class="descname">InverseGamma</code><span class="sig-paren">(</span><em>alpha</em>, <em>beta</em>, <em>transform</em><span class="sig-paren">)</span><a class="headerlink" href="#InverseGamma" title="Permalink to this definition">¶</a></dt>
+<dd><dl class="attribute">
+<dt id="InverseGamma.alpha">
+<code class="descname">alpha</code><a class="headerlink" href="#InverseGamma.alpha" title="Permalink to this definition">¶</a></dt>
+<dd><p>the shape parameter for the prior</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="InverseGamma.beta">
+<code class="descname">beta</code><a class="headerlink" href="#InverseGamma.beta" title="Permalink to this definition">¶</a></dt>
+<dd><p>the scale parameter for the prior</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="InverseGamma.transform">
+<code class="descname">transform</code><a class="headerlink" href="#InverseGamma.transform" title="Permalink to this definition">¶</a></dt>
+<dd><p>(default: None) one of [&#8216;exp&#8217;,&#8217;tanh&#8217;] - changes the support of the parameter.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="Normal">
+<em class="property">class </em><code class="descname">Normal</code><span class="sig-paren">(</span><em>mu0</em>, <em>sigma0</em>, <em>transform</em><span class="sig-paren">)</span><a class="headerlink" href="#Normal" title="Permalink to this definition">¶</a></dt>
+<dd><dl class="attribute">
+<dt id="Normal.mu0">
+<code class="descname">mu0</code><a class="headerlink" href="#Normal.mu0" title="Permalink to this definition">¶</a></dt>
+<dd><p>the location parameter for the prior</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="Normal.sigma0">
+<code class="descname">sigma0</code><a class="headerlink" href="#Normal.sigma0" title="Permalink to this definition">¶</a></dt>
+<dd><p>the scale parameter for the prior</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="Normal.transform">
+<code class="descname">transform</code><a class="headerlink" href="#Normal.transform" title="Permalink to this definition">¶</a></dt>
+<dd><p>(default: None) one of [&#8216;exp&#8217;,&#8217;tanh&#8217;] - changes the support of the parameter.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="Uniform">
+<em class="property">class </em><code class="descname">Uniform</code><span class="sig-paren">(</span><em>transform</em><span class="sig-paren">)</span><a class="headerlink" href="#Uniform" title="Permalink to this definition">¶</a></dt>
+<dd><dl class="attribute">
+<dt id="Uniform.transform">
+<code class="descname">transform</code><a class="headerlink" href="#Uniform.transform" title="Permalink to this definition">¶</a></dt>
+<dd><p>(default: None) one of [&#8216;exp&#8217;,&#8217;tanh&#8217;] - changes the support of the parameter.</p>
+</dd></dl>
+
+</dd></dl>
+
 <p><em>transform</em> has implications beyond the prior. For example, if you set an AR(1) prior to a &#8216;tanh&#8217; transformation, then the tanh transformation will also carry across to the likelihood, so the parameter that is optimized/estimated is tanh(x) instead of x.</p>
 </div>
 </div>
@@ -266,7 +316,7 @@
     <script type="text/javascript">
         var DOCUMENTATION_OPTIONS = {
             URL_ROOT:'./',
-            VERSION:'0.2.1',
+            VERSION:'0.2.7',
             COLLAPSE_INDEX:false,
             FILE_SUFFIX:'.html',
             HAS_SOURCE:  true

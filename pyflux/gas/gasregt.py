@@ -54,10 +54,10 @@ class GASRegt(GASReg):
 
         self.param_no += 2
 
-    def score_function(self,X,y,mean,scale,shape):
+    def score_function(self,X,y,mean,scale,shape,skewness):
         return ((shape+1)/shape)*((y-mean)*X)/(np.power(scale,2)+np.power((y-mean),2)/shape)
 
-    def draw_variable(self,loc,scale,shape,nsims):
+    def draw_variable(self,loc,scale,shape,skewness,nsims):
         return loc + scale*np.random.standard_t(shape,nsims)
 
     def neg_loglik(self,beta):

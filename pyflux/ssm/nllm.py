@@ -5,6 +5,7 @@ if sys.version_info < (3,):
 import numpy as np
 import pandas as pd
 import scipy.stats as ss
+from scipy import optimize
 import matplotlib.pyplot as plt
 from matplotlib.animation import FuncAnimation, writers
 import seaborn as sns
@@ -16,6 +17,7 @@ from .. import tsm as tsm
 from .. import data_check as dc
 from .. import covariances as cov
 from .. import results as res
+from .. import gas as gas
 
 from .kalman import *
 from .llm import *
@@ -103,11 +105,13 @@ class NLLEV(tsm.TSM):
         Scale (float) and shape (float)
         """
         if self.dist == 't':
-            return self.parameters.get_parameter_values()[-2],self.parameters.get_parameter_values()[-1]
+            return self.parameters.get_parameter_values(transformed=True)[-2],self.parameters.get_parameter_values(transformed=True)[-1],0
         elif self.dist == 'Laplace':
-            return self.parameters.get_parameter_values()[-1],0
+            return self.parameters.get_parameter_values(transformed=True)[-1],0,0
+        elif self.dist == 'skewt':
+            return self.parameters.get_parameter_values(transformed=True)[-2],self.parameters.get_parameter_values(transformed=True)[-1],self.parameters.get_parameter_values(transformed=True)[-3]
         else:
-            return 0, 0
+            return 0, 0, 0
 
     def _model(self,data,beta):
         """ Creates the structure of the model
@@ -224,6 +228,32 @@ class NLLEV(tsm.TSM):
 
         return H, mu
 
+    def _skewt_approximating_model(self,beta,T,Z,R,Q):
+        """ Creates approximating Gaussian model for skewt measurement density
+
+        Parameters
+        ----------
+        beta : np.array
+            Contains untransformed starting values for parameters
+
+        T, Z, R, Q : np.array
+            State space matrices used in KFS algorithm
+
+        Returns
+        ----------
+
+        H : np.array
+            Approximating measurement variance matrix
+
+        mu : np.array
+            Approximating measurement constants
+        """     
+
+        H = np.ones(self.data.shape[0])*self.parameters.parameter_list[-2].prior.transform(beta[-2])
+        mu = np.zeros(self.data.shape[0])
+
+        return H, mu
+
     def _t_approximating_model(self,beta,T,Z,R,Q):
         """ Creates approximating Gaussian model for t measurement density
 
@@ -286,7 +316,7 @@ class NLLEV(tsm.TSM):
 
         x._approximating_model = approx_model
 
-        def draw_variable(loc,scale,shape,nsims):
+        def draw_variable(loc,scale,shape,skewness,nsims):
             return np.random.exponential(1/loc, nsims)
 
         x.draw_variable = draw_variable
@@ -333,7 +363,7 @@ class NLLEV(tsm.TSM):
 
         x._approximating_model = approx_model
 
-        def draw_variable(loc,scale,shape,nsims):
+        def draw_variable(loc,scale,shape,skewness,nsims):
             return np.random.laplace(loc, scale, nsims)
 
         x.draw_variable = draw_variable
@@ -373,11 +403,63 @@ class NLLEV(tsm.TSM):
         temp.fit()
         x.parameters.set_parameter_starting_values(np.array([temp.parameters.get_parameter_values()[1]]))
 
-        def draw_variable(loc,scale,shape,nsims):
+        def draw_variable(loc,scale,shape,skewness,nsims):
             return np.random.poisson(loc, nsims)
 
         x.draw_variable = draw_variable
         x.m_likelihood_markov_blanket = x.poisson_likelihood_markov_blanket
+
+        return x
+
+    @classmethod
+    def skewt(cls,data,integ=0,target=None):
+        """ Creates skewt-distributed state space model
+
+        Parameters
+        ----------
+        data : np.array
+            Contains the time series
+
+        integ : int (default : 0)
+            Specifies how many time to difference the time series.
+
+        target : str (pd.DataFrame) or int (np.array)
+            Specifies which column name or array index to use. By default, first
+            column/array will be selected as the dependent variable.
+
+        Returns
+        ----------
+        - NLLEV.skewt object
+        """     
+
+        x = NLLEV(data=data,integ=integ,target=target)
+        
+        x.parameters.add_parameter('Skewness',ifr.Uniform(transform='exp'),dst.q_Normal(0,3))
+        x.parameters.add_parameter('Scale',ifr.Uniform(transform='exp'),dst.q_Normal(0,3))
+        x.parameters.add_parameter('v',ifr.Uniform(transform='exp'),dst.q_Normal(0,3))
+
+        x._approximating_model = x._skewt_approximating_model
+        x.meas_likelihood = x.skewt_likelihood
+        x.model_name = "skewt-distributed Local Level Model"
+        x.dist = "skewt"
+        x.param_no = 4  
+        x.link = np.array
+        temp = LLEV(data,integ=integ,target=target)
+        temp.fit()
+
+        def temp_function(params):
+            return -np.sum(dst.skewt.logpdf(x=x.data,df=np.exp(params[0]),
+                loc=np.ones(x.data.shape[0])*params[1], scale=np.exp(params[2]),gamma=np.exp(params[3])))
+
+        p = optimize.minimize(temp_function,np.array([2.0,0.0,-1.0,0.0]),method='L-BFGS-B')
+
+        x.parameters.set_parameter_starting_values(np.array([temp.parameters.get_parameter_values()[1],p.x[3],p.x[2],p.x[0]]))
+
+        def draw_variable(loc,scale,shape,skewness,nsims):
+            return loc + scale*dst.skewt.rvs(shape,skewness,nsims)
+
+        x.draw_variable = draw_variable
+        x.m_likelihood_markov_blanket = x.skewt_likelihood_markov_blanket
 
         return x
 
@@ -404,7 +486,7 @@ class NLLEV(tsm.TSM):
 
         x = NLLEV(data=data,integ=integ,target=target)
         
-        x.parameters.add_parameter('Signal^2 irregular',ifr.Uniform(transform='exp'),dst.q_Normal(0,3))
+        x.parameters.add_parameter('Scale',ifr.Uniform(transform='exp'),dst.q_Normal(0,3))
         x.parameters.add_parameter('v',ifr.Uniform(transform='exp'),dst.q_Normal(0,3))
 
         x._approximating_model = x._t_approximating_model
@@ -415,9 +497,16 @@ class NLLEV(tsm.TSM):
         x.link = np.array
         temp = LLEV(data,integ=integ,target=target)
         temp.fit()
-        x.parameters.set_parameter_starting_values(np.array([temp.parameters.get_parameter_values()[1],temp.parameters.get_parameter_values()[0],2]))
 
-        def draw_variable(loc,scale,shape,nsims):
+        def temp_function(params):
+            return -np.sum(ss.t.logpdf(x=x.data,df=np.exp(params[0]),
+                loc=np.ones(x.data.shape[0])*params[1], scale=np.exp(params[2])))
+
+        p = optimize.minimize(temp_function,np.array([2.0,0.0,-1.0]),method='L-BFGS-B')
+
+        x.parameters.set_parameter_starting_values(np.array([temp.parameters.get_parameter_values()[1],p.x[2],p.x[0]]))
+
+        def draw_variable(loc,scale,shape,skewness,nsims):
             return loc + scale*np.random.standard_t(shape,nsims)
 
         x.draw_variable = draw_variable
@@ -521,13 +610,13 @@ class NLLEV(tsm.TSM):
         states[0,:] = beta[self.param_no:self.param_no+self.data.shape[0]] 
         return -self.loglik(beta[:self.param_no],states) 
 
-    def fit(self,step=0.001,iterations=3000,print_progress=True,start_diffuse=False,**kwargs):
+    def fit(self,optimizer='RMSProp',iterations=3000,print_progress=True,start_diffuse=False,**kwargs):
         """ Fits the model
 
         Parameters
         ----------
-        step : float
-            Step size for RMSProp
+        optimizer : string
+            Stochastic optimizer: either RMSProp or ADAM.
 
         iterations: int
             How many iterations to run
@@ -543,10 +632,10 @@ class NLLEV(tsm.TSM):
         BBVI fit object
         """     
 
-        return self._bbvi_fit(self.neg_logposterior,step=step,print_progress=print_progress,
+        return self._bbvi_fit(self.neg_logposterior,optimizer=optimizer,print_progress=print_progress,
             start_diffuse=start_diffuse,iterations=iterations,**kwargs)
 
-    def _bbvi_fit(self,posterior,step=0.001,iterations=3000,print_progress=True,start_diffuse=False,**kwargs):
+    def _bbvi_fit(self,posterior,optimizer='RMSProp',iterations=3000,print_progress=True,start_diffuse=False,**kwargs):
         """ Performs Black Box Variational Inference
 
         Parameters
@@ -554,8 +643,8 @@ class NLLEV(tsm.TSM):
         posterior : method
             Hands bbvi_fit a posterior object
 
-        step : float
-            Step size for RMSProp
+        optimizer : string
+            Stochastic optimizer: either RMSProp or ADAM.
 
         iterations: int
             How many iterations to run
@@ -598,17 +687,16 @@ class NLLEV(tsm.TSM):
                 q_list.append(dst.q_Normal(0,np.log(np.sqrt(np.abs(V[0][0][item])))))
 
         # PERFORM BBVI
-        #bbvi_obj = ifr.BBVI(posterior,q_list,12,step,iterations)
-        bbvi_obj = ifr.CBBVI(posterior,self.log_p_blanket,q_list,12,step,iterations)
+        bbvi_obj = ifr.CBBVI(posterior,self.log_p_blanket,q_list,12,optimizer,iterations)
 
         if print_progress is False:
             bbvi_obj.printer = False
 
         if animate is True:
-            q, q_params, q_ses, stored_parameters, stored_predictive_likelihood = bbvi_obj.lambda_update_store()
+            q, q_params, q_ses, stored_parameters, stored_predictive_likelihood = bbvi_obj.run_and_store()
             self._animate_bbvi(stored_parameters,stored_predictive_likelihood)
         else:
-            q, q_params, q_ses = bbvi_obj.lambda_update()
+            q, q_params, q_ses = bbvi_obj.run()
 
         self.parameters.set_parameter_values(q_params[:self.param_no],'BBVI',np.exp(q_ses[:self.param_no]),None)    
 
@@ -621,16 +709,16 @@ class NLLEV(tsm.TSM):
         scores = None
         states = q_params[self.param_no:]
         X_names = None
-        states_var = np.exp(q_ses[self.param_no:])
+        states_ses = np.exp(q_ses[self.param_no:])
 
         self.states = states
-        self.states_var = states_var
+        self.states_ses = states_ses
 
         return res.BBVISSResults(data_name=self.data_name,X_names=X_names,model_name=self.model_name,
             model_type=self.model_type, parameters=self.parameters,data=Y,index=self.index,
             multivariate_model=self.multivariate_model,objective=posterior(q_params), 
             method='BBVI',ses=q_ses[:self.param_no],signal=theta,scores=scores,
-            param_hide=self._param_hide,max_lag=self.max_lag,states=states,states_var=states_var)
+            param_hide=self._param_hide,max_lag=self.max_lag,states=states,states_var=np.power(states_ses,2))
 
     def exponential_likelihood(self,beta,alpha):
         """ Creates Exponential loglikelihood of the data given the states
@@ -774,6 +862,47 @@ class NLLEV(tsm.TSM):
             loc=alpha[0],
             scale=self.parameters.parameter_list[-2].prior.transform(beta[-2]))
 
+    def skewt_likelihood(self,beta,alpha):
+        """ Creates t loglikelihood of the date given the states
+
+        Parameters
+        ----------
+        beta : np.array
+            Contains untransformed starting values for parameters
+
+        alpha : np.array
+            A vector of states
+
+        Returns
+        ----------
+        t loglikelihood
+        """     
+        return np.sum(dst.skewt.logpdf(x=self.data,
+            df=self.parameters.parameter_list[-1].prior.transform(beta[-1]),
+            loc=alpha[0],
+            scale=self.parameters.parameter_list[-2].prior.transform(beta[-2]),gamma=self.parameters.parameter_list[-3].prior.transform(beta[-3])))
+
+    def skewt_likelihood_markov_blanket(self,beta,alpha):
+        """ Creates t Markov blanket for each state
+
+        Parameters
+        ----------
+        beta : np.array
+            Contains untransformed starting values for parameters
+
+        alpha : np.array
+            A vector of states
+
+        Returns
+        ----------
+        Poisson loglikelihood
+        """     
+        return dst.skewt.logpdf(x=self.data,
+            df=self.parameters.parameter_list[-1].prior.transform(beta[-1]),
+            loc=alpha[0],
+            scale=self.parameters.parameter_list[-2].prior.transform(beta[-2]),
+            gamma=self.parameters.parameter_list[-3].prior.transform(beta[-3]))
+
     def markov_blanket(self,beta,alpha):
         """ Creates total Markov blanket for states
 
@@ -817,6 +946,8 @@ class NLLEV(tsm.TSM):
 
         if self.dist in ['t']:
             evo_blanket = np.append([self.m_likelihood_markov_blanket(beta,alpha).sum()]*2,evo_blanket)
+        elif self.dist in ['skewt']:
+            evo_blanket = np.append([self.m_likelihood_markov_blanket(beta,alpha).sum()]*3,evo_blanket)
         elif self.dist in ['Laplace']:
             evo_blanket = np.append([self.m_likelihood_markov_blanket(beta,alpha).sum()],evo_blanket)
 
@@ -865,15 +996,16 @@ class NLLEV(tsm.TSM):
             raise Exception("No parameters estimated!")
         else:
             # Retrieve data, dates and (transformed) parameters
-            scale, shape = self._get_scale_and_shape()
+            scale, shape, skewness = self._get_scale_and_shape()
             previous_value = self.data[-1]  
             forecasted_values = np.ones(h)*self.states[-1]  
             date_index = self.shift_dates(h)
             simulations = 10000
             sim_vector = np.zeros([simulations,h])
+            t_params = self.transform_parameters()
 
             for n in range(0,simulations):  
-                rnd_q = np.random.normal(0,np.sqrt(self.parameters.get_parameter_values(transformed=True)[0]),h)    
+                rnd_q = np.random.normal(0,np.sqrt(self.parameters.get_parameter_values(transformed=True)[0]),h) 
                 exp = forecasted_values.copy()
 
                 for t in range(0,h):
@@ -882,10 +1014,14 @@ class NLLEV(tsm.TSM):
                     else:
                         exp[t] = exp[t-1] + rnd_q[t]
 
-                sim_vector[n] = self.draw_variable(loc=self.link(exp),shape=shape,scale=scale,nsims=exp.shape[0])
+                sim_vector[n] = self.draw_variable(loc=self.link(exp),shape=shape,scale=scale,skewness=skewness,nsims=exp.shape[0])
 
             sim_vector = np.transpose(sim_vector)
+
             forecasted_values = self.link(forecasted_values)
+
+            if self.dist == 'skewt':
+                forecasted_values = forecasted_values + ((t_params[-3] - (1.0/t_params[-3]))*t_params[-2]*gas.SkewtScore.tv_variate_exp(t_params[-1]))
 
             plt.figure(figsize=figsize) 
 
@@ -917,8 +1053,17 @@ class NLLEV(tsm.TSM):
         else:
             date_index = copy.deepcopy(self.index)
             date_index = date_index[self.integ:self.data_original.shape[0]+1]
-            states_upper_95 = self.states + 1.98*np.sqrt(self.states_var)
-            states_lower_95 = self.states - 1.98*np.sqrt(self.states_var)
+            t_params = self.transform_parameters()
+
+            if self.dist == 'skewt':
+                states_upper_95 = (self.states + 1.98*np.sqrt(self.states_ses)) + ((t_params[-3] - (1.0/t_params[-3]))*t_params[-2]*gas.SkewtScore.tv_variate_exp(t_params[-1]))
+                states_lower_95 = (self.states - 1.98*np.sqrt(self.states_ses)) + ((t_params[-3] - (1.0/t_params[-3]))*t_params[-2]*gas.SkewtScore.tv_variate_exp(t_params[-1])) 
+                mean_states = self.states + ((t_params[-3] - (1.0/t_params[-3]))*t_params[-2]*gas.SkewtScore.tv_variate_exp(t_params[-1]))
+            else:
+                states_upper_95 = (self.states + 1.98*np.sqrt(self.states_ses)) 
+                states_lower_95 = (self.states - 1.98*np.sqrt(self.states_ses))
+                mean_states = self.states
+
             plt.figure(figsize=figsize) 
             
             plt.subplot(2, 1, 1)
@@ -929,7 +1074,7 @@ class NLLEV(tsm.TSM):
                 plt.fill_between(date_index, self.link(states_lower_95), self.link(states_upper_95), alpha=0.15,label='95% C.I.')   
 
             plt.plot(date_index,self.data,label='Data')
-            plt.plot(date_index,self.link(self.states),label='Smoothed',c='black')          
+            plt.plot(date_index,self.link(mean_states),label='Smoothed',c='black')          
             plt.legend(loc=2)
             
             plt.subplot(2, 1, 2)
@@ -939,7 +1084,7 @@ class NLLEV(tsm.TSM):
                 alpha =[0.15*i/float(100) for i in range(50,12,-2)]
                 plt.fill_between(date_index, self.link(states_lower_95), self.link(states_upper_95), alpha=0.15,label='95% C.I.')   
 
-            plt.plot(date_index,self.link(self.states),label='Smoothed State')
+            plt.plot(date_index,self.link(mean_states),label='Smoothed State')
             plt.legend(loc=2)
             plt.show()
 
@@ -962,6 +1107,9 @@ class NLLEV(tsm.TSM):
             # Retrieve data, dates and (transformed) parameters         
             date_index = self.shift_dates(h)
             forecasted_values = np.ones(h)*self.states[-1]
+
+            if self.dist == 'skewt':
+                forecasted_values = forecasted_values + ((t_params[-3] - (1.0/t_params[-3]))*t_params[-2]*gas.SkewtScore.tv_variate_exp(t_params[-1]))
 
             result = pd.DataFrame(self.link(forecasted_values))
             result.rename(columns={0:self.data_name}, inplace=True)

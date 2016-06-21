@@ -43,41 +43,6 @@ Class Arguments
 
       string (data is DataFrame) or int (data is np.array) : which column to use as the time series. If None, the first column will be chosen as the data.
 
-
-Class Attributes
-----------
-
-An **ARIMA()** object holds the following attributes:
-
-Model Attributes:
-
-* *ar* : the number of autoregressive lags
-* *ma* : the number of moving average lags
-* *integ* : order of integration (0 : no difference, 1 : first difference, ...)
-* *index* : the timescale of the time-series
-* *data* : the dependent variable held as a np.array
-* *data_name* : string variable containing name of the time series
-* *data_type* : whether original datatype is numpy or pandas
-
-Parameter Attributes:
-
-The attribute *param.desc* is a dictionary holding information about individual parameters:
-
-* *name* : name of the parameter
-* *index* : index of the parameter (begins with 0)
-* *prior* : the prior specification for the parameter
-* *q* : the variational distribution approximation
-
-Inference Attributes:
-
-* *starting_params* : starting parameters for estimation/inference
-* *params* : holds any estimated parameters
-* *ses* : holds any estimated standard errors for parameters (MLE/MAP)
-* *ihessian* : holds any estimated inverse Hessian (MLE/MAP)
-* *chains* : holds trace information for MCMC runs
-* *supported_methods* : which inference methods are supported 
-* *default_method* : default inference method
-
 Class Methods
 ----------
 
@@ -98,9 +63,9 @@ Here is example usage for :py:func:`adjust_prior`:
 
 .. py:function:: fit(method,**kwargs)
    
-   Estimates parameters for the model. Returns a Results object. **method** can be one of ['BBVI',MLE','MAP','M-H','Laplace']. 
+   Estimates parameters for the model. Returns a Results object. **method** is an inference/estimation option; see Bayesian Inference and Classical Inference sections for options. If no **method** is provided then a default will be used.
 
-   Optional arguments include **nsims** - how many simulations if fitting with M-H, **cov_matrix** - option to provide a covariance matrix if fitting with M-H, **iterations** - how many iterations to run if performing BBVI, and **step** - how big should the step size be for RMSprop (default 0.001).
+   Optional arguments are specific to the **method** you choose - see the documentation for these methods for more detail.
 
 Here is example usage for :py:func:`fit`:
 
@@ -117,6 +82,10 @@ Here is example usage for :py:func:`fit`:
    Graphs the fit of the model.
 
    Optional arguments include **figsize** - the dimensions of the figure to plot.
+
+.. py:function:: plot_parameters(indices, figsize)
+
+   Returns a plot of the parameters and their associated uncertainty. **indices** is a list referring to the parameter indices that you want ot plot. Figsize specifies how big the plot will be.
 
 .. py:function:: plot_predict(h,past_values,intervals,**kwargs)
    

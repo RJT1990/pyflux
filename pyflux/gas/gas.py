@@ -58,6 +58,7 @@ class GAS(tsm.TSM):
         self.supported_methods = ["MLE","PML","Laplace","M-H","BBVI"]
         self.default_method = "MLE"
         self.multivariate_model = False
+        self.skewness = False
 
         self.data, self.data_name, self.is_pandas, self.index = dc.data_check(data,target)
         self.data_original = self.data.copy()
@@ -79,7 +80,7 @@ class GAS(tsm.TSM):
         """     
         thetas,_,scores = self._model(beta)
         parm = np.array([self.parameters.parameter_list[k].prior.transform(beta[k]) for k in range(beta.shape[0])])
-        model_scale, model_shape = self._get_scale_and_shape(parm)
+        model_scale, model_shape, model_skewness = self._get_scale_and_shape(parm)
         theta_sample = np.ones(self.model_Y.shape[0])*parm[0]
         scores_sample = np.zeros(self.model_Y.shape[0])
         pseudo_theta = np.append(thetas,self.score_function(self.model_Y[-1],thetas[-1],model_scale,model_shape))
@@ -91,7 +92,7 @@ class GAS(tsm.TSM):
             else:
                 theta_sample[t] += np.dot(parm[1:1+self.ar],theta_sample[(t-self.ar):t][::-1]) + np.dot(parm[1+self.ar:1+self.ar+self.sc],scores_sample[(t-self.sc):t][::-1])
 
-            scores_sample[t] = self.score_function(sample_Y[t],self.link(theta_sample[t]),model_scale,model_shape)
+            scores_sample[t] = self.score_function(sample_Y[t],self.link(theta_sample[t]),model_scale,model_shape, model_skewness)
         return theta_sample
 
     def _create_model_matrices(self):
@@ -145,7 +146,12 @@ class GAS(tsm.TSM):
             model_scale = 0
             model_shape = 0 
 
-        return model_scale, model_shape
+        if self.skewness is True:
+            model_skewness = parm[-3]
+        else:
+            model_skewness = 0
+
+        return model_scale, model_shape, model_skewness
 
     def _model(self,beta):
         """ Creates the structure of the model
@@ -169,7 +175,7 @@ class GAS(tsm.TSM):
 
         parm = np.array([self.parameters.parameter_list[k].prior.transform(beta[k]) for k in range(beta.shape[0])])
         theta = np.ones(self.model_Y.shape[0])*parm[0]
-        model_scale, model_shape = self._get_scale_and_shape(parm)
+        model_scale, model_shape, model_skewness = self._get_scale_and_shape(parm)
 
         # Loop over time series
         for t in range(0,self.model_Y.shape[0]):
@@ -178,7 +184,7 @@ class GAS(tsm.TSM):
             else:
                 theta[t] += np.dot(parm[1:1+self.ar],theta[(t-self.ar):t][::-1]) + np.dot(parm[1+self.ar:1+self.ar+self.sc],self.model_scores[(t-self.sc):t][::-1])
 
-            self.model_scores[t] = self.score_function(self.model_Y[t],self.link(theta[t]),model_scale,model_shape)
+            self.model_scores[t] = self.score_function(self.model_Y[t],self.link(theta[t]),model_scale,model_shape,model_skewness)
 
         return theta, self.model_Y, self.model_scores
 
@@ -258,7 +264,7 @@ class GAS(tsm.TSM):
         Matrix of simulations
         """     
 
-        model_scale, model_shape = self._get_scale_and_shape(t_params)
+        model_scale, model_shape, model_skewness = self._get_scale_and_shape(t_params)
 
         sim_vector = np.zeros([simulations,h])
 
@@ -279,7 +285,7 @@ class GAS(tsm.TSM):
                     for k in range(1,self.sc+1):
                         new_value += t_params[k+self.ar]*scores_exp[-k]
 
-                rnd_value = self.draw_variable(self.link(new_value),model_scale,model_shape,1)[0]
+                rnd_value = self.draw_variable(self.link(new_value),model_scale,model_shape,model_skewness,1)[0]
                 Y_exp = np.append(Y_exp,[rnd_value])
                 theta_exp = np.append(theta_exp,[new_value]) # For indexing consistency
                 scores_exp = np.append(scores_exp,scores[np.random.randint(scores.shape[0])]) # expectation of score is zero

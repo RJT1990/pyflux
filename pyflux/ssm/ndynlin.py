@@ -6,6 +6,7 @@ import numpy as np
 import pandas as pd
 import scipy.stats as ss
 import matplotlib.pyplot as plt
+from scipy import optimize
 import seaborn as sns
 from patsy import dmatrices, dmatrix, demo_data
 
@@ -83,11 +84,13 @@ class NDynLin(tsm.TSM):
         Scale (float) and shape (float)
         """
         if self.dist == 't':
-            return self.parameters.get_parameter_values()[-2],self.parameters.get_parameter_values()[-1]
+            return self.parameters.get_parameter_values(transformed=True)[-2],self.parameters.get_parameter_values(transformed=True)[-1],0
         elif self.dist == 'Laplace':
-            return self.parameters.get_parameter_values()[-1],0
+            return self.parameters.get_parameter_values(transformed=True)[-1],0,0
+        elif self.dist == 'skewt':
+            return self.parameters.get_parameter_values(transformed=True)[-2],self.parameters.get_parameter_values(transformed=True)[-1],self.parameters.get_parameter_values(transformed=True)[-3]
         else:
-            return 0, 0
+            return 0, 0, 0
 
     def _model(self,data,beta):
         """ Creates the structure of the model
@@ -234,6 +237,33 @@ class NDynLin(tsm.TSM):
 
         return H, mu
 
+    def _skewt_approximating_model(self,beta,T,Z,R,Q):
+        """ Creates approximating Gaussian model for t measurement density
+
+        Parameters
+        ----------
+        beta : np.array
+            Contains untransformed starting values for parameters
+
+        T, Z, R, Q : np.array
+            State space matrices used in KFS algorithm
+
+        Returns
+        ----------
+
+        H : np.array
+            Approximating measurement variance matrix
+
+        mu : np.array
+            Approximating measurement constants
+        """     
+
+        H = np.ones(self.data.shape[0])*self.parameters.parameter_list[-2].prior.transform(beta[-2])
+        mu = np.zeros(self.data.shape[0])
+
+        return H, mu
+
+
     @classmethod
     def Exponential(cls,formula,data):
         """ Creates Exponential-distributed state space model
@@ -271,7 +301,7 @@ class NDynLin(tsm.TSM):
 
         x._approximating_model = approx_model
 
-        def draw_variable(loc,scale,shape,nsims):
+        def draw_variable(loc,scale,shape,skewness,nsims):
             return np.random.exponential(1/loc, nsims)
 
         x.m_likelihood_markov_blanket = x.exponential_likelihood_markov_blanket
@@ -320,7 +350,7 @@ class NDynLin(tsm.TSM):
 
         x._approximating_model = approx_model
 
-        def draw_variable(loc,scale,shape,nsims):
+        def draw_variable(loc,scale,shape,skewness,nsims):
             return np.random.laplace(loc, scale, nsims)
 
         x.draw_variable = draw_variable
@@ -360,7 +390,7 @@ class NDynLin(tsm.TSM):
         for i in range(x.param_no):
             x.parameters.parameter_list[i].start = temp.parameters.get_parameter_values()[i+1]
 
-        def draw_variable(loc,scale,shape,nsims):
+        def draw_variable(loc,scale,shape,skewness,nsims):
             return np.random.poisson(loc, nsims)
 
         x.draw_variable = draw_variable
@@ -406,16 +436,80 @@ class NDynLin(tsm.TSM):
         for i in range(x.param_no-2):
             x.parameters.parameter_list[i].start = temp.parameters.get_parameter_values()[i+1]
 
-        x.parameters.parameter_list[-1].start = 2.0
-        x.parameters.parameter_list[-2].start = temp.parameters.get_parameter_values()[0]
+        def temp_function(params):
+            return -np.sum(ss.t.logpdf(x=x.data,df=np.exp(params[0]),
+                loc=np.ones(x.data.shape[0])*params[1], scale=np.exp(params[2])))
 
-        def draw_variable(loc,scale,shape,nsims):
+        p = optimize.minimize(temp_function,np.array([2.0,0.0,-1.0]),method='L-BFGS-B')
+
+        x.parameters.parameter_list[-1].start = p.x[0]
+        x.parameters.parameter_list[-2].start = p.x[2]
+
+        def draw_variable(loc,scale,shape,skewness,nsims):
             return loc + scale*np.random.standard_t(shape,nsims)
 
         x.draw_variable = draw_variable
         x.m_likelihood_markov_blanket = x.t_likelihood_markov_blanket
 
         return x
+
+    @classmethod
+    def skewt(cls,formula,data):
+        """ Creates skewt-distributed state space model
+
+        Parameters
+        ----------
+        data : np.array
+            Contains the time series
+
+        integ : int (default : 0)
+            Specifies how many time to difference the time series.
+
+        target : str (pd.DataFrame) or int (np.array)
+            Specifies which column name or array index to use. By default, first
+            column/array will be selected as the dependent variable.
+
+        Returns
+        ----------
+        - NLLEV.skewt object
+        """     
+
+        x = NDynLin(formula=formula,data=data)
+        
+        x.parameters.add_parameter('Skewness',ifr.Uniform(transform='exp'),dst.q_Normal(0,3))        
+        x.parameters.add_parameter('Signal^2 irregular',ifr.Uniform(transform='exp'),dst.q_Normal(0,3))
+        x.parameters.add_parameter('v',ifr.Uniform(transform='exp'),dst.q_Normal(0,3))
+        x.param_no += 3
+
+        x._approximating_model = x._skewt_approximating_model
+        x.meas_likelihood = x.skewt_likelihood
+        x.model_name = "skewt-distributed Dynamic Regression Model" 
+        x.dist = "skewt"
+        x.link = np.array
+        temp = DynLin(formula=formula,data=data)
+        temp.fit()
+
+        for i in range(x.param_no-3):
+            x.parameters.parameter_list[i].start = temp.parameters.get_parameter_values()[i+1]
+
+        def temp_function(params):
+            return -np.sum(dst.skewt.logpdf(x=x.data,df=np.exp(params[0]),
+                loc=np.ones(x.data.shape[0])*params[1], scale=np.exp(params[2]),gamma=np.exp(params[3])))
+
+        p = optimize.minimize(temp_function,np.array([2.0,0.0,-1.0,1.0]),method='L-BFGS-B')
+
+        x.parameters.parameter_list[-1].start = p.x[0]
+        x.parameters.parameter_list[-2].start = p.x[2]
+        x.parameters.parameter_list[-3].start = p.x[3]
+
+        def draw_variable(loc,scale,shape,skewness,nsims):
+            return loc + scale*dst.skewt.rvs(shape,skewness,nsims)
+
+        x.draw_variable = draw_variable
+        x.m_likelihood_markov_blanket = x.skewt_likelihood_markov_blanket
+
+        return x
+
 
     def neg_logposterior(self,beta):
         """ Returns negative log posterior
@@ -515,13 +609,13 @@ class NDynLin(tsm.TSM):
             states[state_i,:] = beta[(self.param_no + (self.data.shape[0]*state_i)):(self.param_no + (self.data.shape[0]*(state_i+1)))]
         return -self.loglik(beta[:self.param_no],states) 
 
-    def fit(self,step=0.001,iterations=3000,print_progress=True,start_diffuse=False):
+    def fit(self,optimizer='RMSProp',iterations=3000,print_progress=True,start_diffuse=False):
         """ Fits the model
 
         Parameters
         ----------
-        step : float
-            Step size for RMSProp
+        optimizer : string
+            Stochastic optimizer: either RMSProp or ADAM.
 
         iterations: int
             How many iterations to run
@@ -536,9 +630,9 @@ class NDynLin(tsm.TSM):
         ----------
         BBVI fit object
         """             
-        return self._bbvi_fit(self.neg_logposterior,step=step,print_progress=print_progress,start_diffuse=start_diffuse,iterations=iterations)
+        return self._bbvi_fit(self.neg_logposterior,optimizer=optimizer,print_progress=print_progress,start_diffuse=start_diffuse,iterations=iterations)
 
-    def _bbvi_fit(self,posterior,step=0.001,iterations=3000,print_progress=True,start_diffuse=False,**kwargs):
+    def _bbvi_fit(self,posterior,optimizer='RMSProp',iterations=3000,print_progress=True,start_diffuse=False,**kwargs):
         """ Performs Black Box Variational Inference
 
         Parameters
@@ -546,8 +640,8 @@ class NDynLin(tsm.TSM):
         posterior : method
             Hands bbvi_fit a posterior object
 
-        step : float
-            Step size for RMSProp
+        optimizer : string
+            Stochastic optimizer: either RMSProp or ADAM.
 
         iterations: int
             How many iterations for BBVI
@@ -584,12 +678,11 @@ class NDynLin(tsm.TSM):
                 else:
                     q_list.append(dst.q_Normal(0,-3))
 
-        bbvi_obj = ifr.CBBVI(posterior,self.log_p_blanket,q_list,12,step,iterations)
-        #bbvi_obj = ifr.BBVI(posterior,q_list,12,step,iterations)
+        bbvi_obj = ifr.CBBVI(posterior,self.log_p_blanket,q_list,12,optimizer,iterations)
 
         if print_progress is False:
             bbvi_obj.printer = False
-        q, q_params, q_ses = bbvi_obj.lambda_update()
+        q, q_params, q_ses = bbvi_obj.run()
 
         self.parameters.set_parameter_values(q_params[:self.param_no],'BBVI',np.exp(q_ses[:self.param_no]),None)    
 
@@ -756,12 +849,52 @@ class NDynLin(tsm.TSM):
 
         Returns
         ----------
-        Poisson Markov Blanket
+        t Markov Blanket
         """     
         return ss.t.logpdf(x=self.data,
             df=self.parameters.parameter_list[-1].prior.transform(beta[-1]),
             loc=np.sum(self.X*alpha.T,axis=1),
             scale=self.parameters.parameter_list[-2].prior.transform(beta[-2]))
+
+    def skewt_likelihood(self,beta,alpha):
+        """ Creates skewt loglikelihood of the date given the states
+
+        Parameters
+        ----------
+        beta : np.array
+            Contains untransformed starting values for parameters
+
+        alpha : np.array
+            A vector of states
+
+        Returns
+        ----------
+        skewt loglikelihood
+        """     
+        return np.sum(dst.skewt.logpdf(x=self.data,
+            df=self.parameters.parameter_list[-1].prior.transform(beta[-1]),
+            loc=np.sum(self.X*alpha.T,axis=1),
+            scale=self.parameters.parameter_list[-2].prior.transform(beta[-2]),  gamma=self.parameters.parameter_list[-3].prior.transform(beta[-3])))
+
+    def skewt_likelihood_markov_blanket(self,beta,alpha):
+        """ Creates skewt Markov blanket for each state
+
+        Parameters
+        ----------
+        beta : np.array
+            Contains untransformed starting values for parameters
+
+        alpha : np.array
+            A vector of states
+
+        Returns
+        ----------
+        skewt Markov Blanket
+        """     
+        return dst.skewt.logpdf(x=self.data,
+            df=self.parameters.parameter_list[-1].prior.transform(beta[-1]),
+            loc=np.sum(self.X*alpha.T,axis=1),
+            scale=self.parameters.parameter_list[-2].prior.transform(beta[-2]),  gamma=self.parameters.parameter_list[-3].prior.transform(beta[-3]))
 
     def markov_blanket(self,beta,alpha):
         """ Creates total Markov blanket for states
@@ -806,6 +939,8 @@ class NDynLin(tsm.TSM):
 
         if self.dist in ['t']:
             evo_blanket = np.append([self.m_likelihood_markov_blanket(beta,alpha).sum()]*2,evo_blanket)
+        if self.dist in ['skewt']:
+            evo_blanket = np.append([self.m_likelihood_markov_blanket(beta,alpha).sum()]*3,evo_blanket)            
         elif self.dist in ['Laplace']:
             evo_blanket = np.append([self.m_likelihood_markov_blanket(beta,alpha).sum()],evo_blanket)
 
@@ -857,7 +992,7 @@ class NDynLin(tsm.TSM):
             raise Exception("No parameters estimated!")
         else:
             # Retrieve data, dates and (transformed) parameters
-            scale, shape = self._get_scale_and_shape()
+            scale, shape, skewness = self._get_scale_and_shape()
 
             # Retrieve data, dates and (transformed) parameters
             date_index = self.shift_dates(h)
@@ -892,7 +1027,7 @@ class NDynLin(tsm.TSM):
                         for state in range(self.state_no):
                             coeff_sim[state][t] = coeff_sim[state][t-1] + rnd_q[state][t]
 
-                sim_vector[n] = self.draw_variable(loc=self.link(np.sum(coeff_sim.T*Z[self.y.shape[0]:self.y.shape[0]+h,:],axis=1)),shape=shape,scale=scale,nsims=h)
+                sim_vector[n] = self.draw_variable(loc=self.link(np.sum(coeff_sim.T*Z[self.y.shape[0]:self.y.shape[0]+h,:],axis=1)),shape=shape,scale=scale,skewness=skewness,nsims=h)
 
             sim_vector = np.transpose(sim_vector)
             forecasted_values = smoothed_series

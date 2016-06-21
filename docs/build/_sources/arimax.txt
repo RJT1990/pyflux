@@ -1,0 +1,107 @@
+ARIMAX models
+==================================
+
+Example
+----------
+
+.. code-block:: python
+   :linenos:
+
+   import numpy as np
+   import pandas as pd
+   from pandas.io.data import DataReader
+   from datetime import datetime
+   import pyflux as pf
+
+   accident_data = # some made-up data (needs to be a DataFrame)
+
+   model = pf.ARIMAX(data=my_data,ar=1,ma=1,formula='CarAccidents ~ 1 + Friday')
+
+Class Arguments
+----------
+
+.. py:class:: ARIMAX(data,formula,ar,ma,integ)
+
+   .. py:attribute:: data
+
+      pd.DataFrame or array-like : the time-series data
+
+   .. py:attribute:: formula
+
+      patsy notation string describing the regression
+
+   .. py:attribute:: ar
+
+      int : the number of autoregressive lags
+
+   .. py:attribute:: ma
+
+      int : the number of moving average lags
+
+   .. py:attribute:: integ
+
+      int : how many times to difference the time series (default: 0)
+
+Class Methods
+----------
+
+.. py:function:: adjust_prior(index, prior)
+
+   Adjusts the priors of the model. **index** can be an int or a list. **prior** is a prior object, such as Normal(0,3).
+
+Here is example usage for :py:func:`adjust_prior`:
+
+.. code-block:: python
+   :linenos:
+
+   import pyflux as pf
+
+   # model = ... (specify a model)
+   model.list_priors()
+   model.adjust_prior(2,pf.Normal(0,1))
+
+.. py:function:: fit(method,**kwargs)
+   
+   Estimates parameters for the model. Returns a Results object. **method** is an inference/estimation option; see Bayesian Inference and Classical Inference sections for options. If no **method** is provided then a default will be used.
+
+   Optional arguments are specific to the **method** you choose - see the documentation for these methods for more detail.
+
+Here is example usage for :py:func:`fit`:
+
+.. code-block:: python
+   :linenos:
+
+   import pyflux as pf
+
+   # model = ... (specify a model)
+   model.fit("M-H",nsims=20000)
+
+.. py:function:: plot_fit(**kwargs)
+   
+   Graphs the fit of the model.
+
+   Optional arguments include **figsize** - the dimensions of the figure to plot.
+
+.. py:function:: plot_parameters(indices, figsize)
+
+   Returns a plot of the parameters and their associated uncertainty. **indices** is a list referring to the parameter indices that you want ot plot. Figsize specifies how big the plot will be.
+
+.. py:function:: plot_predict(h,past_values,intervals,oos_data,**kwargs)
+   
+   Plots predictions of the model. **h** is an int of how many steps ahead to predict. **past_values** is an int of how many past values of the series to plot. **intervals** is a bool on whether to include confidence/credibility intervals or not. **oos_data** is a DataFrame in the same format as the original DataFrame and has data for the explanatory variables to be used for prediction.
+
+   Optional arguments include **figsize** - the dimensions of the figure to plot.
+
+.. py:function:: plot_predict_is(h,past_values,intervals,**kwargs)
+   
+   Plots in-sample rolling predictions for the model. **h** is an int of how many previous steps to simulate performance on. **past_values** is an int of how many past values of the series to plot. **intervals** is a bool on whether to include confidence/credibility intervals or not.
+
+   Optional arguments include **figsize** - the dimensions of the figure to plot.
+
+.. py:function:: predict(h, oos_data)
+   
+   Returns DataFrame of model predictions. **h** is an int of how many steps ahead to predict. **oos_data** is a DataFrame in the same format as the original DataFrame and has data for the explanatory variables to be used for prediction.
+
+.. py:function:: predict_is(h)
+   
+   Returns DataFrame of in-sample rolling predictions for the model. **h** is an int of how many previous steps to simulate performance on.

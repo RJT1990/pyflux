@@ -1,4 +1,5 @@
-from numpy import abs, exp, power, array
+from numpy import abs, exp, power, array, sqrt, pi
+from scipy.special import gamma
 
 class Score(object):
 
@@ -146,6 +147,39 @@ class PoissonScore(Score):
 
     def adj_score(self,y,lam):
         return array([self.log_lam_adj_score(y,lam)])
+
+
+class SkewtScore(Score):
+
+    def __init__(self):
+
+        super(Score,self).__init__()
+
+    @staticmethod
+    def tv_variate_exp(df):
+        return (sqrt(df)*gamma((df-1.0)/2.0))/(sqrt(pi)*gamma(df/2.0))
+
+    @staticmethod
+    def mu_score(y,loc,scale,shape,skewness):
+        if (y-loc)>=0:
+            return ((shape+1)/shape)*(y-loc)/(power(skewness*scale,2) + (power(y-loc,2)/shape))
+        else:
+            return ((shape+1)/shape)*(y-loc)/(power(scale,2) + (power(skewness*(y-loc),2)/shape))
+
+    @staticmethod
+    def mu_information_term(y,loc,scale,shape,skewness):
+        #return (shape+1)*((power(scale,2)*shape) - power(y-loc,2))/power((power(scale,2)*shape) + power(y-loc,2),2)
+        return 1.0
+
+    @staticmethod
+    def mu_adj_score(y,loc,scale,shape,skewness):
+        return tScore.mu_score(y,loc,scale,shape,skewness) / tScore.mu_information_term(y,loc,scale,shape,skewness)
+
+    def score(self,y,loc,scale,shape,skewness):
+        return array([self.mu_score(y,loc,scale,shape,skewness)])
+
+    def adj_score(self,y,loc,scale,shape,skewness):
+        return array([self.mu_adj_score(y,loc,scale,shape,skewness)])
 
 
 class tScore(Score):

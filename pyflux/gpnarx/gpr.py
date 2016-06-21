@@ -98,7 +98,7 @@ class GPR(GP):
         self.parameters.add_parameter('Noise Sigma^2',ifr.Uniform(transform='exp'),dst.q_Normal(0,3))
 
         if self.kernel_type == 'ARD':
-            self.kernel = ARD(self.X,np.ones(self.ar),1)
+            self.kernel = ARD(self.X,np.ones(len(self.X_names)),1)
 
             for reg in range(self.X.shape[0]):
                 self.parameters.add_parameter('l-' + self.X_names[reg],ifr.Uniform(transform='exp'),dst.q_Normal(0,3))

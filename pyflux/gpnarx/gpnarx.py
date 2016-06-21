@@ -443,11 +443,9 @@ class GPNARX(tsm.TSM):
             x = GPNARX(ar=self.ar,kernel_type=self.kernel_type,integ=self.integ,data=self.data_original[:-h+t])
             if t == 0:
                 x.fit(printer=False)
-                save = x.params
                 predictions = x.predict(1)  
             else:
-                x.fit(printer=False,start=save)
-                save = x.params
+                x.fit(printer=False)
                 predictions = pd.concat([predictions,x.predict(1)])
 
         predictions.rename(columns={0:self.data_name}, inplace=True)

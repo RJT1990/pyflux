@@ -111,17 +111,17 @@ class GASExponential(GAS):
 
         return Y_exp
 
-    def adj_score_function(self,y,mean,scale,shape):
+    def adj_score_function(self,y,mean,scale,shape,skewness):
         return ExponentialScore.log_lam_adj_score(y, mean)
 
-    def draw_variable(self,loc,scale,shape,nsims):
+    def draw_variable(self,loc,scale,shape,skewness,nsims):
         return np.random.exponential(1/loc, nsims)
 
     def neg_loglik(self,beta):
         theta, Y, scores = self._model(beta)
         return -np.sum(ss.expon.logpdf(x=Y,scale=1/self.link(theta)))
 
-    def default_score_function(self,y,mean,scale,shape):
+    def default_score_function(self,y,mean,scale,shape,skewness):
         return ExponentialScore.log_lam_score(y, mean)
 
     def predict_is(self,h=5):

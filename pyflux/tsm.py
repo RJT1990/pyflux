@@ -37,7 +37,7 @@ class TSM(object):
         self.model_type = model_type
         self.parameters = Parameters(self.model_type)
 
-    def _bbvi_fit(self,posterior,step=0.001,iterations=5000,**kwargs):
+    def _bbvi_fit(self,posterior,optimizer='RMSProp',iterations=5000,**kwargs):
         """ Performs Black Box Variational Inference
 
         Parameters
@@ -45,8 +45,8 @@ class TSM(object):
         posterior : method
             Hands bbvi_fit a posterior object
 
-        step : float
-            Step size for RMSProp
+        optimizer : string
+            Stochastic optimizer: one of RMSProp or ADAM.
 
         iterations: int
             How many iterations for BBVI
@@ -90,8 +90,8 @@ class TSM(object):
 
         q_list = [k.q for k in self.parameters.parameter_list]
         
-        bbvi_obj = BBVI(posterior,q_list,12,step,iterations)
-        q, q_params, q_ses = bbvi_obj.lambda_update()
+        bbvi_obj = BBVI(posterior,q_list,12,optimizer,iterations)
+        q, q_params, q_ses = bbvi_obj.run()
         self.parameters.set_parameter_values(q_params,'BBVI',np.exp(q_ses),None)
 
         for k in range(len(self.parameters.parameter_list)):
@@ -241,50 +241,47 @@ class TSM(object):
 
         self.parameters.set_parameter_values(mean_est,'M-H',None,chain)
 
-        if y.ihessian is None:
-            raise Exception("No Hessian information - Laplace approximation cannot be performed")
+        if self.model_type in ['GAS','GARCH','EGARCH']:
+            theta, Y, scores = self._model(mean_est)
+            states = None
+            states_var = None
+            X_names = None
+        elif self.model_type in ['GASReg']:
+            theta, Y, scores, states = self._model(mean_est)
+            states_var = None
+            X_names = self.X_names
+        elif self.model_type in ['LLEV','LLT','DynLin']:
+            Y = self.data
+            scores = None
+            states, states_var = self.smoothed_state(self.data,mean_est)
+            theta = states[0][:-1]
+            X_names = None  
+        elif self.model_type in ['GPNARX','GPR','GP']:
+            Y = self.data*self._norm_std + self._norm_mean
+            scores = None
+            theta = self.expected_values(mean_est)*self._norm_std + self._norm_mean
+            X_names = None  
+            states = None   
+            states_var = None
         else:
-            if self.model_type in ['GAS','GARCH','EGARCH']:
-                theta, Y, scores = self._model(mean_est)
-                states = None
-                states_var = None
-                X_names = None
-            elif self.model_type in ['GASReg']:
-                theta, Y, scores, states = self._model(mean_est)
-                states_var = None
-                X_names = self.X_names
-            elif self.model_type in ['LLEV','LLT','DynLin']:
-                Y = self.data
-                scores = None
-                states, states_var = self.smoothed_state(self.data,mean_est)
-                theta = states[0][:-1]
-                X_names = None  
-            elif self.model_type in ['GPNARX','GPR','GP']:
-                Y = self.data*self._norm_std + self._norm_mean
-                scores = None
-                theta = self.expected_values(mean_est)*self._norm_std + self._norm_mean
-                X_names = None  
-                states = None   
-                states_var = None
-            else:
-                theta, Y = self._model(mean_est)
-                scores = None
-                states = None
-                states_var = None
-                X_names = None
+            theta, Y = self._model(mean_est)
+            scores = None
+            states = None
+            states_var = None
+            X_names = None
     
-            # Change this in future
-            try:
-                parameter_store = self.parameters.copy()
-            except:
-                parameter_store = self.parameters
+        # Change this in future
+        try:
+            parameter_store = self.parameters.copy()
+        except:
+            parameter_store = self.parameters
 
-            return MCMCResults(data_name=self.data_name,X_names=X_names,model_name=self.model_name,
-                model_type=self.model_type, parameters=parameter_store,data=Y,index=self.index,
-                multivariate_model=self.multivariate_model,objective_object=self.neg_logposterior, 
-                method='Metropolis Hastings',samples=chain,mean_est=mean_est,median_est=median_est,lower_95_est=lower_95_est,
-                upper_95_est=upper_95_est,signal=theta,scores=scores, param_hide=self._param_hide,max_lag=self.max_lag,
-                states=states,states_var=states_var)
+        return MCMCResults(data_name=self.data_name,X_names=X_names,model_name=self.model_name,
+            model_type=self.model_type, parameters=parameter_store,data=Y,index=self.index,
+            multivariate_model=self.multivariate_model,objective_object=self.neg_logposterior, 
+            method='Metropolis Hastings',samples=chain,mean_est=mean_est,median_est=median_est,lower_95_est=lower_95_est,
+            upper_95_est=upper_95_est,signal=theta,scores=scores, param_hide=self._param_hide,max_lag=self.max_lag,
+            states=states,states_var=states_var)
 
     def _ols_fit(self):
         """ Performs OLS
@@ -472,7 +469,7 @@ class TSM(object):
         cov_matrix = kwargs.get('cov_matrix',None)
         iterations = kwargs.get('iterations',10000)
         nsims = kwargs.get('nsims',10000)
-        step = kwargs.get('step',0.001)
+        optimizer = kwargs.get('optimizer','RMSProp')
 
         if method is None:
             method = self.default_method
@@ -488,7 +485,7 @@ class TSM(object):
         elif method == "Laplace":
             return self._laplace_fit(self.neg_logposterior) 
         elif method == "BBVI":
-            return self._bbvi_fit(self.neg_logposterior,step=step,iterations=iterations)
+            return self._bbvi_fit(self.neg_logposterior,optimizer=optimizer,iterations=iterations)
         elif method == "OLS":
             return self._ols_fit()          
 

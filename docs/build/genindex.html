@@ -9,7 +9,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>Index &mdash; PyFlux 0.2.1 documentation</title>
+  <title>Index &mdash; PyFlux 0.2.7 documentation</title>
   
 
   
@@ -31,7 +31,7 @@
   
 
   
-    <link rel="top" title="PyFlux 0.2.1 documentation" href="index.html"/> 
+    <link rel="top" title="PyFlux 0.2.7 documentation" href="index.html"/> 
 
   
   <script src="_static/js/modernizr.min.js"></script>
@@ -82,9 +82,11 @@
             
                 <ul>
 <li class="toctree-l1"><a class="reference internal" href="arima.html">ARIMA models</a></li>
+<li class="toctree-l1"><a class="reference internal" href="arimax.html">ARIMAX models</a></li>
 <li class="toctree-l1"><a class="reference internal" href="egarch.html">EGARCH models</a></li>
 <li class="toctree-l1"><a class="reference internal" href="garch.html">GARCH models</a></li>
 <li class="toctree-l1"><a class="reference internal" href="gas.html">GAS models</a></li>
+<li class="toctree-l1"><a class="reference internal" href="gasreg.html">GAS Regression models</a></li>
 <li class="toctree-l1"><a class="reference internal" href="gpnar.html">GP-NARX models</a></li>
 <li class="toctree-l1"><a class="reference internal" href="ssm.html">Gaussian State Space models</a></li>
 <li class="toctree-l1"><a class="reference internal" href="ngssm.html">Non-Gaussian State Space models</a></li>
@@ -140,29 +142,75 @@
 
 <div class="genindex-jumpbox">
  <a href="#A"><strong>A</strong></a>
+ | <a href="#B"><strong>B</strong></a>
  | <a href="#D"><strong>D</strong></a>
+ | <a href="#E"><strong>E</strong></a>
  | <a href="#F"><strong>F</strong></a>
+ | <a href="#G"><strong>G</strong></a>
  | <a href="#I"><strong>I</strong></a>
+ | <a href="#K"><strong>K</strong></a>
+ | <a href="#L"><strong>L</strong></a>
  | <a href="#M"><strong>M</strong></a>
+ | <a href="#N"><strong>N</strong></a>
  | <a href="#P"><strong>P</strong></a>
+ | <a href="#Q"><strong>Q</strong></a>
+ | <a href="#S"><strong>S</strong></a>
  | <a href="#T"><strong>T</strong></a>
+ | <a href="#U"><strong>U</strong></a>
+ | <a href="#V"><strong>V</strong></a>
  
 </div>
 <h2 id="A">A</h2>
 <table style="width: 100%" class="indextable genindextable"><tr>
   <td style="width: 33%" valign="top"><dl>
       
-  <dt><a href="arima.html#adjust_prior">adjust_prior() (built-in function)</a>
+  <dt><a href="egarch.html#add_leverage">add_leverage() (built-in function)</a>
   </dt>
 
       
-  <dt><a href="arima.html#ARIMA.ar">ar (ARIMA attribute)</a>
+  <dt><a href="arima.html#adjust_prior">adjust_prior() (built-in function)</a>, <a href="arimax.html#adjust_prior">[1]</a>, <a href="bayes.html#adjust_prior">[2]</a>, <a href="egarch.html#adjust_prior">[3]</a>, <a href="garch.html#adjust_prior">[4]</a>, <a href="gas.html#adjust_prior">[5]</a>, <a href="gasreg.html#adjust_prior">[6]</a>, <a href="gpnar.html#adjust_prior">[7]</a>, <a href="ngssm.html#adjust_prior">[8]</a>, <a href="ssm.html#adjust_prior">[9]</a>, <a href="var.html#adjust_prior">[10]</a>
+  </dt>
+
+      
+  <dt><a href="bayes.html#InverseGamma.alpha">alpha (InverseGamma attribute)</a>
   </dt>
 
   </dl></td>
   <td style="width: 33%" valign="top"><dl>
       
+  <dt><a href="arima.html#ARIMA.ar">ar (ARIMA attribute)</a>
+  </dt>
+
+      <dd><dl>
+        
+  <dt><a href="arimax.html#ARIMAX.ar">(ARIMAX attribute)</a>
+  </dt>
+
+        
+  <dt><a href="gas.html#GAS.ar">(GAS attribute)</a>
+  </dt>
+
+        
+  <dt><a href="gpnar.html#GPNARX.ar">(GPNARX attribute)</a>
+  </dt>
+
+      </dl></dd>
+      
   <dt><a href="arima.html#ARIMA">ARIMA (built-in class)</a>
+  </dt>
+
+      
+  <dt><a href="arimax.html#ARIMAX">ARIMAX (built-in class)</a>
+  </dt>
+
+  </dl></td>
+</tr></table>
+
+<h2 id="B">B</h2>
+<table style="width: 100%" class="indextable genindextable"><tr>
+  <td style="width: 33%" valign="top"><dl>
+      
+  <dt><a href="bayes.html#InverseGamma.beta">beta (InverseGamma attribute)</a>
   </dt>
 
   </dl></td>
@@ -175,6 +223,76 @@
   <dt><a href="arima.html#ARIMA.data">data (ARIMA attribute)</a>
   </dt>
 
+      <dd><dl>
+        
+  <dt><a href="arimax.html#ARIMAX.data">(ARIMAX attribute)</a>
+  </dt>
+
+        
+  <dt><a href="ssm.html#DynLin.data">(DynLin attribute)</a>
+  </dt>
+
+        
+  <dt><a href="egarch.html#EGARCH.data">(EGARCH attribute)</a>
+  </dt>
+
+        
+  <dt><a href="garch.html#GARCH.data">(GARCH attribute)</a>
+  </dt>
+
+        
+  <dt><a href="gas.html#GAS.data">(GAS attribute)</a>
+  </dt>
+
+        
+  <dt><a href="gasreg.html#GASReg.data">(GASReg attribute)</a>
+  </dt>
+
+        
+  <dt><a href="gpnar.html#GPNARX.data">(GPNARX attribute)</a>
+  </dt>
+
+        
+  <dt><a href="ssm.html#LLEV.data">(LLEV attribute)</a>
+  </dt>
+
+        
+  <dt><a href="ssm.html#LLT.data">(LLT attribute)</a>
+  </dt>
+
+        
+  <dt><a href="ngssm.html#NDynLin.data">(NDynLin attribute)</a>
+  </dt>
+
+        
+  <dt><a href="ngssm.html#NLLEV.data">(NLLEV attribute)</a>
+  </dt>
+
+        
+  <dt><a href="ngssm.html#NLLT.data">(NLLT attribute)</a>
+  </dt>
+
+        
+  <dt><a href="var.html#VAR.data">(VAR attribute)</a>
+  </dt>
+
+      </dl></dd>
+  </dl></td>
+  <td style="width: 33%" valign="top"><dl>
+      
+  <dt><a href="ssm.html#DynLin">DynLin (built-in class)</a>
+  </dt>
+
+  </dl></td>
+</tr></table>
+
+<h2 id="E">E</h2>
+<table style="width: 100%" class="indextable genindextable"><tr>
+  <td style="width: 33%" valign="top"><dl>
+      
+  <dt><a href="egarch.html#EGARCH">EGARCH (built-in class)</a>
+  </dt>
+
   </dl></td>
 </tr></table>
 
@@ -182,7 +300,55 @@
 <table style="width: 100%" class="indextable genindextable"><tr>
   <td style="width: 33%" valign="top"><dl>
       
-  <dt><a href="arima.html#fit">fit() (built-in function)</a>
+  <dt><a href="arima.html#fit">fit() (built-in function)</a>, <a href="arimax.html#fit">[1]</a>, <a href="egarch.html#fit">[2]</a>, <a href="garch.html#fit">[3]</a>, <a href="gas.html#fit">[4]</a>, <a href="gasreg.html#fit">[5]</a>, <a href="gpnar.html#fit">[6]</a>, <a href="ngssm.html#fit">[7]</a>, <a href="ssm.html#fit">[8]</a>, <a href="var.html#fit">[9]</a>
+  </dt>
+
+  </dl></td>
+  <td style="width: 33%" valign="top"><dl>
+      
+  <dt><a href="arimax.html#ARIMAX.formula">formula (ARIMAX attribute)</a>
+  </dt>
+
+      <dd><dl>
+        
+  <dt><a href="ssm.html#DynLin.formula">(DynLin attribute)</a>
+  </dt>
+
+        
+  <dt><a href="gasreg.html#GASReg.formula">(GASReg attribute)</a>
+  </dt>
+
+        
+  <dt><a href="ngssm.html#NDynLin.formula">(NDynLin attribute)</a>
+  </dt>
+
+      </dl></dd>
+  </dl></td>
+</tr></table>
+
+<h2 id="G">G</h2>
+<table style="width: 100%" class="indextable genindextable"><tr>
+  <td style="width: 33%" valign="top"><dl>
+      
+  <dt><a href="garch.html#GARCH">GARCH (built-in class)</a>
+  </dt>
+
+      
+  <dt><a href="gas.html#GAS">GAS (built-in class)</a>
+  </dt>
+
+      
+  <dt><a href="gasreg.html#GASReg">GASReg (built-in class)</a>
+  </dt>
+
+  </dl></td>
+  <td style="width: 33%" valign="top"><dl>
+      
+  <dt><a href="gpnar.html#GPNARX">GPNARX (built-in class)</a>
+  </dt>
+
+      
+  <dt><a href="gas.html#GAS.gradient_only">gradient_only (GAS attribute)</a>
   </dt>
 
   </dl></td>
@@ -195,6 +361,80 @@
   <dt><a href="arima.html#ARIMA.integ">integ (ARIMA attribute)</a>
   </dt>
 
+      <dd><dl>
+        
+  <dt><a href="arimax.html#ARIMAX.integ">(ARIMAX attribute)</a>
+  </dt>
+
+        
+  <dt><a href="gas.html#GAS.integ">(GAS attribute)</a>
+  </dt>
+
+        
+  <dt><a href="gpnar.html#GPNARX.integ">(GPNARX attribute)</a>
+  </dt>
+
+        
+  <dt><a href="ssm.html#LLEV.integ">(LLEV attribute)</a>
+  </dt>
+
+        
+  <dt><a href="ssm.html#LLT.integ">(LLT attribute)</a>
+  </dt>
+
+        
+  <dt><a href="ngssm.html#NLLEV.integ">(NLLEV attribute)</a>
+  </dt>
+
+        
+  <dt><a href="ngssm.html#NLLT.integ">(NLLT attribute)</a>
+  </dt>
+
+        
+  <dt><a href="var.html#VAR.integ">(VAR attribute)</a>
+  </dt>
+
+      </dl></dd>
+      
+  <dt><a href="bayes.html#InverseGamma">InverseGamma (built-in class)</a>
+  </dt>
+
+  </dl></td>
+  <td style="width: 33%" valign="top"><dl>
+      
+  <dt><a href="var.html#irf">irf() (built-in function)</a>
+  </dt>
+
+  </dl></td>
+</tr></table>
+
+<h2 id="K">K</h2>
+<table style="width: 100%" class="indextable genindextable"><tr>
+  <td style="width: 33%" valign="top"><dl>
+      
+  <dt><a href="gpnar.html#GPNARX.kernel_type">kernel_type (GPNARX attribute)</a>
+  </dt>
+
+  </dl></td>
+</tr></table>
+
+<h2 id="L">L</h2>
+<table style="width: 100%" class="indextable genindextable"><tr>
+  <td style="width: 33%" valign="top"><dl>
+      
+  <dt><a href="var.html#VAR.lags">lags (VAR attribute)</a>
+  </dt>
+
+      
+  <dt><a href="ssm.html#LLEV">LLEV (built-in class)</a>
+  </dt>
+
+  </dl></td>
+  <td style="width: 33%" valign="top"><dl>
+      
+  <dt><a href="ssm.html#LLT">LLT (built-in class)</a>
+  </dt>
+
   </dl></td>
 </tr></table>
 
@@ -205,6 +445,42 @@
   <dt><a href="arima.html#ARIMA.ma">ma (ARIMA attribute)</a>
   </dt>
 
+      <dd><dl>
+        
+  <dt><a href="arimax.html#ARIMAX.ma">(ARIMAX attribute)</a>
+  </dt>
+
+      </dl></dd>
+  </dl></td>
+  <td style="width: 33%" valign="top"><dl>
+      
+  <dt><a href="bayes.html#Normal.mu0">mu0 (Normal attribute)</a>
+  </dt>
+
+  </dl></td>
+</tr></table>
+
+<h2 id="N">N</h2>
+<table style="width: 100%" class="indextable genindextable"><tr>
+  <td style="width: 33%" valign="top"><dl>
+      
+  <dt><a href="ngssm.html#NDynLin">NDynLin (built-in class)</a>
+  </dt>
+
+      
+  <dt><a href="ngssm.html#NLLEV">NLLEV (built-in class)</a>
+  </dt>
+
+  </dl></td>
+  <td style="width: 33%" valign="top"><dl>
+      
+  <dt><a href="ngssm.html#NLLT">NLLT (built-in class)</a>
+  </dt>
+
+      
+  <dt><a href="bayes.html#Normal">Normal (built-in class)</a>
+  </dt>
+
   </dl></td>
 </tr></table>
 
@@ -212,25 +488,75 @@
 <table style="width: 100%" class="indextable genindextable"><tr>
   <td style="width: 33%" valign="top"><dl>
       
-  <dt><a href="arima.html#plot_fit">plot_fit() (built-in function)</a>
+  <dt><a href="egarch.html#EGARCH.p">p (EGARCH attribute)</a>
+  </dt>
+
+      <dd><dl>
+        
+  <dt><a href="garch.html#GARCH.p">(GARCH attribute)</a>
+  </dt>
+
+      </dl></dd>
+      
+  <dt><a href="arima.html#plot_fit">plot_fit() (built-in function)</a>, <a href="arimax.html#plot_fit">[1]</a>, <a href="egarch.html#plot_fit">[2]</a>, <a href="garch.html#plot_fit">[3]</a>, <a href="gas.html#plot_fit">[4]</a>, <a href="gasreg.html#plot_fit">[5]</a>, <a href="gpnar.html#plot_fit">[6]</a>, <a href="ngssm.html#plot_fit">[7]</a>, <a href="ssm.html#plot_fit">[8]</a>, <a href="var.html#plot_fit">[9]</a>
   </dt>
 
       
-  <dt><a href="arima.html#plot_predict">plot_predict() (built-in function)</a>
+  <dt><a href="arima.html#plot_parameters">plot_parameters() (built-in function)</a>, <a href="arimax.html#plot_parameters">[1]</a>, <a href="egarch.html#plot_parameters">[2]</a>, <a href="garch.html#plot_parameters">[3]</a>, <a href="gas.html#plot_parameters">[4]</a>, <a href="gasreg.html#plot_parameters">[5]</a>, <a href="gpnar.html#plot_parameters">[6]</a>, <a href="ngssm.html#plot_parameters">[7]</a>, <a href="ssm.html#plot_parameters">[8]</a>, <a href="var.html#plot_parameters">[9]</a>
   </dt>
 
       
-  <dt><a href="arima.html#plot_predict_is">plot_predict_is() (built-in function)</a>
+  <dt><a href="arima.html#plot_predict">plot_predict() (built-in function)</a>, <a href="arimax.html#plot_predict">[1]</a>, <a href="egarch.html#plot_predict">[2]</a>, <a href="garch.html#plot_predict">[3]</a>, <a href="gas.html#plot_predict">[4]</a>, <a href="gasreg.html#plot_predict">[5]</a>, <a href="gpnar.html#plot_predict">[6]</a>, <a href="ngssm.html#plot_predict">[7]</a>, <a href="ssm.html#plot_predict">[8]</a>, <a href="var.html#plot_predict">[9]</a>
   </dt>
 
   </dl></td>
   <td style="width: 33%" valign="top"><dl>
       
-  <dt><a href="arima.html#predict">predict() (built-in function)</a>
+  <dt><a href="arima.html#plot_predict_is">plot_predict_is() (built-in function)</a>, <a href="arimax.html#plot_predict_is">[1]</a>, <a href="egarch.html#plot_predict_is">[2]</a>, <a href="garch.html#plot_predict_is">[3]</a>, <a href="gas.html#plot_predict_is">[4]</a>, <a href="gasreg.html#plot_predict_is">[5]</a>, <a href="gpnar.html#plot_predict_is">[6]</a>, <a href="ngssm.html#plot_predict_is">[7]</a>, <a href="ssm.html#plot_predict_is">[8]</a>, <a href="var.html#plot_predict_is">[9]</a>
   </dt>
 
       
-  <dt><a href="arima.html#predict_is">predict_is() (built-in function)</a>
+  <dt><a href="arima.html#predict">predict() (built-in function)</a>, <a href="arimax.html#predict">[1]</a>, <a href="egarch.html#predict">[2]</a>, <a href="garch.html#predict">[3]</a>, <a href="gas.html#predict">[4]</a>, <a href="gasreg.html#predict">[5]</a>, <a href="gpnar.html#predict">[6]</a>, <a href="ngssm.html#predict">[7]</a>, <a href="ssm.html#predict">[8]</a>, <a href="var.html#predict">[9]</a>
+  </dt>
+
+      
+  <dt><a href="arima.html#predict_is">predict_is() (built-in function)</a>, <a href="arimax.html#predict_is">[1]</a>, <a href="egarch.html#predict_is">[2]</a>, <a href="garch.html#predict_is">[3]</a>, <a href="gas.html#predict_is">[4]</a>, <a href="gasreg.html#predict_is">[5]</a>, <a href="gpnar.html#predict_is">[6]</a>, <a href="ngssm.html#predict_is">[7]</a>, <a href="ssm.html#predict_is">[8]</a>, <a href="var.html#predict_is">[9]</a>
+  </dt>
+
+  </dl></td>
+</tr></table>
+
+<h2 id="Q">Q</h2>
+<table style="width: 100%" class="indextable genindextable"><tr>
+  <td style="width: 33%" valign="top"><dl>
+      
+  <dt><a href="egarch.html#EGARCH.q">q (EGARCH attribute)</a>
+  </dt>
+
+      <dd><dl>
+        
+  <dt><a href="garch.html#GARCH.q">(GARCH attribute)</a>
+  </dt>
+
+      </dl></dd>
+  </dl></td>
+</tr></table>
+
+<h2 id="S">S</h2>
+<table style="width: 100%" class="indextable genindextable"><tr>
+  <td style="width: 33%" valign="top"><dl>
+      
+  <dt><a href="gas.html#GAS.sc">sc (GAS attribute)</a>
+  </dt>
+
+      
+  <dt><a href="bayes.html#Normal.sigma0">sigma0 (Normal attribute)</a>
+  </dt>
+
+  </dl></td>
+  <td style="width: 33%" valign="top"><dl>
+      
+  <dt><a href="ngssm.html#simulation_smoother">simulation_smoother() (built-in function)</a>, <a href="ssm.html#simulation_smoother">[1]</a>
   </dt>
 
   </dl></td>
@@ -241,6 +567,80 @@
   <td style="width: 33%" valign="top"><dl>
       
   <dt><a href="arima.html#ARIMA.target">target (ARIMA attribute)</a>
+  </dt>
+
+      <dd><dl>
+        
+  <dt><a href="egarch.html#EGARCH.target">(EGARCH attribute)</a>
+  </dt>
+
+        
+  <dt><a href="garch.html#GARCH.target">(GARCH attribute)</a>
+  </dt>
+
+        
+  <dt><a href="gas.html#GAS.target">(GAS attribute)</a>
+  </dt>
+
+        
+  <dt><a href="gpnar.html#GPNARX.target">(GPNARX attribute)</a>
+  </dt>
+
+        
+  <dt><a href="ssm.html#LLEV.target">(LLEV attribute)</a>
+  </dt>
+
+        
+  <dt><a href="ssm.html#LLT.target">(LLT attribute)</a>
+  </dt>
+
+        
+  <dt><a href="ngssm.html#NLLEV.target">(NLLEV attribute)</a>
+  </dt>
+
+        
+  <dt><a href="ngssm.html#NLLT.target">(NLLT attribute)</a>
+  </dt>
+
+        
+  <dt><a href="var.html#VAR.target">(VAR attribute)</a>
+  </dt>
+
+      </dl></dd>
+  </dl></td>
+  <td style="width: 33%" valign="top"><dl>
+      
+  <dt><a href="bayes.html#InverseGamma.transform">transform (InverseGamma attribute)</a>
+  </dt>
+
+      <dd><dl>
+        
+  <dt><a href="bayes.html#Normal.transform">(Normal attribute)</a>
+  </dt>
+
+        
+  <dt><a href="bayes.html#Uniform.transform">(Uniform attribute)</a>
+  </dt>
+
+      </dl></dd>
+  </dl></td>
+</tr></table>
+
+<h2 id="U">U</h2>
+<table style="width: 100%" class="indextable genindextable"><tr>
+  <td style="width: 33%" valign="top"><dl>
+      
+  <dt><a href="bayes.html#Uniform">Uniform (built-in class)</a>
+  </dt>
+
+  </dl></td>
+</tr></table>
+
+<h2 id="V">V</h2>
+<table style="width: 100%" class="indextable genindextable"><tr>
+  <td style="width: 33%" valign="top"><dl>
+      
+  <dt><a href="var.html#VAR">VAR (built-in class)</a>
   </dt>
 
   </dl></td>
@@ -279,7 +679,7 @@
     <script type="text/javascript">
         var DOCUMENTATION_OPTIONS = {
             URL_ROOT:'./',
-            VERSION:'0.2.1',
+            VERSION:'0.2.7',
             COLLAPSE_INDEX:false,
             FILE_SUFFIX:'.html',
             HAS_SOURCE:  true

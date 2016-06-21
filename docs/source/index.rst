@@ -15,9 +15,11 @@ Models
    :maxdepth: 2
 
    arima
+   arimax
    egarch
    garch
    gas
+   gasreg
    gpnar
    ssm
    ngssm

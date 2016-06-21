@@ -25,120 +25,113 @@ Example
 Class Arguments
 ----------
 
-The **LLEV()** and **LLT()** model class has the following arguments:
+The local level (**LLEV**) and local linear trend (**LLT**) models are of the following form:
 
-* *data* : requires a pd.DataFrame object or an np.array
-* *target* : (default: None) specify the pandas column name or numpy index if the input is a matrix. If None, the first column will be chosen as the data.
+.. py:class:: LLEV(data,integ,target)
 
-Class Attributes
-----------
+   .. py:attribute:: data
 
-The **LLEV()** and **LLT()** model objects hold the following attributes:
+      pd.DataFrame or array-like : the time-series data
 
-Model Attributes:
+   .. py:attribute:: integ
 
-* *param_no* : number of model parameters
-* *data* : the dependent variable held as a np.array
-* *data_name* : string variable containing name of the time series
-* *data_type* : whether original datatype is numpy or pandas
+      int : how many times to difference the time series (default: 0)
 
-Parameter Attributes:
+   .. py:attribute:: target
 
-The attribute *param.desc* is a dictionary holding information about individual parameters:
+      string (data is DataFrame) or int (data is np.array) : which column to use as the time series. If None, the first column will be chosen as the data.
 
-* *name* : name of the parameter
-* *index* : index of the parameter (begins with 0)
-* *prior* : the prior specification for the parameter
-* *q* : the variational distribution approximation
+.. py:class:: LLT(data,integ,target)
 
-Inference Attributes:
+   .. py:attribute:: data
 
-* *params* : holds any estimated parameters
-* *ses* : holds any estimated standard errors for parameters (MLE/MAP)
-* *ihessian* : holds any estimated inverse Hessian (MLE/MAP)
-* *chains* : holds trace information for MCMC runs
-* *supported_methods* : which inference methods are supported 
-* *default_method* : default inference method
+      pd.DataFrame or array-like : the time-series data
+
+   .. py:attribute:: integ
+
+      int : how many times to difference the time series (default: 0)
+
+   .. py:attribute:: target
+
+      string (data is DataFrame) or int (data is np.array) : which column to use as the time series. If None, the first column will be chosen as the data.
+
+The dynamic linear regression (**DynLin**) model is of the form:
+
+.. py:class:: DynLin(formula,data)
+
+   .. py:attribute:: formula
+
+      patsy notation string describing the regression
+
+   .. py:attribute:: data
+
+      pd.DataFrame or array-like : the time-series data
+
 
 Class Methods
 ----------
 
-**adjust_prior(index,prior)**
+.. py:function:: adjust_prior(index, prior)
 
-Adjusts a prior with the given parameter index. Arguments are:
+   Adjusts the priors of the model. **index** can be an int or a list. **prior** is a prior object, such as Normal(0,3).
 
-* *index* : taking a value in range(0,no of parameters)
-* *prior* : one of the prior objects listed in the Bayesian Inference section
+Here is example usage for :py:func:`adjust_prior`:
 
 .. code-block:: python
    :linenos:
 
+   import pyflux as pf
+
+   # model = ... (specify a model)
    model.list_priors()
-   model.adjust_prior(2,ifr.Normal(0,1))
+   model.adjust_prior(2,pf.Normal(0,1))
 
-**fit(method)**
+.. py:function:: fit(method,**kwargs)
+   
+   Estimates parameters for the model. Returns a Results object. **method** is an inference/estimation option; see Bayesian Inference and Classical Inference sections for options. If no **method** is provided then a default will be used.
 
-Fits parameters for the model. Arguments are:
+   Optional arguments are specific to the **method** you choose - see the documentation for these methods for more detail.
 
-* *method* : one of ['BBVI',MLE','MAP','M-H','Laplace']
-* *printed* : (default: True) whether to print output
-* *nsims* : (default: 100000) how many simulations if M-H is chosen
-* *cov_matrix* (default: None) covariance matrix for M-H
-* *iterations* : (default: 30000) how many iterations if BBVI is chosen
-* *step* : (default: 0.001) step size for BBVI
+Here is example usage for :py:func:`fit`:
 
 .. code-block:: python
    :linenos:
 
+   import pyflux as pf
+
+   # model = ... (specify a model)
    model.fit("M-H",nsims=20000)
 
-**list_priors()**
+.. py:function:: plot_fit(intervals,**kwargs)
+   
+   Graphs the fit of the model. **intervals** is a boolean; if true shows 95% C.I. intervals for the states.
 
-Lists the current prior specification.
+   Optional arguments include **figsize** - the dimensions of the figure to plot - and **series_type** which has two options: *Filtered* or *Smoothed*.
 
-**plot_fit()**
+.. py:function:: plot_parameters(indices, figsize)
 
-Graphs the fit of the model. Optional arguments are:
+   Returns a plot of the parameters and their associated uncertainty. **indices** is a list referring to the parameter indices that you want ot plot. Figsize specifies how big the plot will be.
 
-* *series_type* : 'Filtered' or 'Smoothed'
+.. py:function:: plot_predict(h,past_values,intervals,**kwargs)
+   
+   Plots predictions of the model. **h** is an int of how many steps ahead to predict. **past_values** is an int of how many past values of the series to plot. **intervals** is a bool on whether to include confidence/credibility intervals or not.
 
-**plot_predict(h)**
+   Optional arguments include **figsize** - the dimensions of the figure to plot.
 
-Predicts h timesteps ahead and plots results. Arguments are:
+.. py:function:: plot_predict_is(h,past_values,intervals,**kwargs)
+   
+   Plots in-sample rolling predictions for the model. **h** is an int of how many previous steps to simulate performance on. **past_values** is an int of how many past values of the series to plot. **intervals** is a bool on whether to include confidence/credibility intervals or not.
 
-* *h* : (default: 5) how many timesteps to predict ahead
-* *past_values* : (default: 20) how many past observations to plot
-* *intervals* : (default: True) whether to plot prediction intervals
+   Optional arguments include **figsize** - the dimensions of the figure to plot.
 
-**plot_predict_is(h)**
+.. py:function:: predict(h)
+   
+   Returns DataFrame of model predictions. **h** is an int of how many steps ahead to predict. 
 
-Predicts rolling in-sample prediction for h past timestamps and plots results. Arguments are:
+.. py:function:: predict_is(h)
+   
+   Returns DataFrame of in-sample rolling predictions for the model. **h** is an int of how many previous steps to simulate performance on.
 
-* *h* : (default: 5) how many timesteps to predict
-* *past_values* : (default: 20) how many past observations to plot
-* *intervals* : (default: True) whether to plot prediction intervals
-
-**predict(h)**
-
-Predicts h timesteps ahead and outputs pd.DataFrame. Arguments are:
-
-* *h* : (default: 5) how many timesteps to predict ahead
-
-**predict_is(h)**
-
-Predicts h timesteps ahead and outputs pd.DataFrame. Arguments are:
-
-* *h* : (default: 5) how many timesteps to predict ahead
-
-**simulation_smoother(data, beta)**
-
-Outputs a simulated state trajectory from a simulation smoother. Arguments are:
-
-* *data* : the data to simulate from - use self.data usually.
-* *beta* : the parameters to use - use self.params (after fitting a model) usually.
-
-
-.. code-block:: python
-   :linenos:
-
-   model.plot_predict(h=12,past_values=36)
+.. py:function:: simulation_smoother(data,beta)
+   
+   Outputs a simulated state trajectory from a simulation smoother. Arguments are **data** : the data to simulate from - use self.data usually - and **beta** : the parameters to use.
