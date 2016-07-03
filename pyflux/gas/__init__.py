@@ -1,11 +1,7 @@
 from .gas import GAS
-from .gaspoisson import GASPoisson
-from .gasnormal import GASNormal
-from .gasexponential import GASExponential
-from .gaslaplace import GASLaplace
-from .gast import GASt
-from .gasskewt import GASskewt
-
+from .gasx import GASX
+from .gasmodels import GASPoisson, GASNormal, GASLaplace, GASt, GASSkewt, GASExponential
+from .gasllm import GASLLEV
 
 from .gasreg import GASReg
 from .gasregexponential import GASRegExponential

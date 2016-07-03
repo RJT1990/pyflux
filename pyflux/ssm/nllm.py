@@ -610,7 +610,7 @@ class NLLEV(tsm.TSM):
         states[0,:] = beta[self.param_no:self.param_no+self.data.shape[0]] 
         return -self.loglik(beta[:self.param_no],states) 
 
-    def fit(self,optimizer='RMSProp',iterations=3000,print_progress=True,start_diffuse=False,**kwargs):
+    def fit(self,optimizer='RMSProp',iterations=1000,print_progress=True,start_diffuse=False,**kwargs):
         """ Fits the model
 
         Parameters
@@ -635,7 +635,7 @@ class NLLEV(tsm.TSM):
         return self._bbvi_fit(self.neg_logposterior,optimizer=optimizer,print_progress=print_progress,
             start_diffuse=start_diffuse,iterations=iterations,**kwargs)
 
-    def _bbvi_fit(self,posterior,optimizer='RMSProp',iterations=3000,print_progress=True,start_diffuse=False,**kwargs):
+    def _bbvi_fit(self,posterior,optimizer='RMSProp',iterations=1000,print_progress=True,start_diffuse=False,**kwargs):
         """ Performs Black Box Variational Inference
 
         Parameters
@@ -687,7 +687,7 @@ class NLLEV(tsm.TSM):
                 q_list.append(dst.q_Normal(0,np.log(np.sqrt(np.abs(V[0][0][item])))))
 
         # PERFORM BBVI
-        bbvi_obj = ifr.CBBVI(posterior,self.log_p_blanket,q_list,12,optimizer,iterations)
+        bbvi_obj = ifr.CBBVI(posterior,self.log_p_blanket,q_list,24,optimizer,iterations)
 
         if print_progress is False:
             bbvi_obj.printer = False
@@ -1107,6 +1107,7 @@ class NLLEV(tsm.TSM):
             # Retrieve data, dates and (transformed) parameters         
             date_index = self.shift_dates(h)
             forecasted_values = np.ones(h)*self.states[-1]
+            t_params = self.transform_parameters()
 
             if self.dist == 'skewt':
                 forecasted_values = forecasted_values + ((t_params[-3] - (1.0/t_params[-3]))*t_params[-2]*gas.SkewtScore.tv_variate_exp(t_params[-1]))

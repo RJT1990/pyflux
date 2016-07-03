@@ -12,26 +12,21 @@ from .stoch_optim import RMSProp, ADAM
 class BBVI(object):
     """
     Black Box Variational Inference
-
     Parameters
     ----------
     neg_posterior : function
         posterior function
-
     q : List
         list holding distribution objects
-
     sims : int
         Number of Monte Carlo sims for the gradient
-
     step : float
         Step size for RMSProp
-
     iterations: int
         How many iterations to run
     """
 
-    def __init__(self,neg_posterior,q,sims,optimizer='RMSProp',iterations=30000):
+    def __init__(self,neg_posterior,q,sims,optimizer='RMSProp',iterations=1000):
         self.neg_posterior = neg_posterior
         self.q = q
         self.sims = sims
@@ -72,25 +67,52 @@ class BBVI(object):
         The control variate augmented Monte Carlo gradient estimate
         """
         gradient = np.zeros(np.sum(self.approx_param_no))
-        alpha = np.zeros(np.sum(self.approx_param_no))        
-        log_q = self.normal_log_q(z)
-        log_p = self.log_p(z)
+        alpha0 = np.zeros(np.sum(self.approx_param_no))  
+        z_t = z.T      
+        log_q = self.normal_log_q(z.T)
+        log_p = self.log_p(z.T)
         grad_log_q = self.grad_log_q(z)
+        gradient = grad_log_q*(log_p-log_q)
 
         for lambda_i in range(np.sum(self.approx_param_no)):
-            alpha[lambda_i] = np.cov(grad_log_q[lambda_i],grad_log_q[lambda_i]*(log_p-log_q))[0][1]/np.var(grad_log_q[lambda_i])              
+            alpha0[lambda_i] = np.cov(grad_log_q[lambda_i],gradient[lambda_i])[0][1]             
 
-        vectorized = grad_log_q*(log_p-log_q) - (alpha*grad_log_q.T).T
-        gradient = np.mean(vectorized,axis=1)
+        vectorized = gradient - ((alpha0/np.var(grad_log_q,axis=1))*grad_log_q.T).T
 
-        return gradient
+        return np.mean(vectorized,axis=1)
+
+    def cv_gradient_initial(self,z):
+        """
+        The control variate augmented Monte Carlo gradient estimate
+        """
+        gradient = np.zeros(np.sum(self.approx_param_no))
+        alpha0 = np.zeros(np.sum(self.approx_param_no))  
+        z_t = z.T      
+        log_q = self.normal_log_q_initial(z.T)
+        log_p = self.log_p(z.T)
+        grad_log_q = self.grad_log_q(z)
+        gradient = grad_log_q*(log_p-log_q)
+
+        for lambda_i in range(np.sum(self.approx_param_no)):
+            alpha0[lambda_i] = np.cov(grad_log_q[lambda_i],gradient[lambda_i])[0][1]             
+
+        vectorized = gradient - ((alpha0/np.var(grad_log_q,axis=1))*grad_log_q.T).T
+
+        return np.mean(vectorized,axis=1)
 
     def draw_normal(self):
         """
         Draw parameters from a mean-field normal family
         """
         means, scale = self.get_means_and_scales()
-        return np.random.normal(means,scale+np.power(10.0,-15),size=[self.sims,len(means)]).T
+        return np.random.normal(means,scale,size=[self.sims,means.shape[0]]).T
+
+    def draw_normal_initial(self):
+        """
+        Draw parameters from a mean-field normal family
+        """
+        means, scale = self.get_means_and_scales_from_q()
+        return np.random.normal(means,scale,size=[self.sims,means.shape[0]]).T
 
     def draw_variables(self):
         """
@@ -101,7 +123,7 @@ class BBVI(object):
             z = np.vstack((z,self.q[i].sim(self.sims)))
         return z
 
-    def get_means_and_scales(self):
+    def get_means_and_scales_from_q(self):
         """
         Gets the mean and scales for normal approximating parameters
         """
@@ -109,8 +131,14 @@ class BBVI(object):
         scale = np.zeros(len(self.q))
         for i in range(len(self.q)):
             means[i] = self.q[i].loc
-            scale[i] = np.exp(self.q[i].scale)      
-        return means, scale
+            scale[i] = self.q[i].scale  
+        return means, np.exp(scale)
+
+    def get_means_and_scales(self):
+        """
+        Gets the mean and scales for normal approximating parameters
+        """
+        return self.optim.parameters[::2], np.exp(self.optim.parameters[1::2])
 
     def grad_log_q(self,z):
         """
@@ -128,16 +156,21 @@ class BBVI(object):
         """
         The unnormalized log posterior components (the quantity we want to approximate)
         """
-        z_t = np.transpose(z)
-        return np.array([-self.neg_posterior(i) for i in z_t])
+        return np.array([-self.neg_posterior(i) for i in z])
 
     def normal_log_q(self,z):
         """
         The mean-field normal log posterior components (the quantity we want to approximate)
         """
-        z_t = np.transpose(z)
         means, scale = self.get_means_and_scales()
-        return (ss.norm.logpdf(z_t,loc=means,scale=scale)).sum(axis=1)
+        return (ss.norm.logpdf(z,loc=means,scale=scale)).sum(axis=1)
+
+    def normal_log_q_initial(self,z):
+        """
+        The mean-field normal log posterior components (the quantity we want to approximate)
+        """
+        means, scale = self.get_means_and_scales_from_q()
+        return (ss.norm.logpdf(z,loc=means,scale=scale)).sum(axis=1)
 
     def print_progress(self,i,current_params):
         """
@@ -153,8 +186,8 @@ class BBVI(object):
         """
 
         # Initialization assumptions
-        z = self.draw_normal()
-        gradient = self.cv_gradient(z)
+        z = self.draw_normal_initial()
+        gradient = self.cv_gradient_initial(z)
         gradient[np.isnan(gradient)] = 0
         variance = np.power(gradient,2)       
         final_parameters = self.current_parameters()
@@ -162,27 +195,22 @@ class BBVI(object):
 
         # Create optimizer
         if self.optimizer == 'ADAM':
-            optimizer = ADAM(final_parameters,variance,0.001,0.9,0.999)
+            self.optim = ADAM(final_parameters,variance,0.001,0.9,0.999)
         elif self.optimizer == 'RMSProp':
-            optimizer = RMSProp(final_parameters,variance,0.001,0.99)
+            self.optim = RMSProp(final_parameters,variance,0.001,0.99)
 
         for i in range(self.iterations):
-            z = self.draw_normal()
-            gradient = self.cv_gradient(z)
+            gradient = self.cv_gradient(self.draw_normal())
             gradient[np.isnan(gradient)] = 0
-            self.change_parameters(optimizer.update(gradient))
+            self.change_parameters(self.optim.update(gradient))
 
-            # Print progress
-            current_z = self.current_parameters()
-            current_lambda = np.array([current_z[el] for el in range(len(current_z)) if el%2==0])       
-            
             if self.printer is True:
-                self.print_progress(i,current_lambda)
+                self.print_progress(i,self.optim.parameters[::2])
 
             # Construct final parameters using final 10% of samples
             if i > self.iterations-round(self.iterations/10):
                 final_samples += 1
-                final_parameters = final_parameters+current_z
+                final_parameters = final_parameters+self.optim.parameters
 
         final_parameters = final_parameters/float(final_samples)
         final_means = np.array([final_parameters[el] for el in range(len(final_parameters)) if el%2==0])
@@ -198,8 +226,8 @@ class BBVI(object):
         Stores rgw history of updates for the benefit of a pretty animation.
         """
         # Initialization assumptions
-        z = self.draw_normal()
-        gradient = self.cv_gradient(z)
+        z = self.draw_normal_initial()
+        gradient = self.cv_gradient_initial(z)
         gradient[np.isnan(gradient)] = 0
         variance = np.power(gradient,2)       
         final_parameters = self.current_parameters()
@@ -207,35 +235,30 @@ class BBVI(object):
 
         # Create optimizer
         if self.optimizer == 'ADAM':
-            optimizer = ADAM(final_parameters,variance,0.001,0.9,0.999)
+            self.optim = ADAM(final_parameters,variance,0.001,0.9,0.999)
         elif self.optimizer == 'RMSProp':
-            optimizer = RMSProp(final_parameters,variance,0.001,0.99)
+            self.optim = RMSProp(final_parameters,variance,0.001,0.99)
 
         # Stored updates
         stored_means = np.zeros((self.iterations,len(final_parameters)/2))
         stored_predictive_likelihood = np.zeros(self.iterations)
 
         for i in range(self.iterations):
-            z = self.draw_normal()
-            gradient = self.cv_gradient(z)
+            gradient = self.cv_gradient(self.draw_normal())
             gradient[np.isnan(gradient)] = 0
-            new_parameters = optimizer.update(gradient)
+            new_parameters = self.optim.update(gradient)
             self.change_parameters(new_parameters)
 
-            stored_means[i] = np.array([new_parameters[el] for el in range(len(new_parameters)) if el%2==0])
+            stored_means[i] = self.optim.parameters[::2]
             stored_predictive_likelihood[i] = self.neg_posterior(stored_means[i])
 
-            # Print progress
-            current_z = self.current_parameters()
-            current_lambda = np.array([current_z[el] for el in range(len(current_z)) if el%2==0])       
-            
             if self.printer is True:
-                self.print_progress(i,current_lambda)
+                self.print_progress(i,self.optim.parameters[::2])
 
             # Construct final parameters using final 10% of samples
             if i > self.iterations-round(self.iterations/10):
                 final_samples += 1
-                final_parameters = final_parameters+current_z
+                final_parameters = final_parameters+self.optim.parameters
 
         final_parameters = final_parameters/float(final_samples)
         final_means = np.array([final_parameters[el] for el in range(len(final_parameters)) if el%2==0])
@@ -248,8 +271,8 @@ class BBVI(object):
 
 class CBBVI(BBVI):
 
-    def __init__(self,neg_posterior,log_p_blanket,q,sims,step=0.001,iterations=30000):
-        super(CBBVI,self).__init__(neg_posterior,q,sims,step,iterations)
+    def __init__(self,neg_posterior,log_p_blanket,q,sims,optimizer='RMSProp',iterations=300000):
+        super(CBBVI,self).__init__(neg_posterior,q,sims,optimizer,iterations)
         self.log_p_blanket = log_p_blanket
 
     def log_p(self,z):
@@ -257,35 +280,58 @@ class CBBVI(BBVI):
         The unnormalized log posterior components (the quantity we want to approximate)
         RAO-BLACKWELLIZED!
         """        
-        z_t = np.transpose(z)
-        return np.array([self.log_p_blanket(i) for i in z_t])
+        return np.array([self.log_p_blanket(i) for i in z])
 
     def normal_log_q(self,z):
         """
         The unnormalized log posterior components for mean-field normal family (the quantity we want to approximate)
         RAO-BLACKWELLIZED!
         """             
-        z_t = np.transpose(z)
         means, scale = self.get_means_and_scales()
-        return ss.norm.logpdf(z_t,loc=means,scale=scale)
+        return ss.norm.logpdf(z,loc=means,scale=scale)
+
+    def normal_log_q_initial(self,z):
+        """
+        The unnormalized log posterior components for mean-field normal family (the quantity we want to approximate)
+        RAO-BLACKWELLIZED!
+        """             
+        means, scale = self.get_means_and_scales_from_q()
+        return ss.norm.logpdf(z,loc=means,scale=scale)
 
     def cv_gradient(self,z):
         """
         The control variate augmented Monte Carlo gradient estimate
         RAO-BLACKWELLIZED!
         """        
-        gradient = np.zeros(np.sum(self.approx_param_no))
-        alpha = np.zeros(np.sum(self.approx_param_no))
-        log_q = self.normal_log_q(z)
-        log_p = self.log_p(z)
-        difference = np.repeat((log_p - log_q).T,2,axis=0)
+        alpha0 = np.zeros(np.sum(self.approx_param_no))        
+        z_t = np.transpose(z)
+        log_q = self.normal_log_q(z_t)
+        log_p = self.log_p(z_t)
         grad_log_q = self.grad_log_q(z)
+        gradient = grad_log_q*np.repeat((log_p - log_q).T,2,axis=0)
 
         for lambda_i in range(np.sum(self.approx_param_no)):
-            alpha[lambda_i] = np.cov(grad_log_q[lambda_i],grad_log_q[lambda_i]*(difference[lambda_i]))[0][1]/np.var(grad_log_q[lambda_i])                
+            alpha0[lambda_i] = np.cov(grad_log_q[lambda_i],gradient[lambda_i])[0][1]              
+        
+        vectorized = gradient - ((alpha0/np.var(grad_log_q,axis=1))*grad_log_q.T).T
 
-        vectorized = grad_log_q*difference - (alpha*grad_log_q.T).T
+        return np.mean(vectorized,axis=1)
 
-        gradient= np.mean(vectorized,axis=1)
+    def cv_gradient_initial(self,z):
+        """
+        The control variate augmented Monte Carlo gradient estimate
+        RAO-BLACKWELLIZED!
+        """        
+        alpha0 = np.zeros(np.sum(self.approx_param_no))        
+        z_t = np.transpose(z)
+        log_q = self.normal_log_q_initial(z_t)
+        log_p = self.log_p(z_t)
+        grad_log_q = self.grad_log_q(z)
+        gradient = grad_log_q*np.repeat((log_p - log_q).T,2,axis=0)
 
-        return gradient
+        for lambda_i in range(np.sum(self.approx_param_no)):
+            alpha0[lambda_i] = np.cov(grad_log_q[lambda_i],gradient[lambda_i])[0][1]              
+        
+        vectorized = gradient - ((alpha0/np.var(grad_log_q,axis=1))*grad_log_q.T).T
+
+        return np.mean(vectorized,axis=1)

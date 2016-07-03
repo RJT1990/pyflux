@@ -37,7 +37,7 @@ class TSM(object):
         self.model_type = model_type
         self.parameters = Parameters(self.model_type)
 
-    def _bbvi_fit(self,posterior,optimizer='RMSProp',iterations=5000,**kwargs):
+    def _bbvi_fit(self,posterior,optimizer='RMSProp',iterations=1000,**kwargs):
         """ Performs Black Box Variational Inference
 
         Parameters
@@ -59,23 +59,10 @@ class TSM(object):
         # Starting parameters
         phi = self.parameters.get_parameter_starting_values()
         phi = kwargs.get('start',phi).copy() # If user supplied
+        batch_size = kwargs.get('batch_size',12) # If user supplied
         p = optimize.minimize(posterior,phi,method='L-BFGS-B') # PML starting values
         start_loc = 0.8*p.x + 0.2*phi
         start_ses = None
-
-        """
-        Below - not used at the moment (MAP estimate for starting values)
-
-        p = optimize.minimize(posterior,phi,method='L-BFGS-B') # PML starting values
-
-        try:
-            ihessian = np.linalg.inv(nd.Hessian(obj_type)(p.x))
-            start_ses = np.log(np.power(np.abs(np.diag(ihessian)),0.5))
-            start_loc = p.x 
-        except:
-            start_ses = None            
-            start_loc = p.x 
-        """
 
         # Starting values for approximate distribution
         for i in range(len(self.parameters.parameter_list)):
@@ -90,18 +77,23 @@ class TSM(object):
 
         q_list = [k.q for k in self.parameters.parameter_list]
         
-        bbvi_obj = BBVI(posterior,q_list,12,optimizer,iterations)
+        bbvi_obj = BBVI(posterior,q_list,batch_size,optimizer,iterations)
         q, q_params, q_ses = bbvi_obj.run()
         self.parameters.set_parameter_values(q_params,'BBVI',np.exp(q_ses),None)
 
         for k in range(len(self.parameters.parameter_list)):
             self.parameters.parameter_list[k].q = q[k]
 
-        if self.model_type in ['GAS','GARCH','EGARCH']:
+        if self.model_type in ['GAS','GASX','GASLLEV','GARCH','EGARCH','EGARCHM']:
             theta, Y, scores = self._model(q_params)
             states = None
             states_var = None
             X_names = None
+        elif self.model_type in ['EGARCHMReg']:
+            theta, Y, scores, _ = self._model(q_params)
+            states = None
+            states_var = None
+            X_names = None           
         elif self.model_type in ['GASReg']:
             theta, Y, scores, states = self._model(q_params)
             states_var = None
@@ -157,11 +149,16 @@ class TSM(object):
         if y.ihessian is None:
             raise Exception("No Hessian information - Laplace approximation cannot be performed")
         else:
-            if self.model_type in ['GAS','GARCH','EGARCH']:
+            if self.model_type in ['GAS','GASX','GASLLEV','GARCH','EGARCH','EGARCHM']:
                 theta, Y, scores = self._model(y.parameters.get_parameter_values())
                 states = None
                 states_var = None
                 X_names = None
+            elif self.model_type in ['EGARCHMReg']:
+                theta, Y, scores, _ = self._model(y.parameters.get_parameter_values())
+                states = None
+                states_var = None
+                X_names = None                    
             elif self.model_type in ['GASReg']:
                 theta, Y, scores, states = self._model(y.parameters.get_parameter_values())
                 states_var = None
@@ -241,11 +238,16 @@ class TSM(object):
 
         self.parameters.set_parameter_values(mean_est,'M-H',None,chain)
 
-        if self.model_type in ['GAS','GARCH','EGARCH']:
+        if self.model_type in ['GAS','GASX','GARCH','GASLLEV','EGARCH','EGARCHM']:
             theta, Y, scores = self._model(mean_est)
             states = None
             states_var = None
             X_names = None
+        elif self.model_type in ['EGARCHMReg']:
+            theta, Y, scores, _ = self._model(mean_est)
+            states = None
+            states_var = None
+            X_names = None                
         elif self.model_type in ['GASReg']:
             theta, Y, scores, states = self._model(mean_est)
             states_var = None
@@ -310,11 +312,16 @@ class TSM(object):
         ses = np.append(res_ses,np.ones([params.shape[0]-res_params.shape[0]]))
         self.parameters.set_parameter_values(params,method,ses,None)
 
-        if self.model_type in ['GAS','GARCH','EGARCH']:
+        if self.model_type in ['GAS','GASX','GARCH','EGARCH','GASLLEV','EGARCHM']:
             theta, Y, scores = self._model(params)
             states = None
             states_var = None
             X_names = None
+        elif self.model_type in ['EGARCHMReg']:
+            theta, Y, scores, _ = self._model(params)
+            states = None
+            states_var = None
+            X_names = None                
         elif self.model_type in ['GASReg']:
             theta, Y, scores, states = self._model(params)
             X_names = self.X_names
@@ -370,11 +377,16 @@ class TSM(object):
             ihessian = np.linalg.inv(nd.Hessian(obj_type)(p.x))
             ses = np.power(np.abs(np.diag(ihessian)),0.5)
             self.parameters.set_parameter_values(p.x,method,ses,None)
-            if self.model_type in ['GAS','GARCH','EGARCH']:
+            if self.model_type in ['GAS','GASX','GARCH','EGARCH','GASLLEV','EGARCHM']:
                 theta, Y, scores = self._model(p.x)
                 states = None
                 states_var = None
                 X_names = None
+            if self.model_type in ['EGARCHMReg']:
+                theta, Y, scores, _ = self._model(p.x)
+                states = None
+                states_var = None
+                X_names = None                
             elif self.model_type in ['GASReg']:
                 theta, Y, scores, states = self._model(p.x)
                 X_names = self.X_names
@@ -412,11 +424,16 @@ class TSM(object):
                 param_hide=self._param_hide,max_lag=self.max_lag,states=states,states_var=states_var)
         except:
             self.parameters.set_parameter_values(p.x,method,None,None)
-            if self.model_type in ['GAS','GARCH','EGARCH']:
+            if self.model_type in ['GAS','GASX','GARCH','EGARCH','GASLLEV','EGARCHM']:
                 theta, Y, scores = self._model(p.x)
                 states = None
                 states_var = None
                 X_names = None
+            elif self.model_type in ['EGARCHMReg']:
+                theta, Y, scores, _ = self._model(p.x)
+                states = None
+                states_var = None
+                X_names = None                    
             elif self.model_type in ['GASReg']:
                 theta, Y, scores, states = self._model(p.x) 
                 X_names = self.X_names  
@@ -467,9 +484,10 @@ class TSM(object):
         """
 
         cov_matrix = kwargs.get('cov_matrix',None)
-        iterations = kwargs.get('iterations',10000)
+        iterations = kwargs.get('iterations',1000)
         nsims = kwargs.get('nsims',10000)
         optimizer = kwargs.get('optimizer','RMSProp')
+        batch_size = kwargs.get('batch_size',12)
 
         if method is None:
             method = self.default_method
@@ -485,7 +503,7 @@ class TSM(object):
         elif method == "Laplace":
             return self._laplace_fit(self.neg_logposterior) 
         elif method == "BBVI":
-            return self._bbvi_fit(self.neg_logposterior,optimizer=optimizer,iterations=iterations)
+            return self._bbvi_fit(self.neg_logposterior,optimizer=optimizer,iterations=iterations,batch_size=batch_size)
         elif method == "OLS":
             return self._ols_fit()          
 

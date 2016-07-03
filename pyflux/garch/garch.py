@@ -44,7 +44,7 @@ class GARCH(tsm.TSM):
         # Parameters
         self.p = p
         self.q = q
-        self.param_no = self.p + self.q + 1
+        self.param_no = self.p + self.q + 2
         self.max_lag = max(self.p,self.q)
         self.model_name = "GARCH(" + str(self.p) + "," + str(self.q) + ")"
         self._param_hide = 0 # Whether to cutoff variance parameters from results
@@ -64,7 +64,7 @@ class GARCH(tsm.TSM):
         None (changes model attributes)
         """
 
-        self.parameters.add_parameter('Constant',ifr.Normal(0,3,transform='exp'),dst.q_Normal(0,3))
+        self.parameters.add_parameter('Vol Constant',ifr.Normal(0,3,transform='exp'),dst.q_Normal(0,3))
 
         for q_term in range(self.q):
             self.parameters.add_parameter('q(' + str(q_term+1) + ')',ifr.Normal(0,0.5,transform=None),dst.q_Normal(0,3))
@@ -72,9 +72,11 @@ class GARCH(tsm.TSM):
         for p_term in range(self.p):
             self.parameters.add_parameter('p(' + str(p_term+1) + ')',ifr.Normal(0,0.5,transform=None),dst.q_Normal(0,3))
         
-        self.parameters.parameter_list[0].start = self.parameters.parameter_list[0].prior.itransform(np.mean(np.power(self.data,2)))
+        self.parameters.add_parameter('Returns Constant',ifr.Normal(0,3,transform=None),dst.q_Normal(0,3))
+
+        self.parameters.parameter_list[0].start = self.parameters.parameter_list[0].prior.itransform(np.mean(np.power(self.data-np.mean(self.data),2)))
         
-        for k in range(1,len(self.parameters.parameter_list)):
+        for k in range(1,len(self.parameters.parameter_list)-1):
             self.parameters.parameter_list[k].start = 0.00001
 
     def _model(self,beta):
@@ -97,19 +99,19 @@ class GARCH(tsm.TSM):
             Contains the squared residuals (ARCH terms) for the time series
         """
 
-        xeps = np.power(self.data,2)
-        Y = np.array(self.data[self.max_lag:])
-        eps = np.power(Y,2)
-        X = np.ones(Y.shape[0])
-
         # Transform parameters
         parm = np.array([self.parameters.parameter_list[k].prior.transform(beta[k]) for k in range(beta.shape[0])])
+
+        xeps = np.power(self.data-parm[-1],2)
+        Y = np.array(self.data[self.max_lag:])
+        eps = np.power(Y-parm[-1],2)
+        X = np.ones(Y.shape[0])
 
         # ARCH terms
         if self.q != 0:
             for i in range(0,self.q):   
                 X = np.vstack((X,xeps[(self.max_lag-i-1):-i-1]))
-            sigma2 = np.matmul(np.transpose(X),parm[0:-self.p])
+            sigma2 = np.matmul(np.transpose(X),parm[0:-self.p-1])
         else:
             sigma2 = np.transpose(X*parm[0])
 
@@ -199,7 +201,6 @@ class GARCH(tsm.TSM):
         ----------
         Matrix of simulations
         """     
-
         sim_vector = np.zeros([simulations,h])
 
         for n in range(0,simulations):
@@ -211,19 +212,18 @@ class GARCH(tsm.TSM):
             for t in range(0,h):
                 new_value = t_params[0]
 
-            if self.q != 0:
-                for j in range(1,self.q+1):
-                    new_value += t_params[j]*scores_exp[-j]
+                if self.q != 0:
+                    for j in range(1,self.q+1):
+                        new_value += t_params[j]*scores_exp[-j]
 
-            if self.p != 0:
-                for k in range(1,self.p+1):
-                    new_value += t_params[k+self.q]*sigma2_exp[-k]  
+                if self.p != 0:
+                    for k in range(1,self.p+1):
+                        new_value += t_params[k+self.q]*sigma2_exp[-k]  
 
                 sigma2_exp = np.append(sigma2_exp,[new_value]) # For indexing consistency
                 scores_exp = np.append(scores_exp,scores[np.random.randint(scores.shape[0])]) # expectation of score is zero
 
             sim_vector[n] = sigma2_exp[-h:]
-
         return np.transpose(sim_vector)
 
     def _summarize_simulations(self,mean_values,sim_vector,date_index,h,past_values):
@@ -272,7 +272,8 @@ class GARCH(tsm.TSM):
         """     
 
         sigma2, Y, __ = self._model(beta)
-        return -np.sum(ss.norm.logpdf(Y,loc=np.zeros(sigma2.shape[0]),scale=np.power(sigma2,0.5)))
+        parm = np.array([self.parameters.parameter_list[k].prior.transform(beta[k]) for k in range(beta.shape[0])])
+        return -np.sum(ss.norm.logpdf(Y,loc=parm[-1]*np.ones(sigma2.shape[0]),scale=np.sqrt(sigma2)))
 
     def plot_fit(self,**kwargs):
         """ Plots the fit of the model
@@ -289,8 +290,9 @@ class GARCH(tsm.TSM):
         else:
             plt.figure(figsize=figsize)
             date_index = self.index[max(self.p,self.q):]
+            t_params = self.transform_parameters()
             sigma2, Y, ___ = self._model(self.parameters.get_parameter_values())
-            plt.plot(date_index,np.abs(Y),label=self.data_name + ' Absolute Values')
+            plt.plot(date_index,np.abs(Y-t_params[-1]),label=self.data_name + ' Absolute Demeaned Values')
             plt.plot(date_index,np.power(sigma2,0.5),label='GARCH(' + str(self.p) + ',' + str(self.q) + ') std',c='black')
             plt.title(self.data_name + " Volatility Plot")  
             plt.legend(loc=2)   

@@ -7,6 +7,7 @@ import pandas as pd
 import scipy.stats as ss
 import matplotlib.pyplot as plt
 import seaborn as sns
+from patsy import dmatrices, dmatrix, demo_data
 
 from ..parameter import Parameter, Parameters
 from .. import inference as ifr
@@ -17,15 +18,18 @@ from .. import data_check as dc
 from .scores import *
 from .gasmodels import *
 
-class GAS(tsm.TSM):
+class GASX(tsm.TSM):
     """ Inherits time series methods from TSM class.
 
-    **** GENERALIZED AUTOREGRESSIVE SCORE (GAS) MODELS ****
+    **** GENERALIZED AUTOREGRESSIVE SCORE E(X)OGENOUS VARIABLE (GASX) MODELS ****
 
     Parameters
     ----------
     data : pd.DataFrame or np.array
-        Field to specify the univariate time series data that will be used.
+        Field to specify the time series data that will be used.
+
+    formula : string
+        patsy string describing the regression
 
     ar : int
         Field to specify how many AR lags the model will have.
@@ -36,10 +40,6 @@ class GAS(tsm.TSM):
     integ : int (default : 0)
         Specifies how many time to difference the time series.
 
-    target : str (pd.DataFrame) or int (np.array)
-        Specifies which column name or array index to use. By default, first
-        column/array will be selected as the dependent variable.
-
     dist : str
         Which distribution to use
 
@@ -48,26 +48,39 @@ class GAS(tsm.TSM):
         to construct the modified score.
     """
 
-    def __init__(self,data,ar,sc,family,integ=0,target=None,gradient_only=False):
+    def __init__(self,data,formula,ar,sc,family,integ=0,gradient_only=False):
 
         # Initialize TSM object     
-        super(GAS,self).__init__('GAS')
+        super(GASX,self).__init__('GASX')
 
         self.ar = ar
         self.sc = sc
         self.integ = integ
         self.gradient_only = gradient_only
-        self.param_no = self.ar + self.sc + 1
+        self.param_no = self.ar + self.sc
         self.max_lag = max(self.ar,self.sc)
         self._param_hide = 0 # Whether to cutoff variance parameters from results
         self.supported_methods = ["MLE","PML","Laplace","M-H","BBVI"]
         self.default_method = "MLE"
         self.multivariate_model = False
 
-        self.data, self.data_name, self.is_pandas, self.index = dc.data_check(data,target)
-        self.data_original = self.data.copy()
+        # Format the data
+        self.is_pandas = True # This is compulsory for this model type
+        self.data_original = data.copy()
+        self.formula = formula
+        self.y, self.X = dmatrices(formula, data)
+        self.param_no = self.X.shape[1]
+        self.y_name = self.y.design_info.describe()
+        self.data_name = self.y_name
+        self.X_names = self.X.design_info.describe().split(" + ")
+        self.y = np.array([self.y]).ravel()
+        self.data = self.y.copy()
+        self.X = np.array([self.X])[0]
+        self.index = data.index
 
+        # Difference data
         for order in range(0,self.integ):
+            self.y = np.diff(self.y)
             self.data = np.diff(self.data)
             self.data_name = "Differenced " + self.data_name
 
@@ -77,7 +90,7 @@ class GAS(tsm.TSM):
         self.family = family
         
         self.model_name2, self.link, self.scale, self.shape, self.skewness, self.mean_transform = self.family.setup()
-        self.model_name = self.model_name2 + "(" + str(self.ar) + "," + str(self.integ) + "," + str(self.sc) + ")"
+        self.model_name = self.model_name2 + "X(" + str(self.ar) + "," + str(self.integ) + "," + str(self.sc) + ")"
 
         for no, i in enumerate(self.family.build_parameters()):
             self.parameters.add_parameter(i[0],i[1],i[2])
@@ -104,13 +117,14 @@ class GAS(tsm.TSM):
         None (changes model attributes)
         """
 
-        self.parameters.add_parameter('Constant',ifr.Normal(0,3,transform=None),dst.q_Normal(0,3))
-
         for ar_term in range(self.ar):
             self.parameters.add_parameter('AR(' + str(ar_term+1) + ')',ifr.Normal(0,0.5,transform=None),dst.q_Normal(0,3))
 
         for sc_term in range(self.sc):
             self.parameters.add_parameter('SC(' + str(sc_term+1) + ')',ifr.Normal(0,0.5,transform=None),dst.q_Normal(0,3))
+
+        for parm in range(len(self.X_names)):
+            self.parameters.add_parameter('Beta ' + self.X_names[parm],ifr.Normal(0,3,transform=None),dst.q_Normal(0,3))
 
     def _get_scale_and_shape(self,parm):
         """ Obtains appropriate model scale and shape parameters
@@ -164,21 +178,21 @@ class GAS(tsm.TSM):
         """
 
         parm = np.array([self.parameters.parameter_list[k].prior.transform(beta[k]) for k in range(beta.shape[0])])
-        theta = np.ones(self.model_Y.shape[0])*parm[0]
         model_scale, model_shape, model_skewness = self._get_scale_and_shape(parm)
+        theta = np.matmul(self.X[self.integ+self.max_lag:],parm[self.sc+self.ar:(self.sc+self.ar+len(self.X_names))])
 
         # Loop over time series
         for t in range(0,self.model_Y.shape[0]):
             if t < self.max_lag:
-                theta[t] = parm[0]/(1-np.sum(parm[1:(self.ar+1)]))
+                theta[t] += parm[self.ar+self.sc]/(1-np.sum(parm[:self.ar]))
             else:
-                theta[t] += np.dot(parm[1:1+self.ar],theta[(t-self.ar):t][::-1]) + np.dot(parm[1+self.ar:1+self.ar+self.sc],self.model_scores[(t-self.sc):t][::-1])
+                theta[t] += np.dot(parm[:self.ar],theta[(t-self.ar):t][::-1]) + np.dot(parm[self.ar:self.ar+self.sc],self.model_scores[(t-self.sc):t][::-1])
 
             self.model_scores[t] = self.family.score_function(self.model_Y[t],self.link(theta[t]),model_scale,model_shape,model_skewness)
 
         return theta, self.model_Y, self.model_scores
 
-    def _mean_prediction(self,theta,Y,scores,h,t_params):
+    def _mean_prediction(self,theta,Y,scores,h,t_params,X_oos):
         """ Creates a h-step ahead mean prediction
 
         Parameters
@@ -197,6 +211,9 @@ class GAS(tsm.TSM):
 
         t_params : np.array
             A vector of (transformed) parameters
+
+        X_oos : np.array
+            Out of sample X data
 
         Returns
         ----------
@@ -220,6 +237,8 @@ class GAS(tsm.TSM):
                 for k in range(1,self.sc+1):
                     new_value += t_params[k+self.ar]*scores_exp[-k]
 
+            new_value += np.matmul(X_oos[t,:],t_params[self.sc+self.ar:(self.sc+self.ar+len(self.X_names))])            
+
             if self.model_name2 == "Exponential GAS":
                 Y_exp = np.append(Y_exp,[1.0/self.link(new_value)])
             else:
@@ -229,7 +248,7 @@ class GAS(tsm.TSM):
 
         return Y_exp
 
-    def _sim_prediction(self,theta,Y,scores,h,t_params,simulations):
+    def _sim_prediction(self,theta,Y,scores,h,t_params,X_oos,simulations):
         """ Simulates a h-step ahead mean prediction
 
         Parameters
@@ -248,6 +267,9 @@ class GAS(tsm.TSM):
 
         t_params : np.array
             A vector of (transformed) parameters
+
+        X_oos : np.array
+            Out of sample X data
 
         simulations : int
             How many simulations to perform
@@ -277,6 +299,8 @@ class GAS(tsm.TSM):
                 if self.sc != 0:
                     for k in range(1,self.sc+1):
                         new_value += t_params[k+self.ar]*scores_exp[-k]
+
+                new_value += np.matmul(X_oos[t,:],t_params[self.sc+self.ar:(self.sc+self.ar+len(self.X_names))])            
 
                 if self.model_name2 == "Exponential GAS":
                     rnd_value = self.family.draw_variable(1.0/self.link(new_value),model_scale,model_shape,model_skewness,1)[0]
@@ -346,7 +370,6 @@ class GAS(tsm.TSM):
         else:
             date_index = self.index[max(self.ar,self.sc):]
             mu, Y, scores = self._model(self.parameters.get_parameter_values())
-
             plt.figure(figsize=figsize)
             plt.subplot(2,1,1)
             plt.title("Model fit for " + self.data_name)
@@ -367,7 +390,7 @@ class GAS(tsm.TSM):
 
             plt.show()              
     
-    def plot_predict(self,h=5,past_values=20,intervals=True,**kwargs):
+    def plot_predict(self,h=5,past_values=20,intervals=True,oos_data=None,**kwargs):
         """ Makes forecast with the estimated model
 
         Parameters
@@ -381,6 +404,9 @@ class GAS(tsm.TSM):
         intervals : Boolean
             Would you like to show prediction intervals for the forecast?
 
+        oos_data : pd.DataFrame
+            Data for the variables to be used out of sample (ys can be NaNs)
+
         Returns
         ----------
         - Plot of the forecast
@@ -391,6 +417,10 @@ class GAS(tsm.TSM):
         if self.parameters.estimated is False:
             raise Exception("No parameters estimated!")
         else:
+            # Sort/manipulate the out-of-sample data
+            _, X_oos = dmatrices(self.formula, oos_data)
+            X_oos = np.array([X_oos])[0]
+            X_pred = X_oos[:h]
 
             # Retrieve data, dates and (transformed) parameters
             theta, Y, scores = self._model(self.parameters.get_parameter_values())          
@@ -398,8 +428,8 @@ class GAS(tsm.TSM):
             t_params = self.transform_parameters()
 
             # Get mean prediction and simulations (for errors)
-            mean_values = self._mean_prediction(theta,Y,scores,h,t_params)
-            sim_values = self._sim_prediction(theta,Y,scores,h,t_params,15000)
+            mean_values = self._mean_prediction(theta,Y,scores,h,t_params,X_pred)
+            sim_values = self._sim_prediction(theta,Y,scores,h,t_params,X_pred,15000)
             error_bars, forecasted_values, plot_values, plot_index = self._summarize_simulations(mean_values,sim_values,date_index,h,past_values)
             plt.figure(figsize=figsize)
             if intervals == True:
@@ -427,17 +457,20 @@ class GAS(tsm.TSM):
         - pd.DataFrame with predicted values
         """     
 
+
         predictions = []
 
         for t in range(0,h):
-            x = GAS(ar=self.ar,sc=self.sc,integ=self.integ,family=self.family,data=self.data_original[:-h+t],gradient_only=self.gradient_only)
+            data1 = self.data_original.iloc[:-(h+t),:]
+            data2 = self.data_original.iloc[-h+t:,:]
+            x = GASX(ar=self.ar,sc=self.sc,formula=self.formula,integ=self.integ,family=self.family,data=self.data_original[:-h+t],gradient_only=self.gradient_only)
             x.fit(printer=False)
             if t == 0:
-                predictions = x.predict(1)
+                predictions = x.predict(1,oos_data=data2)
             else:
-                predictions = pd.concat([predictions,x.predict(1)])
+                predictions = pd.concat([predictions,x.predict(h=1,oos_data=data2)])
         
-        predictions.rename(columns={0:self.data_name}, inplace=True)
+        predictions.rename(columns={0:self.y_name}, inplace=True)
         predictions.index = self.index[-h:]
 
         return predictions
@@ -468,13 +501,16 @@ class GAS(tsm.TSM):
         plt.legend(loc=2)   
         plt.show()          
 
-    def predict(self,h=5):
+    def predict(self,h=5, oos_data=None):
         """ Makes forecast with the estimated model
 
         Parameters
         ----------
         h : int (default : 5)
             How many steps ahead would you like to forecast?
+
+        oos_data : pd.DataFrame
+            Data for the variables to be used out of sample (ys can be NaNs)
 
         Returns
         ----------
@@ -484,12 +520,15 @@ class GAS(tsm.TSM):
         if self.parameters.estimated is False:
             raise Exception("No parameters estimated!")
         else:
-
+            # Sort/manipulate the out-of-sample data
+            _, X_oos = dmatrices(self.formula, oos_data)
+            X_oos = np.array([X_oos])[0]
+            X_pred = X_oos[:h]
             theta, Y, scores = self._model(self.parameters.get_parameter_values())          
             date_index = self.shift_dates(h)
             t_params = self.transform_parameters()
 
-            mean_values = self._mean_prediction(theta,Y,scores,h,t_params)
+            mean_values = self._mean_prediction(theta,Y,scores,h,t_params,X_pred)
             forecasted_values = mean_values[-h:]
             result = pd.DataFrame(forecasted_values)
             result.rename(columns={0:self.data_name}, inplace=True)

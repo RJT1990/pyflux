@@ -678,7 +678,7 @@ class NDynLin(tsm.TSM):
                 else:
                     q_list.append(dst.q_Normal(0,-3))
 
-        bbvi_obj = ifr.CBBVI(posterior,self.log_p_blanket,q_list,12,optimizer,iterations)
+        bbvi_obj = ifr.CBBVI(posterior,self.log_p_blanket,q_list,24,optimizer,iterations)
 
         if print_progress is False:
             bbvi_obj.printer = False

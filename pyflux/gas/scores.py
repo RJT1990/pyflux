@@ -49,7 +49,7 @@ class LaplaceScore(Score):
 
     @staticmethod
     def mu_information_term(y,loc,scale):
-        return -(power(y-loc,2) - power(abs(loc-y),2))/(scale*power(abs(loc-y),3))
+        return -(power(y-loc,2) - power(np.abs(loc-y),2))/(scale*power(np.abs(loc-y),3))
 
     @staticmethod
     def mu_adj_score(y,loc,scale):

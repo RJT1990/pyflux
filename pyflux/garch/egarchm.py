@@ -16,10 +16,10 @@ from .. import tsm as tsm
 from .. import gas as gas
 from .. import data_check as dc
 
-class EGARCH(tsm.TSM):
+class EGARCHM(tsm.TSM):
     """ Inherits time series methods from TSM class.
 
-    **** BETA-t-EGARCH MODELS ****
+    **** BETA-t-EGARCH IN MEAN MODELS ****
 
     Parameters
     ----------
@@ -40,15 +40,15 @@ class EGARCH(tsm.TSM):
     def __init__(self,data,p,q,target=None):
 
         # Initialize TSM object
-        super(EGARCH,self).__init__('EGARCH')
+        super(EGARCHM,self).__init__('EGARCHM')
 
         # Parameters
         self.p = p
         self.q = q
-        self.param_no = self.p + self.q + 3
+        self.param_no = self.p + self.q + 2
         self.max_lag = max(self.p,self.q)
         self.leverage = False
-        self.model_name = "EGARCH(" + str(self.p) + "," + str(self.q) + ")"
+        self.model_name = "EGARCHM(" + str(self.p) + "," + str(self.q) + ")"
         self._param_hide = 0 # Whether to cutoff variance parameters from results
         self.supported_methods = ["MLE","PML","Laplace","M-H","BBVI"]
         self.default_method = "MLE"
@@ -76,8 +76,24 @@ class EGARCH(tsm.TSM):
 
         self.parameters.add_parameter('v',ifr.Uniform(transform='exp'),dst.q_Normal(0,3))
         self.parameters.add_parameter('Returns Constant',ifr.Normal(0,3,transform=None),dst.q_Normal(0,3))
-        self.parameters.parameter_list[0].start = self.parameters.parameter_list[0].prior.itransform(np.log(np.mean(np.power(self.data,2))))
-        self.parameters.parameter_list[-2].start = 2.0
+        self.parameters.add_parameter('GARCH-M',ifr.Normal(0,3,transform=None),dst.q_Normal(0,3))
+
+        # Starting values
+        self.parameters.parameter_list[0].start = np.log(0.02)
+        
+        for i in range(1,self.p+1):
+            if self.p > 1:
+                self.parameters.parameter_list[i].start = 0.0001
+            elif self.p == 1:
+                self.parameters.parameter_list[i].start = 0.95
+
+        for i in range(1+self.q,self.p+1+self.q):
+            if self.q > 1:
+                self.parameters.parameter_list[i].start = 0.0001
+            elif self.q == 1:
+                self.parameters.parameter_list[i].start = 0.01
+
+        self.parameters.parameter_list[-3].start = 2.0
 
     def _model(self,beta):
         """ Creates the structure of the model
@@ -126,9 +142,9 @@ class EGARCH(tsm.TSM):
                     lmda[t] += parm[1+self.p+p_term]*scores[t-q_term-1]
 
                 if self.leverage is True:
-                    lmda[t] += parm[-3]*np.sign(-(Y[t-1]-parm[-1]))*(scores[t-1]+1)
+                    lmda[t] += parm[-4]*np.sign(-(Y[t-1]-parm[-2]-parm[-1]*np.exp(lmda[t-1])))*(scores[t-1]+1)
 
-            scores[t] = gas.BetatScore.mu_adj_score(Y[t]-parm[-1],0,lmda[t],parm[-2])
+            scores[t] = gas.BetatScore.mu_adj_score(Y[t]-parm[-2]-parm[-1]*np.exp(lmda[t]),0,lmda[t],parm[-3])
 
         return lmda, Y, scores
 
@@ -175,7 +191,7 @@ class EGARCH(tsm.TSM):
                     new_value += t_params[k+self.p]*scores_exp[-k]
 
             if self.leverage is True:
-                new_value += t_params[1+self.p+self.q]*np.sign(-(Y_exp[scores_exp.shape[0]-1]-t_params[-1]))*(scores_exp[-1]+1)
+                new_value += t_params[1+self.p+self.q]*np.sign(-(Y_exp[scores_exp.shape[0]-1]-t_params[-2]-t_params[-1]*np.exp(lmda_exp[-1])))*(scores_exp[-1]+1)
 
             lmda_exp = np.append(lmda_exp,[new_value]) # For indexing consistency
             scores_exp = np.append(scores_exp,[0]) # expectation of score is zero
@@ -232,7 +248,7 @@ class EGARCH(tsm.TSM):
                         new_value += t_params[k+self.p]*scores_exp[-k]
 
                 if self.leverage is True:
-                    new_value += t_params[1+self.p+self.q]*np.sign(-(Y_exp[scores_exp.shape[0]-1]-t_params[-1]))*(scores_exp[-1]+1)
+                    new_value += t_params[1+self.p+self.q]*np.sign(-(Y_exp[scores_exp.shape[0]-1]-t_params[-2]-t_params[-1]*np.exp(lmda_exp[-1])))*(scores_exp[-1]+1)
 
                 lmda_exp = np.append(lmda_exp,[new_value]) # For indexing consistency
                 scores_exp = np.append(scores_exp,scores[np.random.randint(scores.shape[0])]) # expectation of score is zero
@@ -287,12 +303,14 @@ class EGARCH(tsm.TSM):
         else:
             self.leverage = True
             self.param_no += 1
+            self.parameters.parameter_list.pop()            
             self.parameters.parameter_list.pop()
             self.parameters.parameter_list.pop()
             self.parameters.add_parameter('Leverage Term',ifr.Uniform(transform=None),dst.q_Normal(0,3))
             self.parameters.add_parameter('v',ifr.Uniform(transform='exp'),dst.q_Normal(0,3))
             self.parameters.add_parameter('Returns Constant',ifr.Normal(0,3,transform=None),dst.q_Normal(0,3))
-            self.parameters.parameter_list[-2].start = 2.0
+            self.parameters.add_parameter('GARCH-M',ifr.Normal(0,3,transform=None),dst.q_Normal(0,3))
+            self.parameters.parameter_list[-3].start = 2.0
 
     def neg_loglik(self,beta):
         """ Creates the negative log-likelihood of the model
@@ -308,9 +326,10 @@ class EGARCH(tsm.TSM):
         """     
 
         lmda, Y, ___ = self._model(beta)
+        loc = np.ones(lmda.shape[0])*self.parameters.parameter_list[-2].prior.transform(beta[-2]) + self.parameters.parameter_list[-1].prior.transform(beta[-1])*np.exp(lmda)
         return -np.sum(ss.t.logpdf(x=Y,
-            df=self.parameters.parameter_list[-2].prior.transform(beta[-2]),
-            loc=np.ones(lmda.shape[0])*self.parameters.parameter_list[-1].prior.transform(beta[-1]),scale=np.exp(lmda/2.0)))
+            df=self.parameters.parameter_list[-3].prior.transform(beta[-3]),
+            loc=loc,scale=np.exp(lmda/2.0)))
     
     def plot_fit(self,**kwargs):
         """ Plots the fit of the model
@@ -329,7 +348,7 @@ class EGARCH(tsm.TSM):
             plt.figure(figsize=figsize)
             date_index = self.index[max(self.p,self.q):]
             sigma2, Y, ___ = self._model(self.parameters.get_parameter_values())
-            plt.plot(date_index,np.abs(Y-t_params[-1]),label=self.data_name + ' Absolute Values')
+            plt.plot(date_index,np.abs(Y-t_params[-2]-t_params[-1]*np.exp(sigma2)),label=self.data_name + ' Absolute Values')
             plt.plot(date_index,np.exp(sigma2/2.0),label='EGARCH(' + str(self.p) + ',' + str(self.q) + ') std',c='black')                   
             plt.title(self.data_name + " Volatility Plot")  
             plt.legend(loc=2)   
