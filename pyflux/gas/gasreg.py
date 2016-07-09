@@ -5,6 +5,7 @@ if sys.version_info < (3,):
 import numpy as np
 import pandas as pd
 import scipy.stats as ss
+import scipy.special as sp
 import matplotlib.pyplot as plt
 import seaborn as sns
 from patsy import dmatrices, dmatrix, demo_data
@@ -30,9 +31,13 @@ class GASReg(tsm.TSM):
 
     data : pd.DataFrame or np.array
         Field to specify the data that will be used
+
+    family : GAS family object
+        Which distribution to use, e.g. GASNormal()
+
     """
 
-    def __init__(self,formula,data):
+    def __init__(self, formula, data, family):
 
         # Initialize TSM object     
         super(GASReg,self).__init__('GASReg')
@@ -63,31 +68,16 @@ class GASReg(tsm.TSM):
         self._create_model_matrices()
         self._create_parameters()
 
-    def _bootstrap_scores(self,beta):
-        """ Bootstraps the filtered series
-
-        Returns
-        ----------
-        theta_sample : np.array
-            sample of filtered series
-        """     
-        thetas,_,scores,coefficients = self._model(beta)
-        parm = np.array([self.parameters.parameter_list[k].prior.transform(beta[k]) for k in range(beta.shape[0])])
-        model_scale, model_shape, model_skewness = self._get_scale_and_shape(parm)
+        self.family = family
         
-        theta_sample = np.ones(self.model_Y.shape[0])
-        scores_sample = np.zeros((self.X.shape[1],self.model_Y.shape[0]+1))
-        coefficients_sample = np.zeros((self.X.shape[1],self.model_Y.shape[0]+1))
-        coefficients_sample[:,0] = self.initial_values
+        self.model_name2, self.link, self.scale, self.shape, self.skewness, self.mean_transform = self.family.setup()
+        self.model_name = self.model_name2 + " Regression"
 
-        pseudo_theta = np.append(thetas,np.dot(self.X[-1],coefficients[:,-1]))
-        sample_Y = self.draw_variable(self.link(pseudo_theta[1:]),model_scale,model_shape,model_skewness,self.model_Y.shape[0])
+        for no, i in enumerate(self.family.build_parameters()):
+            self.parameters.add_parameter(i[0],i[1],i[2])
+            self.parameters.parameter_list[no+self.param_no].start = i[3]
 
-        for t in range(0,self.model_Y.shape[0]):
-            theta_sample[t] = np.dot(self.X[t],coefficients_sample[:,t])
-            scores_sample[:,t] = self.score_function(self.X[t],sample_Y[t],self.link(theta_sample[t]),model_scale,model_shape)
-            coefficients_sample[:,t+1] = coefficients_sample[:,t] + parm[0:self.X.shape[1]]*scores_sample[:,t] 
-        return theta_sample, coefficients_sample
+        self.param_no += len(self.family.build_parameters())
 
     def _create_model_matrices(self):
         """ Creates model matrices/vectors
@@ -110,6 +100,7 @@ class GASReg(tsm.TSM):
 
         for parm in range(self.param_no):
             self.parameters.add_parameter('Scale ' + self.X_names[parm],ifr.Uniform(transform='exp'),dst.q_Normal(0,3))
+            self.parameters.parameter_list[parm].start = -7.0
 
     def _get_scale_and_shape(self,parm):
         """ Obtains appropriate model scale and shape parameters
@@ -169,9 +160,15 @@ class GASReg(tsm.TSM):
         # Loop over time series
         for t in range(0,self.model_Y.shape[0]):
             theta[t] = np.dot(self.X[t],coefficients[:,t])
-            self.model_scores[:,t] = self.score_function(self.X[t],self.model_Y[t],self.link(theta[t]),model_scale,model_shape,model_skewness)
+            self.model_scores[:,t] = self.family.reg_score_function(self.X[t],self.model_Y[t],self.link(theta[t]),model_scale,model_shape,model_skewness)
             coefficients[:,t+1] = coefficients[:,t] + parm[0:self.X.shape[1]]*self.model_scores[:,t] 
         return theta[:-1], self.model_Y, self.model_scores[:-1], coefficients
+
+    def neg_loglik(self,beta):
+        theta, Y, scores,_ = self._model(beta)
+        parm = np.array([self.parameters.parameter_list[k].prior.transform(beta[k]) for k in range(beta.shape[0])])
+        model_scale, model_shape, model_skewness = self._get_scale_and_shape(parm)
+        return self.family.neg_loglikelihood(Y,self.link(theta),model_scale,model_shape,model_skewness)
 
     def plot_fit(self,**kwargs):
         """ Plots the fit of the model
@@ -197,12 +194,23 @@ class GASReg(tsm.TSM):
             date_index = self.index.copy()
             mu, Y, scores, coefficients = self._model(self.parameters.get_parameter_values())
 
+            if self.model_name2 == "Exponential GAS":
+                values_to_plot = 1.0/self.link(mu)
+            elif self.model_name2 == "Skewt GAS":
+                t_params = self.transform_parameters()
+                model_scale, model_shape, model_skewness = self._get_scale_and_shape(t_params)
+                m1 = (np.sqrt(model_shape)*sp.gamma((model_shape-1.0)/2.0))/(np.sqrt(np.pi)*sp.gamma(model_shape/2.0))
+                additional_loc = (model_skewness - (1.0/model_skewness))*model_scale*m1
+                values_to_plot = mu + additional_loc
+            else:
+                values_to_plot = self.link(mu)
+
             plt.figure(figsize=figsize) 
             
             plt.subplot(len(self.X_names)+1, 1, 1)
             plt.title(self.y_name + " Filtered")
             plt.plot(date_index,Y,label='Data')
-            plt.plot(date_index,self.link(mu),label='GAS Filter',c='black')
+            plt.plot(date_index,values_to_plot,label='GAS Filter',c='black')
             plt.legend(loc=2)
 
             for coef in range(0,len(self.X_names)):
@@ -253,7 +261,12 @@ class GASReg(tsm.TSM):
             model_scale, model_shape, model_skewness = self._get_scale_and_shape(t_params)
 
             # Measurement prediction intervals
-            rnd_value = self.draw_variable(self.link(theta_pred),model_scale,model_shape,model_skewness,[1500,theta_pred.shape[0]])
+            rnd_value = self.family.draw_variable(self.link(theta_pred),model_scale,model_shape,model_skewness,[1500,theta_pred.shape[0]])
+
+            if self.model_name2 == "Skewt GAS":
+                model_scale, model_shape, model_skewness = self._get_scale_and_shape(t_params)
+                m1 = (np.sqrt(model_shape)*sp.gamma((model_shape-1.0)/2.0))/(np.sqrt(np.pi)*sp.gamma(model_shape/2.0))
+                theta_pred += (model_skewness - (1.0/model_skewness))*model_scale*m1 
 
             error_bars = []
             for pre in range(5,100,5):
@@ -331,8 +344,44 @@ class GASReg(tsm.TSM):
             coefficients_star = coefficients.T[-1]
             theta_pred = np.dot(np.array([coefficients_star]), X_pred.T)[0]
 
+            if self.model_name2 == "Skewt GAS":
+                t_params = self.transform_parameters()
+                model_scale, model_shape, model_skewness = self._get_scale_and_shape(t_params)
+                m1 = (np.sqrt(model_shape)*sp.gamma((model_shape-1.0)/2.0))/(np.sqrt(np.pi)*sp.gamma(model_shape/2.0))
+                theta_pred = theta_pred + (model_skewness - (1.0/model_skewness))*model_scale*m1 
+
             result = pd.DataFrame(self.link(theta_pred))
             result.rename(columns={0:self.y_name}, inplace=True)
             result.index = date_index[-h:]
 
             return result
+
+    def predict_is(self,h=5):
+        """ Makes dynamic in-sample predictions with the estimated model
+
+        Parameters
+        ----------
+        h : int (default : 5)
+            How many steps would you like to forecast?
+
+        Returns
+        ----------
+        - pd.DataFrame with predicted values
+        """     
+
+        predictions = []
+
+        for t in range(0,h):
+            data1 = self.data_original.iloc[:-(h+t),:]
+            data2 = self.data_original.iloc[-h+t:,:]
+            x = GASReg(formula=self.formula,data=self.data_original[:(-h+t)],family=self.family)
+            x.fit(printer=False)
+            if t == 0:
+                predictions = x.predict(1,oos_data=data2)
+            else:
+                predictions = pd.concat([predictions,x.predict(h=1,oos_data=data2)])
+        
+        predictions.rename(columns={0:self.y_name}, inplace=True)
+        predictions.index = self.index[-h:]
+
+        return predictions

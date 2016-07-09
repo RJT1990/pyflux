@@ -16,10 +16,10 @@ from .. import tsm as tsm
 from .. import gas as gas
 from .. import data_check as dc
 
-class EGARCHM(tsm.TSM):
+class LMEGARCH(tsm.TSM):
     """ Inherits time series methods from TSM class.
 
-    **** BETA-t-EGARCH IN MEAN MODELS ****
+    **** LONG MEMORY BETA-t-EGARCH MODELS ****
 
     Parameters
     ----------
@@ -40,15 +40,15 @@ class EGARCHM(tsm.TSM):
     def __init__(self,data,p,q,target=None):
 
         # Initialize TSM object
-        super(EGARCHM,self).__init__('EGARCHM')
+        super(LMEGARCH,self).__init__('LMEGARCH')
 
         # Parameters
         self.p = p
         self.q = q
-        self.param_no = self.p + self.q + 4
+        self.param_no = self.p*2 + self.q*2 + 3
         self.max_lag = max(self.p,self.q)
         self.leverage = False
-        self.model_name = "EGARCHM(" + str(self.p) + "," + str(self.q) + ")"
+        self.model_name = "LMEGARCH(" + str(self.p) + "," + str(self.q) + ")"
         self._param_hide = 0 # Whether to cutoff variance parameters from results
         self.supported_methods = ["MLE","PML","Laplace","M-H","BBVI"]
         self.default_method = "MLE"
@@ -68,19 +68,24 @@ class EGARCHM(tsm.TSM):
 
         self.parameters.add_parameter('Vol Constant',ifr.Normal(0,3,transform=None),dst.q_Normal(0,3))
 
-        for p_term in range(self.p):
-            self.parameters.add_parameter('p(' + str(p_term+1) + ')',ifr.Normal(0,0.5,transform=None),dst.q_Normal(0,3))
+        for component in range(2):
+            increment = 0.05
+            for p_term in range(self.p):
+                self.parameters.add_parameter("Component " + str(component+1) + ' p(' + str(p_term+1) + ')',ifr.Normal(0,0.5,transform=None),dst.q_Normal(0,3))
+                if p_term == 0:
+                    self.parameters.parameter_list[1+p_term+component*(self.p+self.q)].start = 0.00
 
-        for q_term in range(self.q):
-            self.parameters.add_parameter('q(' + str(q_term+1) + ')',ifr.Normal(0,0.5,transform=None),dst.q_Normal(0,3))
+            for q_term in range(self.q):
+                self.parameters.add_parameter("Component " + str(component+1) + ' q(' + str(q_term+1) + ')',ifr.Normal(0,0.5,transform=None),dst.q_Normal(0,3))
+                if p_term == 0 and component == 0:
+                    self.parameters.parameter_list[1+self.p+q_term+component*(self.p+self.q)].start = 0.001
+                elif p_term == 0 and component == 1:
+                    self.parameters.parameter_list[1+self.p+q_term+component*(self.p+self.q)].start = 0.01
 
         self.parameters.add_parameter('v',ifr.Uniform(transform='exp'),dst.q_Normal(0,3))
         self.parameters.add_parameter('Returns Constant',ifr.Normal(0,3,transform=None),dst.q_Normal(0,3))
-        self.parameters.add_parameter('GARCH-M',ifr.Normal(0,3,transform=None),dst.q_Normal(0,3))
-
-        # Starting values
         self.parameters.parameter_list[0].start = self.parameters.parameter_list[0].prior.itransform(np.log(np.mean(np.power(self.data,2))))
-        self.parameters.parameter_list[-3].start = 2.0
+        self.parameters.parameter_list[-2].start = 2.0
 
     def _model(self,beta):
         """ Creates the structure of the model
@@ -110,38 +115,46 @@ class EGARCHM(tsm.TSM):
         parm = np.array([self.parameters.parameter_list[k].prior.transform(beta[k]) for k in range(beta.shape[0])])
 
         lmda = np.ones(Y.shape[0])*parm[0]
+        lmda_c = np.zeros((Y.shape[0],2))
 
         # Loop over time series
         for t in range(0,Y.shape[0]):
 
-            if t < self.max_lag:
+            if t >= self.max_lag:
+                
+                for comp in range(2):
 
-                lmda[t] = parm[0]/(1-np.sum(parm[1:(self.p+1)]))
+                    # Loop over GARCH terms
+                    for p_term in range(0,self.p):
+                        lmda_c[t,comp] += parm[1+p_term+(comp*(self.q+self.p))]*lmda_c[t-p_term-1,comp]
 
-            else:
-
-                # Loop over GARCH terms
-                for p_term in range(0,self.p):
-                    lmda[t] += parm[1+p_term]*lmda[t-p_term-1]
-
-                # Loop over Score terms
-                for q_term in range(0,self.q):
-                    lmda[t] += parm[1+self.p+q_term]*scores[t-q_term-1]
+                    # Loop over Score terms
+                    for q_term in range(0,self.q):
+                        lmda_c[t,comp] += parm[1+self.p+q_term+(comp*(self.q+self.p))]*scores[t-q_term-1]
 
                 if self.leverage is True:
-                    lmda[t] += parm[-4]*np.sign(-(Y[t-1]-parm[-2]-parm[-1]*np.exp(lmda[t-1]/2.0)))*(scores[t-1]+1)
+                    lmda_c[t,1] += parm[-3]*np.sign(-(Y[t-1]-parm[-1]))*(scores[t-1]+1)
 
-            scores[t] = gas.BetatScore.mu_adj_score(Y[t],parm[-2]+parm[-1]*np.exp(lmda[t]/2.0),lmda[t],parm[-3])
+                lmda[t] += lmda_c[t,:].sum()
 
-        return lmda, Y, scores
+            else:
+                lmda[t] = parm[0] / (1-parm[1:1+self.p].sum())
 
-    def _mean_prediction(self,lmda,Y,scores,h,t_params):
+            scores[t] = gas.BetatScore.mu_adj_score(Y[t],parm[-1],lmda[t],parm[-2])
+
+        return lmda, lmda_c, Y, scores
+
+
+    def _mean_prediction(self,lmda,lmda_c,Y,scores,h,t_params):
         """ Creates a h-step ahead mean prediction
 
         Parameters
         ----------
         lmda : np.array
-            The past predicted values
+            The combined volatility component
+
+        lmda_c : np.array
+            The two volatility components
 
         Y : np.array
             The past data
@@ -162,37 +175,46 @@ class EGARCHM(tsm.TSM):
 
         # Create arrays to iteratre over
         lmda_exp = lmda.copy()
+        lmda_c_exp = [lmda_c.T[0],lmda_c.T[1]] 
         scores_exp = scores.copy()
         Y_exp = Y.copy()
 
         # Loop over h time periods          
         for t in range(0,h):
-            new_value = t_params[0]
+            new_value_comp = np.zeros(2)
+            new_value = 0
 
-            if self.p != 0:
-                for j in range(1,self.p+1):
-                    new_value += t_params[j]*lmda_exp[-j]
+            for comp in range(2):
 
-            if self.q != 0:
-                for k in range(1,self.q+1):
-                    new_value += t_params[k+self.p]*scores_exp[-k]
+                if self.p != 0:
+                    for j in range(self.p):
+                        new_value_comp[comp] += t_params[1+j+(comp*(self.q+self.p))]*lmda_c_exp[comp][-j-1]
+
+                if self.q != 0:
+                    for k in range(self.q):
+                        new_value_comp[comp] += t_params[1+k+self.p+(comp*(self.q+self.p))]*scores_exp[-k-1]
 
             if self.leverage is True:
-                new_value += t_params[1+self.p+self.q]*np.sign(-(Y_exp[-1]-t_params[-2]-t_params[-1]*np.exp(lmda_exp[-1]/2.0)))*(scores_exp[-1]+1)
+                new_value_comp[1] += t_params[-3]*np.sign(-(Y_exp[-1]-t_params[-1]))*(scores_exp[t-1]+1)
 
-            lmda_exp = np.append(lmda_exp,[new_value]) # For indexing consistency
+            lmda_exp = np.append(lmda_exp,[new_value_comp.sum()+t_params[0]]) # For indexing consistency
+            lmda_c_exp[0] = np.append(lmda_c_exp[0],new_value_comp[0])
+            lmda_c_exp[1] = np.append(lmda_c_exp[1],new_value_comp[1])
             scores_exp = np.append(scores_exp,[0]) # expectation of score is zero
-            Y_exp = np.append(Y_exp,[t_params[-2]])
+            Y_exp = np.append(Y_exp,[t_params[-1]])
 
         return lmda_exp
 
-    def _sim_prediction(self,lmda,Y,scores,h,t_params,simulations):
+    def _sim_prediction(self,lmda,lmda_c,Y,scores,h,t_params,simulations):
         """ Simulates a h-step ahead mean prediction
 
         Parameters
         ----------
         lmda : np.array
-            The past predicted values
+            The combined volatility component
+
+        lmda_c : np.array
+            The two volatility components
 
         Y : np.array
             The past data
@@ -217,30 +239,36 @@ class EGARCHM(tsm.TSM):
         sim_vector = np.zeros([simulations,h])
 
         for n in range(0,simulations):
-            # Create arrays to iteratre over        
+            # Create arrays to iteratre over
             lmda_exp = lmda.copy()
+            lmda_c_exp = [lmda_c.T[0],lmda_c.T[1]] 
             scores_exp = scores.copy()
             Y_exp = Y.copy()
 
             # Loop over h time periods          
             for t in range(0,h):
-                new_value = t_params[0]
+                new_value_comp = np.zeros(2)
+                new_value = 0
 
-                if self.p != 0:
-                    for j in range(1,self.p+1):
-                        new_value += t_params[j]*lmda_exp[-j]
+                for comp in range(2):
 
-                if self.q != 0:
-                    for k in range(1,self.q+1):
-                        new_value += t_params[k+self.p]*scores_exp[-k]
+                    if self.p != 0:
+                        for j in range(self.p):
+                            new_value_comp[comp] += t_params[1+j+(comp*(self.q+self.p))]*lmda_c_exp[comp][-j-1]
+
+                    if self.q != 0:
+                        for k in range(self.q):
+                            new_value_comp[comp] += t_params[1+k+self.p+(comp*(self.q+self.p))]*scores_exp[-k-1]
 
                 if self.leverage is True:
-                    new_value += t_params[1+self.p+self.q]*np.sign(-(Y_exp[-1]-t_params[-2]-t_params[-1]*np.exp(lmda_exp[-1]/2.0)))*(scores_exp[-1]+1)
+                    new_value_comp[1] += t_params[-3]*np.sign(-(Y_exp[-1]-t_params[-1]))*(scores_exp[t-1]+1)
 
-                lmda_exp = np.append(lmda_exp,[new_value]) # For indexing consistency
-                scores_exp = np.append(scores_exp,scores[np.random.randint(scores.shape[0])]) # expectation of score is zero
-                Y_exp = np.append(Y_exp,Y[np.random.randint(Y.shape[0])]) # bootstrap returns
-
+                lmda_exp = np.append(lmda_exp,[new_value_comp.sum()+t_params[0]]) # For indexing consistency
+                lmda_c_exp[0] = np.append(lmda_c_exp[0],new_value_comp[0])
+                lmda_c_exp[1] = np.append(lmda_c_exp[1],new_value_comp[1])
+                rnd_no = np.random.randint(scores.shape[0])
+                scores_exp = np.append(scores_exp,scores[rnd_no]) # expectation of score is zero
+                Y_exp = np.append(Y_exp,Y[rnd_no])
             sim_vector[n] = lmda_exp[-h:]
 
         return np.transpose(sim_vector)
@@ -290,14 +318,12 @@ class EGARCHM(tsm.TSM):
         else:
             self.leverage = True
             self.param_no += 1
-            self.parameters.parameter_list.pop()            
             self.parameters.parameter_list.pop()
             self.parameters.parameter_list.pop()
             self.parameters.add_parameter('Leverage Term',ifr.Uniform(transform=None),dst.q_Normal(0,3))
             self.parameters.add_parameter('v',ifr.Uniform(transform='exp'),dst.q_Normal(0,3))
             self.parameters.add_parameter('Returns Constant',ifr.Normal(0,3,transform=None),dst.q_Normal(0,3))
-            self.parameters.add_parameter('GARCH-M',ifr.Normal(0,3,transform=None),dst.q_Normal(0,3))
-            self.parameters.parameter_list[-3].start = 2.0
+            self.parameters.parameter_list[-2].start = 2.0
 
     def neg_loglik(self,beta):
         """ Creates the negative log-likelihood of the model
@@ -312,11 +338,10 @@ class EGARCHM(tsm.TSM):
         The negative logliklihood of the model
         """     
 
-        lmda, Y, ___ = self._model(beta)
-        loc = np.ones(lmda.shape[0])*self.parameters.parameter_list[-2].prior.transform(beta[-2]) + self.parameters.parameter_list[-1].prior.transform(beta[-1])*np.exp(lmda/2.0)
+        lmda, _, Y, ___ = self._model(beta)
         return -np.sum(ss.t.logpdf(x=Y,
-            df=self.parameters.parameter_list[-3].prior.transform(beta[-3]),
-            loc=loc,scale=np.exp(lmda/2.0)))
+            df=self.parameters.parameter_list[-2].prior.transform(beta[-2]),
+            loc=np.ones(lmda.shape[0])*self.parameters.parameter_list[-1].prior.transform(beta[-1]),scale=np.exp(lmda/2.0)))
     
     def plot_fit(self,**kwargs):
         """ Plots the fit of the model
@@ -334,9 +359,9 @@ class EGARCHM(tsm.TSM):
             t_params = self.transform_parameters()
             plt.figure(figsize=figsize)
             date_index = self.index[max(self.p,self.q):]
-            sigma2, Y, ___ = self._model(self.parameters.get_parameter_values())
-            plt.plot(date_index,np.abs(Y-t_params[-2]-t_params[-1]*np.exp(sigma2/2.0)),label=self.data_name + ' Absolute Demeaned Values')
-            plt.plot(date_index,np.exp(sigma2/2.0),label='EGARCHM(' + str(self.p) + ',' + str(self.q) + ') Conditional Volatility',c='black')                   
+            sigma2, lmda_c, Y, ___ = self._model(self.parameters.get_parameter_values())
+            plt.plot(date_index,np.abs(Y-t_params[-1]),label=self.data_name + ' Demeaned Absolute Values')
+            plt.plot(date_index,np.exp(sigma2/2.0),label='LMEGARCH(' + str(self.p) + ',' + str(self.q) + ') Conditional Volaility',c='black')                   
             plt.title(self.data_name + " Volatility Plot")  
             plt.legend(loc=2)   
             plt.show()              
@@ -368,13 +393,13 @@ class EGARCHM(tsm.TSM):
         else:
 
             # Retrieve data, dates and (transformed) parameters
-            lmda, Y, scores = self._model(self.parameters.get_parameter_values())           
+            lmda, lmda_c, Y, scores = self._model(self.parameters.get_parameter_values())           
             date_index = self.shift_dates(h)
             t_params = self.transform_parameters()
 
             # Get mean prediction and simulations (for errors)
-            mean_values = self._mean_prediction(lmda,Y,scores,h,t_params)
-            sim_values = self._sim_prediction(lmda,Y,scores,h,t_params,15000)
+            mean_values = self._mean_prediction(lmda,lmda_c,Y,scores,h,t_params)
+            sim_values = self._sim_prediction(lmda,lmda_c,Y,scores,h,t_params,15000)
             error_bars, forecasted_values, plot_values, plot_index = self._summarize_simulations(mean_values,sim_values,date_index,h,past_values)
 
             plt.figure(figsize=figsize)
@@ -383,8 +408,9 @@ class EGARCHM(tsm.TSM):
                 for count, pre in enumerate(error_bars):
                     plt.fill_between(date_index[-h-1:], np.exp((forecasted_values-pre)/2), np.exp((forecasted_values+pre)/2),alpha=alpha[count])            
             
+
             plt.plot(plot_index,np.exp(plot_values/2.0))
-            plt.title("Forecast for " + self.data_name)
+            plt.title("Forecast for " + self.data_name + " Conditional Volatility")
             plt.xlabel("Time")
             plt.ylabel(self.data_name + " Conditional Volatility")
             plt.show()
@@ -405,7 +431,7 @@ class EGARCHM(tsm.TSM):
         predictions = []
 
         for t in range(0,h):
-            x = EGARCHM(p=self.p,q=self.q,data=self.data[:-h+t])
+            x = LMEGARCH(p=self.p,q=self.q,data=self.data[:-h+t])
             x.fit(printer=False)
             if t == 0:
                 predictions = x.predict(1)
@@ -463,7 +489,7 @@ class EGARCHM(tsm.TSM):
             raise Exception("No parameters estimated!")
         else:
 
-            sigma2, Y, scores = self._model(self.parameters.get_parameter_values()) 
+            sigma2, lmda_c, Y, scores = self._model(self.parameters.get_parameter_values()) 
             date_index = self.shift_dates(h)
             t_params = self.transform_parameters()
 

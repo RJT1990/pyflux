@@ -34,12 +34,10 @@ class skewt(object):
 
     @staticmethod
     def rvs(df, gamma, n):
-        u = np.random.uniform(size=n)
         if type(n) == list:
-            result = []
-            for i in range(n[0]):
-                result.append(skewt.ppf(q=u[i],df=df,gamma=gamma))
+            u = np.random.uniform(size=n[0]*n[1])
+            result = np.split(u,n[0])
             return np.array(result)
         else:
+            u = np.random.uniform(size=n)
             return skewt.ppf(q=u,df=df,gamma=gamma)
-

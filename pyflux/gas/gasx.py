@@ -5,6 +5,7 @@ if sys.version_info < (3,):
 import numpy as np
 import pandas as pd
 import scipy.stats as ss
+import scipy.special as sp
 import matplotlib.pyplot as plt
 import seaborn as sns
 from patsy import dmatrices, dmatrix, demo_data
@@ -94,7 +95,7 @@ class GASX(tsm.TSM):
 
         for no, i in enumerate(self.family.build_parameters()):
             self.parameters.add_parameter(i[0],i[1],i[2])
-            self.parameters.parameter_list[no+self.ar+self.sc].start = i[3]
+            self.parameters.parameter_list[no+self.ar+self.sc+self.X.shape[1]].start = i[3]
 
         self.parameters.parameter_list[0].start = self.mean_transform(np.mean(self.data))
 
@@ -307,7 +308,6 @@ class GASX(tsm.TSM):
                 else:
                     rnd_value = self.family.draw_variable(self.link(new_value),model_scale,model_shape,model_skewness,1)[0]
 
-                rnd_value = self.family.draw_variable(self.link(new_value),model_scale,model_shape,model_skewness,1)[0]
                 Y_exp = np.append(Y_exp,[rnd_value])
                 theta_exp = np.append(theta_exp,[new_value]) # For indexing consistency
                 scores_exp = np.append(scores_exp,scores[np.random.randint(scores.shape[0])]) # expectation of score is zero
@@ -376,6 +376,12 @@ class GASX(tsm.TSM):
 
             if self.model_name2 == "Exponential GAS":
                 values_to_plot = 1.0/self.link(mu)
+            elif self.model_name2 == "Skewt GAS":
+                t_params = self.transform_parameters()
+                model_scale, model_shape, model_skewness = self._get_scale_and_shape(t_params)
+                m1 = (np.sqrt(model_shape)*sp.gamma((model_shape-1.0)/2.0))/(np.sqrt(np.pi)*sp.gamma(model_shape/2.0))
+                additional_loc = (model_skewness - (1.0/model_skewness))*model_scale*m1
+                values_to_plot = mu + additional_loc
             else:
                 values_to_plot = self.link(mu)
 
@@ -429,6 +435,12 @@ class GASX(tsm.TSM):
 
             # Get mean prediction and simulations (for errors)
             mean_values = self._mean_prediction(theta,Y,scores,h,t_params,X_pred)
+
+            if self.model_name2 == "Skewt GAS":
+                model_scale, model_shape, model_skewness = self._get_scale_and_shape(t_params)
+                m1 = (np.sqrt(model_shape)*sp.gamma((model_shape-1.0)/2.0))/(np.sqrt(np.pi)*sp.gamma(model_shape/2.0))
+                mean_values += (model_skewness - (1.0/model_skewness))*model_scale*m1 
+
             sim_values = self._sim_prediction(theta,Y,scores,h,t_params,X_pred,15000)
             error_bars, forecasted_values, plot_values, plot_index = self._summarize_simulations(mean_values,sim_values,date_index,h,past_values)
             plt.figure(figsize=figsize)
@@ -529,7 +541,12 @@ class GASX(tsm.TSM):
             t_params = self.transform_parameters()
 
             mean_values = self._mean_prediction(theta,Y,scores,h,t_params,X_pred)
-            forecasted_values = mean_values[-h:]
+            if self.model_name2 == "Skewt GAS":
+                model_scale, model_shape, model_skewness = self._get_scale_and_shape(t_params)
+                m1 = (np.sqrt(model_shape)*sp.gamma((model_shape-1.0)/2.0))/(np.sqrt(np.pi)*sp.gamma(model_shape/2.0))
+                forecasted_values = mean_values[-h:] + (model_skewness - (1.0/model_skewness))*model_scale*m1 
+            else:
+                forecasted_values = mean_values[-h:] 
             result = pd.DataFrame(forecasted_values)
             result.rename(columns={0:self.data_name}, inplace=True)
             result.index = date_index[-h:]

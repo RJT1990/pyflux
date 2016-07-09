@@ -5,6 +5,7 @@ if sys.version_info < (3,):
 import numpy as np
 import pandas as pd
 import scipy.stats as ss
+import scipy.special as sp
 
 from .. import inference as ifr
 from .. import tsm as tsm
@@ -62,6 +63,10 @@ class GASExponential(GASDistribution):
     def second_order_score(y,mean,scale,shape,skewness):
         return 1 - (mean*y)
 
+    @staticmethod
+    def reg_score_function(X,y,mean,scale,shape,skewness):
+        return X*(1.0 - mean*y)
+
 
 class GASLaplace(GASDistribution):
 
@@ -84,7 +89,7 @@ class GASLaplace(GASDistribution):
     @staticmethod
     def build_parameters():
         parameters_to_build = []
-        parameters_to_build.append(['Scale',ifr.Uniform(transform='exp'),dst.q_Normal(0,3),2.0])
+        parameters_to_build.append(['Laplace Scale',ifr.Uniform(transform='exp'),dst.q_Normal(0,3),2.0])
         return parameters_to_build
 
     @staticmethod
@@ -103,6 +108,11 @@ class GASLaplace(GASDistribution):
     def second_order_score(y,mean,scale,shape,skewness):
         return ((y-mean)/float(scale*np.abs(y-mean))) / (-(np.power(y-mean,2) - np.power(np.abs(mean-y),2))/(scale*np.power(np.abs(mean-y),3)))
 
+    @staticmethod
+    def reg_score_function(X,y,mean,scale,shape,skewness):
+        return X*(y-mean)/(scale*np.abs(y-mean))
+
+
 class GASNormal(GASDistribution):
 
     @staticmethod
@@ -118,7 +128,7 @@ class GASNormal(GASDistribution):
     @staticmethod
     def build_parameters():
         parameters_to_build = []
-        parameters_to_build.append(['Scale',ifr.Uniform(transform='exp'),dst.q_Normal(0,3),0.0])
+        parameters_to_build.append(['Normal Scale',ifr.Uniform(transform='exp'),dst.q_Normal(0,3),0.0])
         return parameters_to_build
 
     @staticmethod
@@ -136,6 +146,10 @@ class GASNormal(GASDistribution):
     @staticmethod
     def second_order_score(y,mean,scale,shape,skewness):
         return y-mean
+
+    @staticmethod
+    def reg_score_function(X,y,mean,scale,shape,skewness):
+        return X*(y-mean)
 
 
 class GASPoisson(GASDistribution):
@@ -171,6 +185,10 @@ class GASPoisson(GASDistribution):
     def second_order_score(y,mean,scale,shape,skewness):
         return (y-mean)/float(mean)
 
+    @staticmethod
+    def reg_score_function(X,y,mean,scale,shape,skewness):
+        return X*(y-mean)
+
 
 class GASt(GASDistribution):
 
@@ -193,8 +211,8 @@ class GASt(GASDistribution):
     @staticmethod
     def build_parameters():
         parameters_to_build = []
-        parameters_to_build.append(['Scale',ifr.Uniform(transform='exp'),dst.q_Normal(0,3),0.0])
-        parameters_to_build.append(['v',ifr.Uniform(transform='exp'),dst.q_Normal(0,3),3.0])
+        parameters_to_build.append(['t Scale',ifr.Uniform(transform='exp'),dst.q_Normal(0,3),0.0])
+        parameters_to_build.append(['v',ifr.Uniform(transform='exp'),dst.q_Normal(0,3),2.0])
         return parameters_to_build
 
     @staticmethod
@@ -212,6 +230,10 @@ class GASt(GASDistribution):
     @staticmethod
     def second_order_score(y,mean,scale,shape,skewness):
         return ((shape+1)/shape)*(y-mean)/(np.power(scale,2) + (np.power(y-mean,2)/shape))/((shape+1)*((np.power(scale,2)*shape) - np.power(y-mean,2))/np.power((np.power(scale,2)*shape) + np.power(y-mean,2),2))
+
+    @staticmethod
+    def reg_score_function(X,y,mean,scale,shape,skewness):
+        return ((shape+1)/shape)*((y-mean)*X)/(np.power(scale,2)+np.power((y-mean),2)/shape)
 
 
 class GASSkewt(GASDistribution):
@@ -236,8 +258,8 @@ class GASSkewt(GASDistribution):
     def build_parameters():
         parameters_to_build = []
         parameters_to_build.append(['Skewness',ifr.Uniform(transform='exp'),dst.q_Normal(0,3),0.0])
-        parameters_to_build.append(['Scale',ifr.Uniform(transform='exp'),dst.q_Normal(0,3),0.0])
-        parameters_to_build.append(['v',ifr.Uniform(transform='exp'),dst.q_Normal(0,3),3.0])
+        parameters_to_build.append(['Skewt Scale',ifr.Uniform(transform='exp'),dst.q_Normal(0,3),0.0])
+        parameters_to_build.append(['v',ifr.Uniform(transform='exp'),dst.q_Normal(0,3),2.0])
         return parameters_to_build
 
     @staticmethod
@@ -246,6 +268,8 @@ class GASSkewt(GASDistribution):
 
     @staticmethod
     def first_order_score(y,mean,scale,shape,skewness):
+        m1 = (np.sqrt(shape)*sp.gamma((shape-1.0)/2.0))/(np.sqrt(np.pi)*sp.gamma(shape/2.0))
+        mean = mean + (skewness - (1.0/skewness))*scale*m1
         if (y-mean)>=0:
             return ((shape+1)/shape)*(y-mean)/(np.power(skewness*scale,2) + (np.power(y-mean,2)/shape))
         else:
@@ -253,11 +277,26 @@ class GASSkewt(GASDistribution):
 
     @staticmethod
     def neg_loglikelihood(y,mean,scale,shape,skewness):
+        m1 = (np.sqrt(shape)*sp.gamma((shape-1.0)/2.0))/(np.sqrt(np.pi)*sp.gamma(shape/2.0))
+        mean = mean + (skewness - (1.0/skewness))*scale*m1
         return -np.sum(dst.skewt.logpdf(x=y,df=shape,loc=mean,gamma=skewness,scale=scale))
 
     @staticmethod
     def second_order_score(y,mean,scale,shape,skewness):
+        m1 = (np.sqrt(shape)*sp.gamma((shape-1.0)/2.0))/(np.sqrt(np.pi)*sp.gamma(shape/2.0))
+        mean = mean + (skewness - (1.0/skewness))*scale*m1
         if (y-mean)>=0:
             return ((shape+1)/shape)*(y-mean)/(np.power(skewness*scale,2) + (np.power(y-mean,2)/shape))
         else:
             return ((shape+1)/shape)*(y-mean)/(np.power(scale,2) + (np.power(skewness*(y-mean),2)/shape))
+
+    @staticmethod
+    def reg_score_function(X,y,mean,scale,shape,skewness):
+        m1 = (np.sqrt(shape)*sp.gamma((shape-1.0)/2.0))/(np.sqrt(np.pi)*sp.gamma(shape/2.0))
+        mean = mean + (skewness - (1.0/skewness))*scale*m1
+        if (y-mean)>=0:
+            return ((shape+1)/shape)*((y-mean)*X)/(np.power(skewness*scale,2) + (np.power(y-mean,2)/shape))
+        else:
+            return ((shape+1)/shape)*((y-mean)*X)/(np.power(scale,2) + (np.power(skewness*(y-mean),2)/shape))
+
+

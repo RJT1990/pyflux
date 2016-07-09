@@ -7,6 +7,7 @@ import pandas as pd
 import scipy.stats as ss
 import matplotlib.pyplot as plt
 import seaborn as sns
+from patsy import dmatrices, dmatrix, demo_data
 
 from .. import inference as ifr
 from .. import distributions as dst
@@ -16,14 +17,14 @@ from .. import tsm as tsm
 from .. import gas as gas
 from .. import data_check as dc
 
-class EGARCHM(tsm.TSM):
+class EGARCHMReg(tsm.TSM):
     """ Inherits time series methods from TSM class.
 
-    **** BETA-t-EGARCH IN MEAN MODELS ****
+    **** BETA-t-EGARCH IN MEAN REGRESSION MODELS ****
 
     Parameters
     ----------
-    data : pd.DataFrame or np.array
+    data : pd.DataFrame
         Field to specify the time series data that will be used.
 
     p : int
@@ -32,30 +33,43 @@ class EGARCHM(tsm.TSM):
     q : int
         Field to specify how many SCORE terms the model will have.
 
-    target : str (pd.DataFrame) or int (np.array)
-        Specifies which column name or array index to use. By default, first
-        column/array will be selected as the dependent variable.
+    formula : string
+        patsy string describing the regression
+
     """
 
-    def __init__(self,data,p,q,target=None):
+    def __init__(self,data,p,q,formula):
 
         # Initialize TSM object
-        super(EGARCHM,self).__init__('EGARCHM')
+        super(EGARCHMReg,self).__init__('EGARCHMReg')
 
         # Parameters
         self.p = p
         self.q = q
-        self.param_no = self.p + self.q + 4
-        self.max_lag = max(self.p,self.q)
-        self.leverage = False
-        self.model_name = "EGARCHM(" + str(self.p) + "," + str(self.q) + ")"
+        self.max_lag = max(self.p,self.q)  
+        self.param_no = self.p + self.q + 2
         self._param_hide = 0 # Whether to cutoff variance parameters from results
         self.supported_methods = ["MLE","PML","Laplace","M-H","BBVI"]
         self.default_method = "MLE"
         self.multivariate_model = False
+        self.leverage = False
+        self.model_name = "EGARCHMReg(" + str(self.p) + "," + str(self.q) + ")"
 
         # Format the data
-        self.data, self.data_name, self.is_pandas, self.index = dc.data_check(data,target)
+        self.is_pandas = True # This is compulsory for this model type
+        self.data_original = data
+        self.formula = formula
+        self.y, self.X = dmatrices(formula, data)
+        self.param_no += self.X.shape[1]*2
+        self.y_name = self.y.design_info.describe()
+        self.data_name = self.y_name
+        self.X_names = self.X.design_info.describe().split(" + ")
+        self.y = np.array([self.y]).ravel()
+        self.data = self.y
+        self.X = np.array([self.X])[0]
+        self.index = data.index
+        self.initial_values = np.zeros(self.param_no)
+
         self._create_parameters()
 
     def _create_parameters(self):
@@ -66,8 +80,6 @@ class EGARCHM(tsm.TSM):
         None (changes model attributes)
         """
 
-        self.parameters.add_parameter('Vol Constant',ifr.Normal(0,3,transform=None),dst.q_Normal(0,3))
-
         for p_term in range(self.p):
             self.parameters.add_parameter('p(' + str(p_term+1) + ')',ifr.Normal(0,0.5,transform=None),dst.q_Normal(0,3))
 
@@ -75,12 +87,32 @@ class EGARCHM(tsm.TSM):
             self.parameters.add_parameter('q(' + str(q_term+1) + ')',ifr.Normal(0,0.5,transform=None),dst.q_Normal(0,3))
 
         self.parameters.add_parameter('v',ifr.Uniform(transform='exp'),dst.q_Normal(0,3))
-        self.parameters.add_parameter('Returns Constant',ifr.Normal(0,3,transform=None),dst.q_Normal(0,3))
         self.parameters.add_parameter('GARCH-M',ifr.Normal(0,3,transform=None),dst.q_Normal(0,3))
 
-        # Starting values
-        self.parameters.parameter_list[0].start = self.parameters.parameter_list[0].prior.itransform(np.log(np.mean(np.power(self.data,2))))
-        self.parameters.parameter_list[-3].start = 2.0
+        for parm in range(len(self.X_names)):
+            self.parameters.add_parameter('Vol Beta ' + self.X_names[parm],ifr.Normal(0,10,transform=None),dst.q_Normal(0,3))
+
+        for parm in range(len(self.X_names)):
+            self.parameters.add_parameter('Returns Beta ' + self.X_names[parm],ifr.Normal(0,10,transform=None),dst.q_Normal(0,3))
+
+        # Starting values        
+        for i in range(self.p):
+            if self.p > 1:
+                self.parameters.parameter_list[i].start = 0.0
+            elif self.p == 1:
+                self.parameters.parameter_list[i].start = 0.0
+
+        for i in range(self.q,self.p+self.q):
+            if self.q > 1:
+                self.parameters.parameter_list[i].start = 0.0
+            elif self.q == 1:
+                self.parameters.parameter_list[i].start = 0.0
+
+        for i in range(self.p+self.q,self.param_no):
+            self.parameters.parameter_list[i].start = 0.0
+
+        self.parameters.parameter_list[self.p+self.q].start = 2.0
+        self.parameters.parameter_list[self.p+self.q+2].start = self.parameters.parameter_list[0].prior.itransform(np.log(np.mean(np.power(self.data,2))))
 
     def _model(self,beta):
         """ Creates the structure of the model
@@ -109,33 +141,34 @@ class EGARCHM(tsm.TSM):
         # Transform parameters
         parm = np.array([self.parameters.parameter_list[k].prior.transform(beta[k]) for k in range(beta.shape[0])])
 
-        lmda = np.ones(Y.shape[0])*parm[0]
+        lmda = np.zeros(Y.shape[0])
+        theta = np.zeros(Y.shape[0])
 
         # Loop over time series
         for t in range(0,Y.shape[0]):
-
             if t < self.max_lag:
-
-                lmda[t] = parm[0]/(1-np.sum(parm[1:(self.p+1)]))
-
+                lmda[t] = parm[-len(self.X_names)*2]/(1-np.sum(parm[:self.p]))
+                theta[t] = np.dot(self.X[t],parm[-len(self.X_names):])
             else:
-
                 # Loop over GARCH terms
                 for p_term in range(0,self.p):
-                    lmda[t] += parm[1+p_term]*lmda[t-p_term-1]
+                    lmda[t] += parm[p_term]*lmda[t-p_term-1]
 
                 # Loop over Score terms
                 for q_term in range(0,self.q):
-                    lmda[t] += parm[1+self.p+q_term]*scores[t-q_term-1]
+                    lmda[t] += parm[self.p+q_term]*scores[t-q_term-1]
 
                 if self.leverage is True:
-                    lmda[t] += parm[-4]*np.sign(-(Y[t-1]-parm[-2]-parm[-1]*np.exp(lmda[t-1]/2.0)))*(scores[t-1]+1)
+                    lmda[t] += parm[-(len(self.X_names)*2)-3]*np.sign(-(Y[t-1]-theta[t-1]))*(scores[t-1]+1)
 
-            scores[t] = gas.BetatScore.mu_adj_score(Y[t],parm[-2]+parm[-1]*np.exp(lmda[t]/2.0),lmda[t],parm[-3])
+                lmda[t] += np.dot(self.X[t],parm[-len(self.X_names)*2:-len(self.X_names)])
 
-        return lmda, Y, scores
+                theta[t] = np.dot(self.X[t],parm[-len(self.X_names):]) + parm[-(len(self.X_names)*2)-1]*np.exp(lmda[t]/2.0)
+            
+            scores[t] = gas.BetatScore.mu_adj_score(Y[t]-theta[t],0,lmda[t],parm[self.p+self.q])
+        return lmda, Y, scores, theta
 
-    def _mean_prediction(self,lmda,Y,scores,h,t_params):
+    def _mean_prediction(self,lmda,Y,scores,h,t_params,X_oos):
         """ Creates a h-step ahead mean prediction
 
         Parameters
@@ -155,6 +188,9 @@ class EGARCHM(tsm.TSM):
         t_params : np.array
             A vector of (transformed) parameters
 
+        X_oos : np.array
+            Out of sample predictors
+
         Returns
         ----------
         h-length vector of mean predictions
@@ -167,26 +203,27 @@ class EGARCHM(tsm.TSM):
 
         # Loop over h time periods          
         for t in range(0,h):
-            new_value = t_params[0]
+            new_lambda_value = 0
 
             if self.p != 0:
-                for j in range(1,self.p+1):
-                    new_value += t_params[j]*lmda_exp[-j]
+                for j in range(self.p):
+                    new_lambda_value += t_params[j]*lmda_exp[-j-1]
 
             if self.q != 0:
-                for k in range(1,self.q+1):
-                    new_value += t_params[k+self.p]*scores_exp[-k]
+                for k in range(self.q):
+                    new_lambda_value += t_params[k+self.p]*scores_exp[-k-1]
 
-            if self.leverage is True:
-                new_value += t_params[1+self.p+self.q]*np.sign(-(Y_exp[-1]-t_params[-2]-t_params[-1]*np.exp(lmda_exp[-1]/2.0)))*(scores_exp[-1]+1)
+            # No leverage term for mean (should be zero in expectation?)
 
-            lmda_exp = np.append(lmda_exp,[new_value]) # For indexing consistency
+            new_lambda_value += np.dot(X_oos[t],t_params[-len(self.X_names)*2:-len(self.X_names)]) 
+            new_theta_value = np.dot(X_oos[t],t_params[-len(self.X_names):]) + t_params[-(len(self.X_names)*2)-1]*np.exp(new_lambda_value/2.0)
+            lmda_exp = np.append(lmda_exp,[new_lambda_value]) # For indexing consistency
             scores_exp = np.append(scores_exp,[0]) # expectation of score is zero
-            Y_exp = np.append(Y_exp,[t_params[-2]])
+            Y_exp = np.append(Y_exp,new_theta_value)
 
         return lmda_exp
 
-    def _sim_prediction(self,lmda,Y,scores,h,t_params,simulations):
+    def _sim_prediction(self,lmda,Y,scores,h,t_params,simulations,X_oos):
         """ Simulates a h-step ahead mean prediction
 
         Parameters
@@ -209,6 +246,9 @@ class EGARCHM(tsm.TSM):
         simulations : int
             How many simulations to perform
 
+        X_oos : np.array
+            Out of sample predictors
+
         Returns
         ----------
         Matrix of simulations
@@ -217,27 +257,30 @@ class EGARCHM(tsm.TSM):
         sim_vector = np.zeros([simulations,h])
 
         for n in range(0,simulations):
-            # Create arrays to iteratre over        
+            # Create arrays to iteratre over
             lmda_exp = lmda.copy()
             scores_exp = scores.copy()
             Y_exp = Y.copy()
 
             # Loop over h time periods          
             for t in range(0,h):
-                new_value = t_params[0]
+                new_lambda_value = 0
 
                 if self.p != 0:
-                    for j in range(1,self.p+1):
-                        new_value += t_params[j]*lmda_exp[-j]
+                    for j in range(self.p):
+                        new_lambda_value += t_params[j]*lmda_exp[-j-1]
 
                 if self.q != 0:
-                    for k in range(1,self.q+1):
-                        new_value += t_params[k+self.p]*scores_exp[-k]
+                    for k in range(self.q):
+                        new_lambda_value += t_params[k+self.p]*scores_exp[-k-1]
 
                 if self.leverage is True:
-                    new_value += t_params[1+self.p+self.q]*np.sign(-(Y_exp[-1]-t_params[-2]-t_params[-1]*np.exp(lmda_exp[-1]/2.0)))*(scores_exp[-1]+1)
+                    new_lambda_value += t_params[self.p+self.q]*np.sign(-(Y_exp[-1]-new_theta_value))*(scores_exp[-1]+1)
 
-                lmda_exp = np.append(lmda_exp,[new_value]) # For indexing consistency
+                new_lambda_value += np.dot(X_oos[t],t_params[-len(self.X_names)*2:-len(self.X_names)]) 
+                new_theta_value = np.dot(X_oos[t],t_params[-len(self.X_names):]) + t_params[-(len(self.X_names)*2)-1]*np.exp(new_lambda_value/2.0)
+
+                lmda_exp = np.append(lmda_exp,[new_lambda_value]) # For indexing consistency
                 scores_exp = np.append(scores_exp,scores[np.random.randint(scores.shape[0])]) # expectation of score is zero
                 Y_exp = np.append(Y_exp,Y[np.random.randint(Y.shape[0])]) # bootstrap returns
 
@@ -312,11 +355,10 @@ class EGARCHM(tsm.TSM):
         The negative logliklihood of the model
         """     
 
-        lmda, Y, ___ = self._model(beta)
-        loc = np.ones(lmda.shape[0])*self.parameters.parameter_list[-2].prior.transform(beta[-2]) + self.parameters.parameter_list[-1].prior.transform(beta[-1])*np.exp(lmda/2.0)
+        lmda, Y, _, theta = self._model(beta)
         return -np.sum(ss.t.logpdf(x=Y,
-            df=self.parameters.parameter_list[-3].prior.transform(beta[-3]),
-            loc=loc,scale=np.exp(lmda/2.0)))
+            df=self.parameters.parameter_list[-(len(self.X_names)*2)-2].prior.transform(beta[-(len(self.X_names)*2)-2]),
+            loc=theta,scale=np.exp(lmda/2.0)))
     
     def plot_fit(self,**kwargs):
         """ Plots the fit of the model
@@ -334,14 +376,14 @@ class EGARCHM(tsm.TSM):
             t_params = self.transform_parameters()
             plt.figure(figsize=figsize)
             date_index = self.index[max(self.p,self.q):]
-            sigma2, Y, ___ = self._model(self.parameters.get_parameter_values())
-            plt.plot(date_index,np.abs(Y-t_params[-2]-t_params[-1]*np.exp(sigma2/2.0)),label=self.data_name + ' Absolute Demeaned Values')
-            plt.plot(date_index,np.exp(sigma2/2.0),label='EGARCHM(' + str(self.p) + ',' + str(self.q) + ') Conditional Volatility',c='black')                   
+            sigma2, Y, ___, theta = self._model(self.parameters.get_parameter_values())
+            plt.plot(date_index,np.abs(Y-theta),label=self.data_name + ' Absolute Demeaned Values')
+            plt.plot(date_index,np.exp(sigma2/2.0),label='EGARCHMREG(' + str(self.p) + ',' + str(self.q) + ') Conditional Volatility',c='black')                   
             plt.title(self.data_name + " Volatility Plot")  
             plt.legend(loc=2)   
             plt.show()              
 
-    def plot_predict(self,h=5,past_values=20,intervals=True,**kwargs):
+    def plot_predict(self,h=5,past_values=20,intervals=True,oos_data=None,**kwargs):
 
         """ Plots forecast with the estimated model
 
@@ -356,6 +398,9 @@ class EGARCHM(tsm.TSM):
         intervals : Boolean
             Would you like to show prediction intervals for the forecast?
 
+        oos_data : pd.DataFrame
+            Data for the variables to be used out of sample (ys can be NaNs)
+
         Returns
         ----------
         - Plot of the forecast
@@ -368,13 +413,16 @@ class EGARCHM(tsm.TSM):
         else:
 
             # Retrieve data, dates and (transformed) parameters
-            lmda, Y, scores = self._model(self.parameters.get_parameter_values())           
+            _, X_oos = dmatrices(self.formula, oos_data)
+            X_oos = np.array([X_oos])[0]
+            X_pred = X_oos[:h]
+            lmda, Y, scores, theta = self._model(self.parameters.get_parameter_values())           
             date_index = self.shift_dates(h)
             t_params = self.transform_parameters()
 
             # Get mean prediction and simulations (for errors)
-            mean_values = self._mean_prediction(lmda,Y,scores,h,t_params)
-            sim_values = self._sim_prediction(lmda,Y,scores,h,t_params,15000)
+            mean_values = self._mean_prediction(lmda,Y,scores,h,t_params,X_pred)
+            sim_values = self._sim_prediction(lmda,Y,scores,h,t_params,15000,X_pred)
             error_bars, forecasted_values, plot_values, plot_index = self._summarize_simulations(mean_values,sim_values,date_index,h,past_values)
 
             plt.figure(figsize=figsize)
@@ -384,9 +432,9 @@ class EGARCHM(tsm.TSM):
                     plt.fill_between(date_index[-h-1:], np.exp((forecasted_values-pre)/2), np.exp((forecasted_values+pre)/2),alpha=alpha[count])            
             
             plt.plot(plot_index,np.exp(plot_values/2.0))
-            plt.title("Forecast for " + self.data_name)
+            plt.title("Forecast for " + self.data_name + " Conditional Volatility")
             plt.xlabel("Time")
-            plt.ylabel(self.data_name + " Conditional Volatility")
+            plt.ylabel(self.data_name)
             plt.show()
 
     def predict_is(self,h=5):
@@ -400,19 +448,21 @@ class EGARCHM(tsm.TSM):
         Returns
         ----------
         - pd.DataFrame with predicted values
-        """     
+        """  
 
         predictions = []
 
         for t in range(0,h):
-            x = EGARCHM(p=self.p,q=self.q,data=self.data[:-h+t])
+            data1 = self.data_original.iloc[:-(h+t),:]
+            data2 = self.data_original.iloc[-h+t:,:]
+            x = EGARCHMReg(p=self.p,q=self.q,data=self.data_original[:(-h+t)],formula=self.formula)
             x.fit(printer=False)
             if t == 0:
-                predictions = x.predict(1)
+                predictions = x.predict(1,oos_data=data2)
             else:
-                predictions = pd.concat([predictions,x.predict(1)])
+                predictions = pd.concat([predictions,x.predict(h=1,oos_data=data2)])
         
-        predictions.rename(columns={0:self.data_name}, inplace=True)
+        predictions.rename(columns={0:self.y_name}, inplace=True)
         predictions.index = self.index[-h:]
 
         return predictions
@@ -446,13 +496,16 @@ class EGARCHM(tsm.TSM):
         plt.legend(loc=2)   
         plt.show()          
 
-    def predict(self,h=5):
+    def predict(self,h=5,oos_data=None):
         """ Makes forecast with the estimated model
 
         Parameters
         ----------
         h : int (default : 5)
             How many steps ahead would you like to forecast?
+
+        oos_data : pd.DataFrame
+            Data to use for the predictors in the forecast
 
         Returns
         ----------
@@ -462,12 +515,15 @@ class EGARCHM(tsm.TSM):
         if self.parameters.estimated is False:
             raise Exception("No parameters estimated!")
         else:
+            _, X_oos = dmatrices(self.formula, oos_data)
+            X_oos = np.array([X_oos])[0]
+            X_pred = X_oos[:h]
 
-            sigma2, Y, scores = self._model(self.parameters.get_parameter_values()) 
+            sigma2, Y, scores, _ = self._model(self.parameters.get_parameter_values()) 
             date_index = self.shift_dates(h)
             t_params = self.transform_parameters()
 
-            mean_values = self._mean_prediction(sigma2,Y,scores,h,t_params)
+            mean_values = self._mean_prediction(sigma2,Y,scores,h,t_params,X_pred)
             forecasted_values = mean_values[-h:]
             result = pd.DataFrame(np.exp(forecasted_values/2.0))
             result.rename(columns={0:self.data_name}, inplace=True)

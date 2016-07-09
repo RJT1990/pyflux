@@ -123,12 +123,12 @@ class EGARCH(tsm.TSM):
 
                 # Loop over Score terms
                 for q_term in range(0,self.q):
-                    lmda[t] += parm[1+self.p+p_term]*scores[t-q_term-1]
+                    lmda[t] += parm[1+self.p+q_term]*scores[t-q_term-1]
 
                 if self.leverage is True:
                     lmda[t] += parm[-3]*np.sign(-(Y[t-1]-parm[-1]))*(scores[t-1]+1)
 
-            scores[t] = gas.BetatScore.mu_adj_score(Y[t]-parm[-1],0,lmda[t],parm[-2])
+            scores[t] = gas.BetatScore.mu_adj_score(Y[t],parm[-1],lmda[t],parm[-2])
 
         return lmda, Y, scores
 
@@ -175,11 +175,11 @@ class EGARCH(tsm.TSM):
                     new_value += t_params[k+self.p]*scores_exp[-k]
 
             if self.leverage is True:
-                new_value += t_params[1+self.p+self.q]*np.sign(-(Y_exp[scores_exp.shape[0]-1]-t_params[-1]))*(scores_exp[-1]+1)
+                new_value += t_params[1+self.p+self.q]*np.sign(-(Y_exp[-1]-t_params[-1]))*(scores_exp[-1]+1)
 
             lmda_exp = np.append(lmda_exp,[new_value]) # For indexing consistency
             scores_exp = np.append(scores_exp,[0]) # expectation of score is zero
-            Y_exp = np.append(Y_exp,[0])
+            Y_exp = np.append(Y_exp,[t_params[-1]])
 
         return lmda_exp
 
@@ -232,7 +232,7 @@ class EGARCH(tsm.TSM):
                         new_value += t_params[k+self.p]*scores_exp[-k]
 
                 if self.leverage is True:
-                    new_value += t_params[1+self.p+self.q]*np.sign(-(Y_exp[scores_exp.shape[0]-1]-t_params[-1]))*(scores_exp[-1]+1)
+                    new_value += t_params[1+self.p+self.q]*np.sign(-(Y_exp[-1]-t_params[-1]))*(scores_exp[-1]+1)
 
                 lmda_exp = np.append(lmda_exp,[new_value]) # For indexing consistency
                 scores_exp = np.append(scores_exp,scores[np.random.randint(scores.shape[0])]) # expectation of score is zero
@@ -329,8 +329,8 @@ class EGARCH(tsm.TSM):
             plt.figure(figsize=figsize)
             date_index = self.index[max(self.p,self.q):]
             sigma2, Y, ___ = self._model(self.parameters.get_parameter_values())
-            plt.plot(date_index,np.abs(Y-t_params[-1]),label=self.data_name + ' Absolute Values')
-            plt.plot(date_index,np.exp(sigma2/2.0),label='EGARCH(' + str(self.p) + ',' + str(self.q) + ') std',c='black')                   
+            plt.plot(date_index,np.abs(Y-t_params[-1]),label=self.data_name + ' Absolute Demeaned Values')
+            plt.plot(date_index,np.exp(sigma2/2.0),label='EGARCH(' + str(self.p) + ',' + str(self.q) + ') Conditional Volatility',c='black')                   
             plt.title(self.data_name + " Volatility Plot")  
             plt.legend(loc=2)   
             plt.show()              
@@ -378,9 +378,9 @@ class EGARCH(tsm.TSM):
                     plt.fill_between(date_index[-h-1:], np.exp((forecasted_values-pre)/2), np.exp((forecasted_values+pre)/2),alpha=alpha[count])            
             
             plt.plot(plot_index,np.exp(plot_values/2.0))
-            plt.title("Forecast for " + self.data_name)
+            plt.title("Forecast for " + self.data_name + " Conditional Volatility")
             plt.xlabel("Time")
-            plt.ylabel(self.data_name)
+            plt.ylabel(self.data_name + " Conditional Volatility")
             plt.show()
 
     def predict_is(self,h=5):
@@ -432,7 +432,9 @@ class EGARCH(tsm.TSM):
         predictions = self.predict_is(h)
         data = self.data[-h:]
 
-        plt.plot(date_index,np.abs(data),label='Data')
+        t_params = self.transform_parameters()
+
+        plt.plot(date_index,np.abs(data-t_params[-1]),label='Data')
         plt.plot(date_index,predictions,label='Predictions',c='black')
         plt.title(self.data_name)
         plt.legend(loc=2)   

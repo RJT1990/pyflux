@@ -293,7 +293,7 @@ class GARCH(tsm.TSM):
             t_params = self.transform_parameters()
             sigma2, Y, ___ = self._model(self.parameters.get_parameter_values())
             plt.plot(date_index,np.abs(Y-t_params[-1]),label=self.data_name + ' Absolute Demeaned Values')
-            plt.plot(date_index,np.power(sigma2,0.5),label='GARCH(' + str(self.p) + ',' + str(self.q) + ') std',c='black')
+            plt.plot(date_index,np.power(sigma2,0.5),label='GARCH(' + str(self.p) + ',' + str(self.q) + ') Conditional Volatility',c='black')
             plt.title(self.data_name + " Volatility Plot")  
             plt.legend(loc=2)   
             plt.show()              
@@ -339,9 +339,9 @@ class GARCH(tsm.TSM):
                 for count, pre in enumerate(error_bars):
                     plt.fill_between(date_index[-h-1:], forecasted_values-pre, forecasted_values+pre,alpha=alpha[count])            
             plt.plot(plot_index,plot_values)
-            plt.title("Forecast for " + self.data_name)
+            plt.title("Forecast for " + self.data_name + " Conditional Volatility")
             plt.xlabel("Time")
-            plt.ylabel(self.data_name)
+            plt.ylabel(self.data_name + " Conditional Volatility")
             plt.show()
 
     def predict_is(self,h=5):

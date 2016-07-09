@@ -89,6 +89,21 @@ class TSM(object):
             states = None
             states_var = None
             X_names = None
+        elif self.model_type in ['GASLLT']:
+            theta, mu_t, Y, scores = self._model(q_params)
+            states = np.array([theta, mu_t])
+            states_var = None
+            X_names = None
+        elif self.model_type in ['LMEGARCH']:
+            theta, _, Y, scores = self._model(q_params)
+            states = None
+            states_var = None
+            X_names = None    
+        elif self.model_type in ['SEGARCH','SEGARCHM']:
+            theta, Y, scores, y_theta = self._model(q_params)
+            states = None
+            states_var = None
+            X_names = None    
         elif self.model_type in ['EGARCHMReg']:
             theta, Y, scores, _ = self._model(q_params)
             states = None
@@ -154,6 +169,21 @@ class TSM(object):
                 states = None
                 states_var = None
                 X_names = None
+            elif self.model_type in ['GASLLT']:
+                theta, mu_t, Y, scores = self._model(y.parameters.get_parameter_values())
+                states = np.array([theta, mu_t])
+                states_var = None
+                X_names = None        
+            elif self.model_type in ['LMEGARCH']:
+                theta, _, Y, scores = self._model(y.parameters.get_parameter_values())
+                states = None
+                states_var = None
+                X_names = None        
+            elif self.model_type in ['SEGARCH','SEGARCHM']:
+                theta, Y, scores, y_theta = self._model(y.parameters.get_parameter_values())
+                states = None
+                states_var = None
+                X_names = None        
             elif self.model_type in ['EGARCHMReg']:
                 theta, Y, scores, _ = self._model(y.parameters.get_parameter_values())
                 states = None
@@ -243,6 +273,21 @@ class TSM(object):
             states = None
             states_var = None
             X_names = None
+        elif self.model_type in ['GASLLT']:
+            theta, mu_t, Y, scores = self._model(mean_est)
+            states = np.array([theta, mu_t])
+            states_var = None
+            X_names = None    
+        elif self.model_type in ['LMEGARCH']:
+            theta, _, Y, scores = self._model(mean_est)
+            states = None
+            states_var = None
+            X_names = None    
+        elif self.model_type in ['SEGARCH','SEGARCHM']:
+            theta, Y, scores, y_theta = self._model(mean_est)
+            states = None
+            states_var = None
+            X_names = None    
         elif self.model_type in ['EGARCHMReg']:
             theta, Y, scores, _ = self._model(mean_est)
             states = None
@@ -317,6 +362,21 @@ class TSM(object):
             states = None
             states_var = None
             X_names = None
+        elif self.model_type in ['GASLLT']:
+            theta, mu_t, Y, scores = self._model(params)
+            states = np.array([theta, mu_t])
+            states_var = None
+            X_names = None    
+        elif self.model_type in ['LMEGARCH']:
+            theta, _, Y, scores = self._model(params)
+            states = None
+            states_var = None
+            X_names = None    
+        elif self.model_type in ['SEGARCH','SEGARCHM']:
+            theta, Y, scores, y_theta = self._model(params)
+            states = None
+            states_var = None
+            X_names = None    
         elif self.model_type in ['EGARCHMReg']:
             theta, Y, scores, _ = self._model(params)
             states = None
@@ -372,44 +432,61 @@ class TSM(object):
         # Optimize using L-BFGS-B
         p = optimize.minimize(obj_type,phi,method='L-BFGS-B')
 
+        # Model check
+        if self.model_type in ['GAS','GASX','GARCH','EGARCH','GASLLEV','EGARCHM']:
+            theta, Y, scores = self._model(p.x)
+            states = None
+            states_var = None
+            X_names = None
+        elif self.model_type in ['GASLLT']:
+            theta, mu_t, Y, scores = self._model(p.x)
+            states = np.array([theta, mu_t])
+            states_var = None
+            X_names = None
+        elif self.model_type in ['LMEGARCH']:
+            theta, _, Y, scores = self._model(p.x)
+            states = None
+            states_var = None
+            X_names = None    
+        elif self.model_type in ['SEGARCH','SEGARCHM']:
+            theta, Y, scores, y_theta = self._model(p.x)
+            states = None
+            states_var = None
+            X_names = None    
+        elif self.model_type in ['EGARCHMReg']:
+            theta, Y, scores, _ = self._model(p.x)
+            states = None
+            states_var = None
+            X_names = None                
+        elif self.model_type in ['GASReg']:
+            theta, Y, scores, states = self._model(p.x)
+            X_names = self.X_names
+            states_var = None
+        elif self.model_type in ['LLEV','LLT','DynLin']:
+            Y = self.data
+            scores = None
+            states, states_var = self.smoothed_state(self.data,p.x)
+            theta = states[0][:-1]
+            X_names = None
+        elif self.model_type in ['GPNARX','GPR','GP']:
+            Y = self.data*self._norm_std + self._norm_mean
+            scores = None
+            theta = self.expected_values(self.parameters.get_parameter_values())*self._norm_std + self._norm_mean
+            X_names = None  
+            states = None   
+            states_var = None
+        else:
+            theta, Y = self._model(p.x)
+            scores = None
+            states = None
+            X_names = None
+            states_var = None
+
         # Check that matrix is non-singular; act accordingly
         try:
             ihessian = np.linalg.inv(nd.Hessian(obj_type)(p.x))
             ses = np.power(np.abs(np.diag(ihessian)),0.5)
             self.parameters.set_parameter_values(p.x,method,ses,None)
-            if self.model_type in ['GAS','GASX','GARCH','EGARCH','GASLLEV','EGARCHM']:
-                theta, Y, scores = self._model(p.x)
-                states = None
-                states_var = None
-                X_names = None
-            if self.model_type in ['EGARCHMReg']:
-                theta, Y, scores, _ = self._model(p.x)
-                states = None
-                states_var = None
-                X_names = None                
-            elif self.model_type in ['GASReg']:
-                theta, Y, scores, states = self._model(p.x)
-                X_names = self.X_names
-                states_var = None
-            elif self.model_type in ['LLEV','LLT','DynLin']:
-                Y = self.data
-                scores = None
-                states, states_var = self.smoothed_state(self.data,p.x)
-                theta = states[0][:-1]
-                X_names = None
-            elif self.model_type in ['GPNARX','GPR','GP']:
-                Y = self.data*self._norm_std + self._norm_mean
-                scores = None
-                theta = self.expected_values(self.parameters.get_parameter_values())*self._norm_std + self._norm_mean
-                X_names = None  
-                states = None   
-                states_var = None
-            else:
-                theta, Y = self._model(p.x)
-                scores = None
-                states = None
-                X_names = None
-                states_var = None
 
             # Change this in future
             try:
@@ -424,40 +501,7 @@ class TSM(object):
                 param_hide=self._param_hide,max_lag=self.max_lag,states=states,states_var=states_var)
         except:
             self.parameters.set_parameter_values(p.x,method,None,None)
-            if self.model_type in ['GAS','GASX','GARCH','EGARCH','GASLLEV','EGARCHM']:
-                theta, Y, scores = self._model(p.x)
-                states = None
-                states_var = None
-                X_names = None
-            elif self.model_type in ['EGARCHMReg']:
-                theta, Y, scores, _ = self._model(p.x)
-                states = None
-                states_var = None
-                X_names = None                    
-            elif self.model_type in ['GASReg']:
-                theta, Y, scores, states = self._model(p.x) 
-                X_names = self.X_names  
-                states_var = None
-            elif self.model_type in ['LLEV','LLT','DynLin']:
-                Y = self.data
-                scores = None
-                states, states_var = self.smoothed_state(self.data,p.x)
-                theta = states[0][:-1]
-                X_names = None  
-            elif self.model_type in ['GPNARX','GPR','GP']:
-                Y = self.data*self._norm_std + self._norm_mean
-                scores = None
-                theta = self.expected_values(self.parameters.get_parameter_values())*self._norm_std + self._norm_mean
-                X_names = None  
-                states = None   
-                states_var = None               
-            else:
-                theta, Y = self._model(p.x)
-                scores = None
-                states = None
-                X_names = None
-                states_var = None
-
+ 
             # Change this in future
             try:
                 parameter_store = self.parameters.copy()

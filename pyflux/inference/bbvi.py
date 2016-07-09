@@ -156,6 +156,7 @@ class BBVI(object):
         """
         The unnormalized log posterior components (the quantity we want to approximate)
         """
+        import time
         return np.array([-self.neg_posterior(i) for i in z])
 
     def normal_log_q(self,z):
@@ -198,9 +199,10 @@ class BBVI(object):
             self.optim = ADAM(final_parameters,variance,0.001,0.9,0.999)
         elif self.optimizer == 'RMSProp':
             self.optim = RMSProp(final_parameters,variance,0.001,0.99)
-
+        
         for i in range(self.iterations):
-            gradient = self.cv_gradient(self.draw_normal())
+            x = self.draw_normal()
+            gradient = self.cv_gradient(x)
             gradient[np.isnan(gradient)] = 0
             self.change_parameters(self.optim.update(gradient))
 
