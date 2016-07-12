@@ -225,7 +225,7 @@ class TSM(object):
                 method='Laplace',ihessian=y.ihessian,signal=theta,scores=scores,
                 param_hide=self._param_hide,max_lag=self.max_lag,states=states,states_var=states_var)
 
-    def _mcmc_fit(self,scale=(2.38/sqrt(1000)),nsims=100000,printer=True,method="M-H",cov_matrix=None,**kwargs):
+    def _mcmc_fit(self,scale=1.0,nsims=10000,printer=True,method="M-H",cov_matrix=None,**kwargs):
         """ Performs MCMC 
 
         Parameters
@@ -249,10 +249,14 @@ class TSM(object):
         ----------
         None (plots posteriors, stores parameters)
         """
-
+        scale = 2.38/np.sqrt(self.param_no)
         # Get Mode and Inverse Hessian information
         y = self.fit(method='PML',printer=False)
-
+        try:
+            ses = np.power(np.abs(np.diag(y.ihessian)),0.5)
+            cov_matrix = np.diag(np.diag(ses))
+        except:
+            pass
         if method == "M-H":
             sampler = MetropolisHastings(self.neg_logposterior,scale,nsims,y.parameters.get_parameter_values(),cov_matrix=cov_matrix,model_object=None)
             chain, mean_est, median_est, upper_95_est, lower_95_est = sampler.sample()

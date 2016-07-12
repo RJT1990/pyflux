@@ -129,8 +129,11 @@ class ARIMA(tsm.TSM):
         parm = np.array([self.parameters.parameter_list[k].prior.transform(beta[k]) for k in range(beta.shape[0])])
 
         # Constant and AR terms
-        mu = np.matmul(np.transpose(self.X),parm[0:-1-self.ma])
-
+        if self.ar != 0:
+            mu = np.matmul(np.transpose(self.X),parm[0:-1-self.ma])
+        else:
+            mu = np.ones(Y.shape[0])*parm[0]
+            
         # MA terms
         if self.ma != 0:
             for t in range(self.max_lag,Y.shape[0]):
