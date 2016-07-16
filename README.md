@@ -42,5 +42,5 @@ PyFlux is tested on Python 2.7 and 3.5.
 PyFlux is still alpha software so results should be treated with care, but citations are very welcome:
 
 > Ross Taylor. 2016.
-> _PyFlux: An open source time series library for Python
+> _PyFlux: An open source time series library for Python_
 > http://www.pyflux.com
