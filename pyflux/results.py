@@ -39,6 +39,7 @@ class MLEResults(Results):
 
         if self.multivariate_model is True:
             self.data_length = self.data[0].shape[0]
+            self.data_name = ",".join(self.data_name)
         else:
             self.data_length = self.data.shape[0]
 
@@ -237,6 +238,7 @@ class BBVIResults(Results):
 
         if self.multivariate_model is True:
             self.data_length = self.data[0].shape[0]
+            self.data_name = ",".join(self.data_name)
         else:
             self.data_length = self.data.shape[0]
 
@@ -364,6 +366,7 @@ class BBVISSResults(Results):
 
         if self.multivariate_model is True:
             self.data_length = self.data[0].shape[0]
+            self.data_name = ",".join(self.data_name)
         else:
             self.data_length = self.data.shape[0]
 
@@ -466,6 +469,7 @@ class LaplaceResults(Results):
         data,index,multivariate_model,objective_object,method,
         param_hide,max_lag,ihessian,signal=None,scores=None,states=None,
         states_var=None):
+
         self.data_name = data_name
         self.X_names = X_names
         self.max_lag = max_lag
@@ -486,6 +490,7 @@ class LaplaceResults(Results):
 
         if self.multivariate_model is True:
             self.data_length = self.data[0].shape[0]
+            self.data_name = ",".join(self.data_name)
         else:
             self.data_length = self.data.shape[0]
 
@@ -616,6 +621,7 @@ class MCMCResults(Results):
 
         if self.multivariate_model is True:
             self.data_length = self.data[0].shape[0]
+            self.data_name = ",".join(self.data_name)
         else:
             self.data_length = self.data.shape[0]
 

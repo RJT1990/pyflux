@@ -35,12 +35,17 @@ class VAR(tsm.TSM):
     target : str (pd.DataFrame) or int (np.array)
         Specifies which column name or array index to use. By default, first
         column/array will be selected as the dependent variable.
+
+    use_ols_covariance : Boolean
+        If true use OLS covariance; if false use estimated covariance
     """
 
-    def __init__(self,data,lags,target=None,integ=0):
+    def __init__(self,data,lags,target=None,integ=0,use_ols_covariance=False):
 
         # Initialize TSM object     
         super(VAR,self).__init__('VAR')
+
+        self.neg_logposterior = self.multivariate_neg_logposterior
 
         # Parameters
         self.lags = lags
@@ -50,6 +55,7 @@ class VAR(tsm.TSM):
         self.supported_methods = ["OLS","MLE","PML","Laplace","M-H","BBVI"]
         self.default_method = "OLS"
         self.multivariate_model = True
+        self.use_ols_covariance = use_ols_covariance
 
         # Format the data
         self.data, self.data_name, self.is_pandas, self.index = dc.mv_data_check(data,target)
@@ -70,7 +76,7 @@ class VAR(tsm.TSM):
         self.param_no = len(self.parameters.parameter_list)
 
     def _create_B(self,Y):
-        """ Creates coefficient matrix
+        """ Creates OLS coefficient matrix
 
         Parameters
         ----------
@@ -86,7 +92,7 @@ class VAR(tsm.TSM):
         return np.dot(np.dot(Y,np.transpose(Z)),np.linalg.inv(np.dot(Z,np.transpose(Z))))
 
     def _create_B_direct(self):
-        """ Creates coefficient matrix (calculates Y within - for OLS fitting)
+        """ Creates OLS coefficient matrix (calculates Y within - for OLS fitting)
 
         Returns
         ----------
@@ -116,28 +122,24 @@ class VAR(tsm.TSM):
                 for other in other_variables:
                     self.parameters.add_parameter(str(self.data_name[other]) + ' to ' + str(self.data_name[variable]) + ' AR(' + str(lag_no+1) + ')',ifr.Normal(0,0.5,transform=None),dst.q_Normal(0,3))
 
+        starting_params_temp = self._create_B_direct().flatten()
+
         # Variance parameters
         for i in range(self.ylen):
             for k in range(self.ylen):
                 if i == k:
-                    self.parameters.add_parameter('Sigma' + str(self.data_name[i]),ifr.Uniform(transform='exp'),dst.q_Normal(0,3))
+                    self.parameters.add_parameter('Cholesky Diagonal ' + str(i),ifr.Uniform(transform='exp'),dst.q_Normal(0,3))
                 elif i > k:
-                    self.parameters.add_parameter('Sigma' + str(self.data_name[i]) + ' to ' + str(self.data_name[k]),ifr.Uniform(transform='exp'),dst.q_Normal(0,3))
-
-        # Starting parameters
-
-        starting_params_temp = self._create_B_direct().flatten()
-        cov = self.ols_covariance()
+                    self.parameters.add_parameter('Cholesky Off-Diagonal (' + str(i) + ',' + str(k) + ')',ifr.Uniform(transform=None),dst.q_Normal(0,3))
 
         for i in range(0,self.ylen):
             for k in range(0,self.ylen):
                 if i == k:
-                    starting_params_temp = np.append(starting_params_temp,self.parameters.parameter_list[-1].prior.itransform(cov[i,k]))
+                    starting_params_temp = np.append(starting_params_temp,np.array([0.5]))
                 elif i > k:
-                    starting_params_temp = np.append(starting_params_temp,self.parameters.parameter_list[-1].prior.itransform(cov[i,k]))            
+                    starting_params_temp = np.append(starting_params_temp,np.array([0.0]))
 
         self.parameters.set_parameter_starting_values(starting_params_temp)
-
 
     def _create_Z(self,Y):
         """ Creates design matrix holding the lagged variables
@@ -248,7 +250,6 @@ class VAR(tsm.TSM):
             params.append(beta[(col_length*i): (col_length*(i+1))])
 
         mu = np.dot(np.array(params),self._create_Z(Y))
-
         return mu, Y
 
     def _shock_create(self, h, shock_type, shock_index, shock_value, shock_dir, irf_intervals):
@@ -285,8 +286,13 @@ class VAR(tsm.TSM):
 
         elif shock_type == 'IRF':
 
-            cov = self.custom_covariance(self.parameters.get_parameter_values())
+            if self.use_ols_covariance is False:
+                cov = self.custom_covariance(self.parameters.get_parameter_values())
+            else:
+                cov = self.ols_covariance()
+
             post = ss.multivariate_normal(np.zeros(self.ylen),cov)
+            
             if irf_intervals is False:
                 random = [np.zeros(self.ylen) for i in range(0,h)]
             else:
@@ -305,7 +311,11 @@ class VAR(tsm.TSM):
 
         elif shock_type == 'Cov':
             
-            cov = self.custom_covariance(self.parameters.get_parameter_values())
+            if self.use_ols_covariance is False:
+                cov = self.custom_covariance(self.parameters.get_parameter_values())
+            else:
+                cov = self.ols_covariance()
+
             post = ss.multivariate_normal(np.zeros(self.ylen),cov)
             random = [post.rvs() for i in range(0,h)]
 
@@ -366,6 +376,33 @@ class VAR(tsm.TSM):
                     index = self.ylen + self.lags*(self.ylen**2) + quick_count
                     quick_count += 1
                     cov_matrix[i,k] = self.parameters.parameter_list[index].prior.transform(beta[index])
+
+        return np.dot(cov_matrix,cov_matrix.T)
+
+    def custom_covariance_old(self,beta):
+        """ Creates Covariance Matrix for a given Beta Vector
+        (Not necessarily the OLS covariance)
+
+        Parameters
+        ----------
+        beta : np.array
+            Contains untransformed starting values for parameters
+
+        Returns
+        ----------
+        A Covariance Matrix
+        """         
+
+        cov_matrix = np.zeros((self.ylen,self.ylen))
+
+        quick_count = 0
+        for i in range(0,self.ylen):
+            for k in range(0,self.ylen):
+                if i >= k:
+                    index = self.ylen + self.lags*(self.ylen**2) + quick_count
+                    quick_count += 1
+                    cov_matrix[i,k] = self.parameters.parameter_list[index].prior.transform(beta[index])
+
         return cov_matrix + np.transpose(np.tril(cov_matrix,k=-1))
 
     def estimator_cov(self,method):
@@ -389,108 +426,6 @@ class VAR(tsm.TSM):
             sigma = self.custom_covariance(self.parameters.get_parameter_values())
         return np.kron(np.linalg.inv(np.dot(Z,np.transpose(Z))), sigma)
 
-    def irf(self,h=10,shock_index=0,shock_value=None,intervals=True,shock_dir='positive',cumulative=False,**kwargs):
-
-        """ Function allows for mean prediction; also allows shock specification for simulations or impulse response effects
-
-        Parameters
-        ----------
-        h : int
-            How many steps ahead to forecast
-
-        shock_index : int
-            Which parameter (index) to apply the shock to.
-
-        shock_value : None or float
-            If specified, applies a custom-sized impulse response shock.
-
-        intervals : Boolean
-            Whether to have intervals for the IRF plot or not
-
-        shock_dir : str
-            Direction of the IRF shock. One of 'positive' or 'negative'.
-
-        cumulative : Boolean
-            Whether to plot cumulative effect (if no -> plot effect at each step)
-
-        Returns
-        ----------
-        A plot of the impact response
-        """         
-
-        figsize = kwargs.get('figsize',(10,7))
-
-        if self.parameters.estimated is False:
-            raise Exception("No parameters estimated!")
-        else:       
-
-            # Retrieve data, dates and (transformed) parameters
-            mu, Y = self._model(self.parameters.get_parameter_values()) 
-            date_index = self.shift_dates(h)
-            t_params = self.transform_parameters()
-
-            # Get steady state values (hacky solution)
-            ss_exps = self._forecast_mean(150,t_params,Y,None)
-            ss_exps = np.array([i[len(i)-10:len(i)-1] for i in ss_exps])
-
-            # Expectation
-            exps = self._forecast_mean(h,t_params,ss_exps,'IRF',shock_index,None,shock_dir)
-
-            if intervals is True:
-                # Error bars
-                sim_vector = np.array([np.zeros([10000,h]) for i in range(0,self.ylen)])
-                for it in range(0,10000):
-                    exps_sim = self._forecast_mean(h,t_params,Y,'IRF',shock_index,None,shock_dir,True)
-                    for variable in range(0,self.ylen):
-                        sim_vector[variable][it,:] = exps_sim[variable][-h:]
-
-            for variable in range(exps.shape[0]):
-
-                exp_var = exps[variable][-h-1:]
-                exp_var = exp_var - ss_exps[variable][-1] # demean
-
-                if cumulative is True:
-                    exp_var = exp_var.cumsum()
-                    if intervals is True:
-                        sims = sim_vector[variable]
-                        sims = [i.cumsum() for i in sims]
-                        sims = np.transpose(sims)
-                elif cumulative is False:
-                    if intervals is True:
-                        sims = np.transpose(sim_vector[variable])
-                        
-                plt.figure(figsize=figsize)
-
-                if intervals is True:
-                    error_bars, forecasted_values, plot_values, plot_index = self._summarize_simulations(exps[variable],sims,date_index,h,0)
-
-                    if cumulative is True:
-                        forecasted_values = (forecasted_values - ss_exps[variable][-1]).cumsum()
-                    else:
-                        forecasted_values = (forecasted_values - ss_exps[variable][-1])
-                    
-                    alpha =[0.15*i/float(100) for i in range(50,12,-2)]
-                    for count, pre in enumerate(error_bars):
-
-                        if cumulative is True:
-                            ebar = pre - ss_exps[variable][-1]                  
-                        else:
-                            ebar = pre - ss_exps[variable][-1]
-
-                        plt.fill_between(range(1,len(forecasted_values)), 
-                            forecasted_values[1:len(ebar)]-ebar[1:len(ebar)], 
-                            forecasted_values[1:len(ebar)]+ebar[1:len(ebar)],alpha=alpha[count])            
-                    
-                plt.plot(exp_var)
-                plt.plot(np.zeros(exp_var.shape[0]),alpha=0.3)  
-                if shock_dir == 'positive':             
-                    plt.title("IR for " + self.data_name[variable] + " for +ve shock in " + self.data_name[shock_index])
-                elif shock_dir == 'negative':
-                    plt.title("IR for " + self.data_name[variable] + " for -ve shock in " + self.data_name[shock_index])                    
-                plt.xlabel("Time")
-                plt.ylabel(self.data_name[variable])
-                plt.show()
-
     def neg_loglik(self,beta):
         """ Creates the negative log-likelihood of the model
 
@@ -505,16 +440,19 @@ class VAR(tsm.TSM):
         """     
 
         mu, Y = self._model(beta)
-        mu_t = np.transpose(mu)
-        Y_t = np.transpose(Y)
-        cm = self.custom_covariance(beta)
-        diff = Y_t - mu_t
 
-        ll1 =  -(mu_t.shape[0]*mu_t.shape[1]/2.0)*np.log(2.0*np.pi) - (mu_t.shape[0]/2.0)*np.linalg.slogdet(cm)[1]
-        ll2 = 0
+        if self.use_ols_covariance is False:
+            cm = self.custom_covariance(beta)
+        else:
+            cm = self.ols_covariance()
+        diff = Y.T - mu.T
 
-        for t in range(0,mu_t.shape[0]):
-            ll2 += np.dot(np.dot(diff[t].T,np.linalg.pinv(cm)),diff[t])
+        ll1 =  -(mu.T.shape[0]*mu.T.shape[1]/2.0)*np.log(2.0*np.pi) - (mu.T.shape[0]/2.0)*np.linalg.slogdet(cm)[1]
+        ll2 = 0.0
+
+        inverse = np.linalg.pinv(cm)
+        for t in range(0,mu.T.shape[0]):
+            ll2 += np.dot(np.dot(diff[t].T,inverse),diff[t])
 
         return -(ll1 -0.5*ll2)
 
@@ -719,3 +657,9 @@ class VAR(tsm.TSM):
 
         return (Y-np.dot(self._create_B(Y),self._create_Z(Y)))
 
+    def construct_wishart(self,v,X):
+        """
+        Constructs a Wishart prior for the covariance matrix
+        """
+        self.adjust_prior(list(range(int((len(self.parameters.parameter_list)-self.ylen-(self.ylen**2-self.ylen)/2)),
+            int(len(self.parameters.parameter_list)))),ifr.InverseWishart(v,X))

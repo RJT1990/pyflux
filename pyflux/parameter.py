@@ -30,9 +30,9 @@ class Parameters(object):
         transforms = self.get_parameter_transforms_names()
 
         fmt = [
-            ('Index','param_index',6),      
+            ('Index','param_index',8),      
             ('Parameter','param_name',25),
-            ('Prior','param_prior',10),
+            ('Prior','param_prior',15),
             ('Hyperparameters','param_hyper',25),
             ('V.I. Dist','param_vardist',10),
             ('Transform','param_transform',10)
@@ -112,13 +112,16 @@ class Parameters(object):
         for prior in priors:
             if isinstance(prior, Normal):
                 prior_names.append('Normal')
-                prior_params_names.append('mu0: ' + str(prior.mu0) + ', sigma0: ' + str(prior.sigma0))
+                prior_params_names.append('mu0: ' + str(np.round(prior.mu0,4)) + ', sigma0: ' + str(np.round(prior.sigma0,4)))
             elif isinstance(prior, InverseGamma):
                 prior_names.append('Inverse Gamma')
-                prior_params_names.append('alpha: ' + str(prior.alpha) + ', beta: ' + str(prior.beta))
+                prior_params_names.append('alpha: ' + str(np.round(prior.alpha,4)) + ', beta: ' + str(np.round(prior.beta,4)))
             elif isinstance(prior, Uniform):
                 prior_names.append('Uniform')
                 prior_params_names.append('n/a (non-informative)')
+            elif isinstance(prior, InverseWishart):
+                prior_names.append('InverseWishart')
+                prior_params_names.append('v: ' + str(np.round(prior.v,4)) + ' and scale matrix')
             else:
                 raise ValueError("Prior distribution not detected!")
         return prior_names, prior_params_names
@@ -177,6 +180,8 @@ class Parameters(object):
                 q_list.append('Inverse Gamma')
             elif isinstance(approx, q_Uniform):
                 q_list.append('Uniform')
+            elif isinstance(approx, q.InverseWishart):
+                q_list.append('InverseWishart')
             else:
                 raise Exception("Approximate distribution not detected!")
         return q_list
@@ -199,7 +204,7 @@ class Parameters(object):
         for no in range(len(self.parameter_list)):
             self.parameter_list[no].start = values[no]
 
-    def plot_parameters(self,indices=None,figsize=(15,5)):
+    def plot_parameters(self,indices=None,figsize=(15,5),loc=1):
         plt.figure(figsize=figsize) 
         for parm in range(1,len(self.parameter_list)+1):
             if indices is not None and parm-1 not in indices:
@@ -224,7 +229,7 @@ class Parameters(object):
         plt.xlabel('Value')
         plt.ylabel('Frequency')
         plt.title('Parameter Plot')
-        plt.legend()
+        plt.legend(loc=1)
         plt.show()
 
     def trace_plot(self,figsize=(15,15)):

@@ -1,5 +1,6 @@
 from math import exp, log, tanh
 import numpy as np
+from scipy.stats import invwishart
 
 def ilogit(x):
     return 1/(1+np.exp(-x))
@@ -31,6 +32,7 @@ def itransform_define(transform):
     else:
         return None
 
+
 class Normal(object):
 
     def __init__(self,mu0,sigma0,transform=None):
@@ -39,6 +41,7 @@ class Normal(object):
         self.transform_name = transform     
         self.transform = transform_define(transform)
         self.itransform = itransform_define(transform)
+        self.covariance_prior = False
 
     def logpdf(self,mu):
         if self.transform is not None:
@@ -50,15 +53,18 @@ class Normal(object):
             mu = self.transform(mu)             
         return (1/float(self.sigma0))*exp(-(0.5*(mu-self.mu0)**2)/float(self.sigma0**2))
 
+
 class Uniform(object):
 
     def __init__(self,transform=None):
         self.transform_name = transform     
         self.transform = transform_define(transform)
         self.itransform = itransform_define(transform)
+        self.covariance_prior = False
 
     def logpdf(self,mu):
         return 0.0
+
 
 class InverseGamma(object):
 
@@ -68,6 +74,7 @@ class InverseGamma(object):
         self.transform_name = transform
         self.transform = transform_define(transform)
         self.itransform = itransform_define(transform)
+        self.covariance_prior = False
 
     def logpdf(self,x):
         if self.transform is not None:
@@ -78,5 +85,22 @@ class InverseGamma(object):
         if self.transform is not None:
             x = self.transform(x)               
         return (x**(-self.alpha-1))*exp(-(self.beta/float(x)))
+
+
+class InverseWishart(object):
+
+    def __init__(self,v,Psi):
+        self.v = v
+        self.Psi = Psi
+        self.covariance_prior = True
+        self.transform_name = None     
+        self.transform = transform_define(None)
+        self.itransform = itransform_define(None)
+
+    def logpdf(self,X):
+        return invwishart.logpdf(X, df=self.v, scale=self.Psi)
+
+    def pdf(self,X):
+        return invwishart.pdf(X, df=self.v, scale=self.Psi)
 
 

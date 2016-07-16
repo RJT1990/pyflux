@@ -18,6 +18,7 @@ See some examples and documentation at [PyFlux.com](http://www.pyflux.com/). Or 
 - [Gaussian State Space models](http://www.pyflux.com/notebooks/GaussianStateSpace.html)
 - [Non-Gaussian State Space models](http://www.pyflux.com/notebooks/NonGaussianStateSpace.html)
 - [VAR models](http://www.pyflux.com/notebooks/VAR.html)
+ - [Bayesian VAR models](http://www.pyflux.com/notebooks/BayesianVAR.html)
 
 ## Inference
 
@@ -35,3 +36,11 @@ pip install pyflux
 ## Python Version
 
 PyFlux is tested on Python 2.7 and 3.5.
+
+## Citation
+
+PyFlux is still alpha software so results should be treated with care, but citations are very welcome:
+
+> Ross Taylor. 2016.
+> _PyFlux: An open source time series library for Python
+> http://www.pyflux.com

@@ -1,5 +1,4 @@
 import numpy as np
-from math import exp
 import sys
 if sys.version_info < (3,):
     range = xrange
@@ -128,7 +127,7 @@ class MetropolisHastings(object):
             for i in range(1,sims_to_do):
                 phi_prop = self.phi[i-1] + rnums[i]
                 post_prop = -self.posterior(phi_prop)
-                lik_rat = exp(post_prop - old_lik)
+                lik_rat = np.exp(post_prop - old_lik)
 
                 if crit[i] < lik_rat:
                     self.phi[i] = phi_prop

@@ -37,6 +37,58 @@ class TSM(object):
         self.model_type = model_type
         self.parameters = Parameters(self.model_type)
 
+    def _categorize_model_output(self, parameters):
+        if self.model_type in ['GAS','GASX','GASLLEV','GARCH','EGARCH','EGARCHM']:
+            theta, Y, scores = self._model(parameters)
+            states = None
+            states_var = None
+            X_names = None
+        elif self.model_type in ['GASLLT']:
+            theta, mu_t, Y, scores = self._model(parameters)
+            states = np.array([theta, mu_t])
+            states_var = None
+            X_names = None
+        elif self.model_type in ['LMEGARCH']:
+            theta, _, Y, scores = self._model(parameters)
+            states = None
+            states_var = None
+            X_names = None    
+        elif self.model_type in ['SEGARCH','SEGARCHM']:
+            theta, Y, scores, y_theta = self._model(parameters)
+            states = None
+            states_var = None
+            X_names = None    
+        elif self.model_type in ['EGARCHMReg']:
+            theta, Y, scores, _ = self._model(parameters)
+            states = None
+            states_var = None
+            X_names = None           
+        elif self.model_type in ['GASReg']:
+            theta, Y, scores, states = self._model(parameters)
+            states_var = None
+            X_names = self.X_names
+        elif self.model_type in ['LLEV','LLT','DynLin']:
+            Y = self.data
+            scores = None
+            states, states_var = self.smoothed_state(self.data,parameters)
+            theta = states[0][:-1]
+            X_names = None  
+        elif self.model_type in ['GPNARX','GPR','GP']:
+            Y = self.data*self._norm_std + self._norm_mean
+            scores = None
+            theta = self.expected_values(parameters)*self._norm_std + self._norm_mean
+            X_names = None  
+            states = None   
+            states_var = None
+        else:
+            theta, Y = self._model(parameters)
+            scores = None
+            states = None
+            states_var = None
+            X_names = None
+
+        return theta, Y, scores, states, states_var, X_names
+
     def _bbvi_fit(self,posterior,optimizer='RMSProp',iterations=1000,**kwargs):
         """ Performs Black Box Variational Inference
 
@@ -84,54 +136,7 @@ class TSM(object):
         for k in range(len(self.parameters.parameter_list)):
             self.parameters.parameter_list[k].q = q[k]
 
-        if self.model_type in ['GAS','GASX','GASLLEV','GARCH','EGARCH','EGARCHM']:
-            theta, Y, scores = self._model(q_params)
-            states = None
-            states_var = None
-            X_names = None
-        elif self.model_type in ['GASLLT']:
-            theta, mu_t, Y, scores = self._model(q_params)
-            states = np.array([theta, mu_t])
-            states_var = None
-            X_names = None
-        elif self.model_type in ['LMEGARCH']:
-            theta, _, Y, scores = self._model(q_params)
-            states = None
-            states_var = None
-            X_names = None    
-        elif self.model_type in ['SEGARCH','SEGARCHM']:
-            theta, Y, scores, y_theta = self._model(q_params)
-            states = None
-            states_var = None
-            X_names = None    
-        elif self.model_type in ['EGARCHMReg']:
-            theta, Y, scores, _ = self._model(q_params)
-            states = None
-            states_var = None
-            X_names = None           
-        elif self.model_type in ['GASReg']:
-            theta, Y, scores, states = self._model(q_params)
-            states_var = None
-            X_names = self.X_names
-        elif self.model_type in ['LLEV','LLT','DynLin']:
-            Y = self.data
-            scores = None
-            states, states_var = self.smoothed_state(self.data,q_params)
-            theta = states[0][:-1]
-            X_names = None  
-        elif self.model_type in ['GPNARX','GPR','GP']:
-            Y = self.data*self._norm_std + self._norm_mean
-            scores = None
-            theta = self.expected_values(self.parameters.get_parameter_values())*self._norm_std + self._norm_mean
-            X_names = None  
-            states = None   
-            states_var = None
-        else:
-            theta, Y = self._model(q_params)
-            scores = None
-            states = None
-            states_var = None
-            X_names = None
+        theta, Y, scores, states, states_var, X_names = self._categorize_model_output(q_params)
 
         # Change this in future
         try:
@@ -164,54 +169,8 @@ class TSM(object):
         if y.ihessian is None:
             raise Exception("No Hessian information - Laplace approximation cannot be performed")
         else:
-            if self.model_type in ['GAS','GASX','GASLLEV','GARCH','EGARCH','EGARCHM']:
-                theta, Y, scores = self._model(y.parameters.get_parameter_values())
-                states = None
-                states_var = None
-                X_names = None
-            elif self.model_type in ['GASLLT']:
-                theta, mu_t, Y, scores = self._model(y.parameters.get_parameter_values())
-                states = np.array([theta, mu_t])
-                states_var = None
-                X_names = None        
-            elif self.model_type in ['LMEGARCH']:
-                theta, _, Y, scores = self._model(y.parameters.get_parameter_values())
-                states = None
-                states_var = None
-                X_names = None        
-            elif self.model_type in ['SEGARCH','SEGARCHM']:
-                theta, Y, scores, y_theta = self._model(y.parameters.get_parameter_values())
-                states = None
-                states_var = None
-                X_names = None        
-            elif self.model_type in ['EGARCHMReg']:
-                theta, Y, scores, _ = self._model(y.parameters.get_parameter_values())
-                states = None
-                states_var = None
-                X_names = None                    
-            elif self.model_type in ['GASReg']:
-                theta, Y, scores, states = self._model(y.parameters.get_parameter_values())
-                states_var = None
-                X_names = self.X_names
-            elif self.model_type in ['LLEV','LLT','DynLin']:
-                Y = self.data
-                scores = None
-                states, states_var = self.smoothed_state(self.data,y.parameters.get_parameter_values())
-                theta = states[0][:-1]
-                X_names = None  
-            elif self.model_type in ['GPNARX','GPR','GP']:
-                Y = self.data*self._norm_std + self._norm_mean
-                scores = None
-                theta = self.expected_values(self.parameters.get_parameter_values())*self._norm_std + self._norm_mean
-                X_names = None  
-                states = None   
-                states_var = None
-            else:
-                theta, Y = self._model(y.parameters.get_parameter_values())
-                scores = None
-                states = None
-                states_var = None
-                X_names = None
+
+            theta, Y, scores, states, states_var, X_names = self._categorize_model_output(y.parameters.get_parameter_values())
 
             # Change this in future
             try:
@@ -253,10 +212,12 @@ class TSM(object):
         # Get Mode and Inverse Hessian information
         y = self.fit(method='PML',printer=False)
         try:
-            ses = np.power(np.abs(np.diag(y.ihessian)),0.5)
-            cov_matrix = np.diag(np.diag(ses))
+            ses = np.abs(np.diag(y.ihessian))
+            cov_matrix = np.zeros((len(ses), len(ses)))
+            np.fill_diagonal(cov_matrix, ses)
         except:
             pass
+
         if method == "M-H":
             sampler = MetropolisHastings(self.neg_logposterior,scale,nsims,y.parameters.get_parameter_values(),cov_matrix=cov_matrix,model_object=None)
             chain, mean_est, median_est, upper_95_est, lower_95_est = sampler.sample()
@@ -272,54 +233,7 @@ class TSM(object):
 
         self.parameters.set_parameter_values(mean_est,'M-H',None,chain)
 
-        if self.model_type in ['GAS','GASX','GARCH','GASLLEV','EGARCH','EGARCHM']:
-            theta, Y, scores = self._model(mean_est)
-            states = None
-            states_var = None
-            X_names = None
-        elif self.model_type in ['GASLLT']:
-            theta, mu_t, Y, scores = self._model(mean_est)
-            states = np.array([theta, mu_t])
-            states_var = None
-            X_names = None    
-        elif self.model_type in ['LMEGARCH']:
-            theta, _, Y, scores = self._model(mean_est)
-            states = None
-            states_var = None
-            X_names = None    
-        elif self.model_type in ['SEGARCH','SEGARCHM']:
-            theta, Y, scores, y_theta = self._model(mean_est)
-            states = None
-            states_var = None
-            X_names = None    
-        elif self.model_type in ['EGARCHMReg']:
-            theta, Y, scores, _ = self._model(mean_est)
-            states = None
-            states_var = None
-            X_names = None                
-        elif self.model_type in ['GASReg']:
-            theta, Y, scores, states = self._model(mean_est)
-            states_var = None
-            X_names = self.X_names
-        elif self.model_type in ['LLEV','LLT','DynLin']:
-            Y = self.data
-            scores = None
-            states, states_var = self.smoothed_state(self.data,mean_est)
-            theta = states[0][:-1]
-            X_names = None  
-        elif self.model_type in ['GPNARX','GPR','GP']:
-            Y = self.data*self._norm_std + self._norm_mean
-            scores = None
-            theta = self.expected_values(mean_est)*self._norm_std + self._norm_mean
-            X_names = None  
-            states = None   
-            states_var = None
-        else:
-            theta, Y = self._model(mean_est)
-            scores = None
-            states = None
-            states_var = None
-            X_names = None
+        theta, Y, scores, states, states_var, X_names = self._categorize_model_output(mean_est)
     
         # Change this in future
         try:
@@ -345,7 +259,8 @@ class TSM(object):
         # TO DO - A lot of things are VAR specific here; might need to refactor in future, or just move to VAR script
 
         method = 'OLS'
-
+        self.use_ols_covariance = True
+        
         res_params = self._create_B_direct().flatten()
         params = res_params.copy()
         cov = self.ols_covariance()
@@ -361,54 +276,7 @@ class TSM(object):
         ses = np.append(res_ses,np.ones([params.shape[0]-res_params.shape[0]]))
         self.parameters.set_parameter_values(params,method,ses,None)
 
-        if self.model_type in ['GAS','GASX','GARCH','EGARCH','GASLLEV','EGARCHM']:
-            theta, Y, scores = self._model(params)
-            states = None
-            states_var = None
-            X_names = None
-        elif self.model_type in ['GASLLT']:
-            theta, mu_t, Y, scores = self._model(params)
-            states = np.array([theta, mu_t])
-            states_var = None
-            X_names = None    
-        elif self.model_type in ['LMEGARCH']:
-            theta, _, Y, scores = self._model(params)
-            states = None
-            states_var = None
-            X_names = None    
-        elif self.model_type in ['SEGARCH','SEGARCHM']:
-            theta, Y, scores, y_theta = self._model(params)
-            states = None
-            states_var = None
-            X_names = None    
-        elif self.model_type in ['EGARCHMReg']:
-            theta, Y, scores, _ = self._model(params)
-            states = None
-            states_var = None
-            X_names = None                
-        elif self.model_type in ['GASReg']:
-            theta, Y, scores, states = self._model(params)
-            X_names = self.X_names
-            states_var = None
-        elif self.model_type in ['LLEV','LLT','DynLin']:
-            Y = self.data
-            scores = None
-            states, states_var = self.smoothed_state(self.data,params)
-            theta = states[0][:-1]
-            X_names = None
-        elif self.model_type in ['GPNARX','GPR','GP']:
-            Y = self.data*self._norm_std + self._norm_mean
-            scores = None
-            theta = self.expected_values(params)*self._norm_std + self._norm_mean
-            X_names = None  
-            states = None   
-            states_var = None
-        else:
-            theta, Y = self._model(params)
-            scores = None
-            states = None
-            X_names = None
-            states_var = None
+        theta, Y, scores, states, states_var, X_names = self._categorize_model_output(params)
 
         # Change this in future
         try:
@@ -436,62 +304,13 @@ class TSM(object):
         # Optimize using L-BFGS-B
         p = optimize.minimize(obj_type,phi,method='L-BFGS-B')
 
-        # Model check
-        if self.model_type in ['GAS','GASX','GARCH','EGARCH','GASLLEV','EGARCHM']:
-            theta, Y, scores = self._model(p.x)
-            states = None
-            states_var = None
-            X_names = None
-        elif self.model_type in ['GASLLT']:
-            theta, mu_t, Y, scores = self._model(p.x)
-            states = np.array([theta, mu_t])
-            states_var = None
-            X_names = None
-        elif self.model_type in ['LMEGARCH']:
-            theta, _, Y, scores = self._model(p.x)
-            states = None
-            states_var = None
-            X_names = None    
-        elif self.model_type in ['SEGARCH','SEGARCHM']:
-            theta, Y, scores, y_theta = self._model(p.x)
-            states = None
-            states_var = None
-            X_names = None    
-        elif self.model_type in ['EGARCHMReg']:
-            theta, Y, scores, _ = self._model(p.x)
-            states = None
-            states_var = None
-            X_names = None                
-        elif self.model_type in ['GASReg']:
-            theta, Y, scores, states = self._model(p.x)
-            X_names = self.X_names
-            states_var = None
-        elif self.model_type in ['LLEV','LLT','DynLin']:
-            Y = self.data
-            scores = None
-            states, states_var = self.smoothed_state(self.data,p.x)
-            theta = states[0][:-1]
-            X_names = None
-        elif self.model_type in ['GPNARX','GPR','GP']:
-            Y = self.data*self._norm_std + self._norm_mean
-            scores = None
-            theta = self.expected_values(self.parameters.get_parameter_values())*self._norm_std + self._norm_mean
-            X_names = None  
-            states = None   
-            states_var = None
-        else:
-            theta, Y = self._model(p.x)
-            scores = None
-            states = None
-            X_names = None
-            states_var = None
+        theta, Y, scores, states, states_var, X_names = self._categorize_model_output(p.x)
 
         # Check that matrix is non-singular; act accordingly
         try:
             ihessian = np.linalg.inv(nd.Hessian(obj_type)(p.x))
             ses = np.power(np.abs(np.diag(ihessian)),0.5)
             self.parameters.set_parameter_values(p.x,method,ses,None)
-
             # Change this in future
             try:
                 parameter_store = self.parameters.copy()
@@ -571,6 +390,28 @@ class TSM(object):
         post = self.neg_loglik(beta)
         for k in range(0,self.param_no):
             post += -self.parameters.parameter_list[k].prior.logpdf(beta[k])
+        return post
+
+    def multivariate_neg_logposterior(self,beta):
+        """ Returns negative log posterior, for a model with a covariance matrix 
+
+        Parameters
+        ----------
+        beta : np.array
+            Contains untransformed starting values for parameters
+
+        Returns
+        ----------
+        Negative log posterior
+        """
+
+        post = self.neg_loglik(beta)
+        for k in range(0,self.param_no):
+            if self.parameters.parameter_list[k].prior.covariance_prior is True:
+                post += -self.parameters.parameter_list[k].prior.logpdf(self.custom_covariance(beta))
+                break
+            else:
+                post += -self.parameters.parameter_list[k].prior.logpdf(beta[k])
         return post
 
     def shift_dates(self,h):
