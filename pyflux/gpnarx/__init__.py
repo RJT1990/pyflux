@@ -1,2 +1,2 @@
 from .gpnarx import GPNARX
-from .gpr import GPR
+from.kernels import SquaredExponential, ARD, OrnsteinUhlenbeck, Periodic, RationalQuadratic

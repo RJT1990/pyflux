@@ -1,3 +1,7 @@
+__version__ = "3.3"
+
+from . import __check_build
+
 from .arma import *
 from .var import *
 from .gas import *

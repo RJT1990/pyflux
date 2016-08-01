@@ -10,7 +10,6 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 from patsy import dmatrices, dmatrix, demo_data
 
-from ..parameter import Parameter, Parameters
 from .. import inference as ifr
 from .. import tsm as tsm
 from .. import distributions as dst
@@ -18,6 +17,8 @@ from .. import data_check as dc
 
 from .scores import *
 from .gasmodels import *
+
+from .gas_recursions import gasx_recursion
 
 class GASX(tsm.TSM):
     """ Inherits time series methods from TSM class.
@@ -58,9 +59,9 @@ class GASX(tsm.TSM):
         self.sc = sc
         self.integ = integ
         self.gradient_only = gradient_only
-        self.param_no = self.ar + self.sc
+        self.z_no = self.ar + self.sc
         self.max_lag = max(self.ar,self.sc)
-        self._param_hide = 0 # Whether to cutoff variance parameters from results
+        self._z_hide = 0 # Whether to cutoff variance latent variables from results
         self.supported_methods = ["MLE","PML","Laplace","M-H","BBVI"]
         self.default_method = "MLE"
         self.multivariate_model = False
@@ -70,10 +71,12 @@ class GASX(tsm.TSM):
         self.data_original = data.copy()
         self.formula = formula
         self.y, self.X = dmatrices(formula, data)
-        self.param_no = self.X.shape[1]
         self.y_name = self.y.design_info.describe()
-        self.data_name = self.y_name
         self.X_names = self.X.design_info.describe().split(" + ")
+        self.y = self.y.astype(np.float) 
+        self.X = self.X.astype(np.float) 
+        self.param_no = self.X.shape[1]
+        self.data_name = self.y_name
         self.y = np.array([self.y]).ravel()
         self.data = self.y.copy()
         self.X = np.array([self.X])[0]
@@ -86,19 +89,20 @@ class GASX(tsm.TSM):
             self.data_name = "Differenced " + self.data_name
 
         self._create_model_matrices()
-        self._create_parameters()
+        self._create_latent_variables()
 
         self.family = family
         
         self.model_name2, self.link, self.scale, self.shape, self.skewness, self.mean_transform = self.family.setup()
         self.model_name = self.model_name2 + "X(" + str(self.ar) + "," + str(self.integ) + "," + str(self.sc) + ")"
 
-        for no, i in enumerate(self.family.build_parameters()):
-            self.parameters.add_parameter(i[0],i[1],i[2])
-            self.parameters.parameter_list[no+self.ar+self.sc+self.X.shape[1]].start = i[3]
+        for no, i in enumerate(self.family.build_latent_variables()):
+            self.latent_variables.add_z(i[0],i[1],i[2])
+            self.latent_variables.z_list[no+self.ar+self.sc+self.X.shape[1]].start = i[3]
 
-        self.parameters.parameter_list[0].start = self.mean_transform(np.mean(self.data))
-
+        self.latent_variables.z_list[0].start = self.mean_transform(np.mean(self.data))
+        self.z_no = len(self.latent_variables.z_list)
+        
     def _create_model_matrices(self):
         """ Creates model matrices/vectors
 
@@ -110,8 +114,8 @@ class GASX(tsm.TSM):
         self.model_Y = np.array(self.data[self.max_lag:self.data.shape[0]])
         self.model_scores = np.zeros(self.model_Y.shape[0])
 
-    def _create_parameters(self):
-        """ Creates model parameters
+    def _create_latent_variables(self):
+        """ Creates model latent variables
 
         Returns
         ----------
@@ -119,21 +123,21 @@ class GASX(tsm.TSM):
         """
 
         for ar_term in range(self.ar):
-            self.parameters.add_parameter('AR(' + str(ar_term+1) + ')',ifr.Normal(0,0.5,transform=None),dst.q_Normal(0,3))
+            self.latent_variables.add_z('AR(' + str(ar_term+1) + ')',ifr.Normal(0,0.5,transform=None),dst.q_Normal(0,3))
 
         for sc_term in range(self.sc):
-            self.parameters.add_parameter('SC(' + str(sc_term+1) + ')',ifr.Normal(0,0.5,transform=None),dst.q_Normal(0,3))
+            self.latent_variables.add_z('SC(' + str(sc_term+1) + ')',ifr.Normal(0,0.5,transform=None),dst.q_Normal(0,3))
 
         for parm in range(len(self.X_names)):
-            self.parameters.add_parameter('Beta ' + self.X_names[parm],ifr.Normal(0,3,transform=None),dst.q_Normal(0,3))
+            self.latent_variables.add_z('Beta ' + self.X_names[parm],ifr.Normal(0,3,transform=None),dst.q_Normal(0,3))
 
     def _get_scale_and_shape(self,parm):
-        """ Obtains appropriate model scale and shape parameters
+        """ Obtains appropriate model scale and shape latent variables
 
         Parameters
         ----------
         parm : np.array
-            Transformed parameter vector
+            Transformed latent variable vector
 
         Returns
         ----------
@@ -164,7 +168,7 @@ class GASX(tsm.TSM):
         Parameters
         ----------
         beta : np.array
-            Contains untransformed starting values for parameters
+            Contains untransformed starting values for latent variables
 
         Returns
         ----------
@@ -178,18 +182,13 @@ class GASX(tsm.TSM):
             Contains the scores for the time series
         """
 
-        parm = np.array([self.parameters.parameter_list[k].prior.transform(beta[k]) for k in range(beta.shape[0])])
+        parm = np.array([self.latent_variables.z_list[k].prior.transform(beta[k]) for k in range(beta.shape[0])])
         model_scale, model_shape, model_skewness = self._get_scale_and_shape(parm)
         theta = np.matmul(self.X[self.integ+self.max_lag:],parm[self.sc+self.ar:(self.sc+self.ar+len(self.X_names))])
 
         # Loop over time series
-        for t in range(0,self.model_Y.shape[0]):
-            if t < self.max_lag:
-                theta[t] += parm[self.ar+self.sc]/(1-np.sum(parm[:self.ar]))
-            else:
-                theta[t] += np.dot(parm[:self.ar],theta[(t-self.ar):t][::-1]) + np.dot(parm[self.ar:self.ar+self.sc],self.model_scores[(t-self.sc):t][::-1])
-
-            self.model_scores[t] = self.family.score_function(self.model_Y[t],self.link(theta[t]),model_scale,model_shape,model_skewness)
+        theta, self.model_scores = gasx_recursion(parm, theta, self.model_scores, self.model_Y, self.ar, self.sc, self.model_Y.shape[0], self.family.score_function, 
+            self.link, model_scale, model_shape, model_skewness, self.max_lag)
 
         return theta, self.model_Y, self.model_scores
 
@@ -211,7 +210,7 @@ class GASX(tsm.TSM):
             How many steps ahead for the prediction
 
         t_params : np.array
-            A vector of (transformed) parameters
+            A vector of (transformed) latent variables
 
         X_oos : np.array
             Out of sample X data
@@ -267,7 +266,7 @@ class GASX(tsm.TSM):
             How many steps ahead for the prediction
 
         t_params : np.array
-            A vector of (transformed) parameters
+            A vector of (transformed) latent variables
 
         X_oos : np.array
             Out of sample X data
@@ -351,7 +350,7 @@ class GASX(tsm.TSM):
 
     def neg_loglik(self,beta):
         theta, Y, _ = self._model(beta)
-        parm = np.array([self.parameters.parameter_list[k].prior.transform(beta[k]) for k in range(beta.shape[0])])
+        parm = np.array([self.latent_variables.z_list[k].prior.transform(beta[k]) for k in range(beta.shape[0])])
         model_scale, model_shape, model_skewness = self._get_scale_and_shape(parm)
         return self.family.neg_loglikelihood(Y,self.link(theta),model_scale,model_shape,model_skewness)
 
@@ -365,11 +364,11 @@ class GASX(tsm.TSM):
 
         figsize = kwargs.get('figsize',(10,7))
 
-        if self.parameters.estimated is False:
-            raise Exception("No parameters estimated!")
+        if self.latent_variables.estimated is False:
+            raise Exception("No latent variables estimated!")
         else:
             date_index = self.index[max(self.ar,self.sc):]
-            mu, Y, scores = self._model(self.parameters.get_parameter_values())
+            mu, Y, scores = self._model(self.latent_variables.get_z_values())
             plt.figure(figsize=figsize)
             plt.subplot(2,1,1)
             plt.title("Model fit for " + self.data_name)
@@ -377,7 +376,7 @@ class GASX(tsm.TSM):
             if self.model_name2 == "Exponential GAS":
                 values_to_plot = 1.0/self.link(mu)
             elif self.model_name2 == "Skewt GAS":
-                t_params = self.transform_parameters()
+                t_params = self.transform_z()
                 model_scale, model_shape, model_skewness = self._get_scale_and_shape(t_params)
                 m1 = (np.sqrt(model_shape)*sp.gamma((model_shape-1.0)/2.0))/(np.sqrt(np.pi)*sp.gamma(model_shape/2.0))
                 additional_loc = (model_skewness - (1.0/model_skewness))*model_scale*m1
@@ -420,18 +419,18 @@ class GASX(tsm.TSM):
 
         figsize = kwargs.get('figsize',(10,7))
 
-        if self.parameters.estimated is False:
-            raise Exception("No parameters estimated!")
+        if self.latent_variables.estimated is False:
+            raise Exception("No latent variables estimated!")
         else:
             # Sort/manipulate the out-of-sample data
             _, X_oos = dmatrices(self.formula, oos_data)
             X_oos = np.array([X_oos])[0]
             X_pred = X_oos[:h]
 
-            # Retrieve data, dates and (transformed) parameters
-            theta, Y, scores = self._model(self.parameters.get_parameter_values())          
+            # Retrieve data, dates and (transformed) latent variables
+            theta, Y, scores = self._model(self.latent_variables.get_z_values())          
             date_index = self.shift_dates(h)
-            t_params = self.transform_parameters()
+            t_params = self.transform_z()
 
             # Get mean prediction and simulations (for errors)
             mean_values = self._mean_prediction(theta,Y,scores,h,t_params,X_pred)
@@ -529,16 +528,16 @@ class GASX(tsm.TSM):
         - pd.DataFrame with predicted values
         """     
 
-        if self.parameters.estimated is False:
-            raise Exception("No parameters estimated!")
+        if self.latent_variables.estimated is False:
+            raise Exception("No latent variables estimated!")
         else:
             # Sort/manipulate the out-of-sample data
             _, X_oos = dmatrices(self.formula, oos_data)
             X_oos = np.array([X_oos])[0]
             X_pred = X_oos[:h]
-            theta, Y, scores = self._model(self.parameters.get_parameter_values())          
+            theta, Y, scores = self._model(self.latent_variables.get_z_values())          
             date_index = self.shift_dates(h)
-            t_params = self.transform_parameters()
+            t_params = self.transform_z()
 
             mean_values = self._mean_prediction(theta,Y,scores,h,t_params,X_pred)
             if self.model_name2 == "Skewt GAS":

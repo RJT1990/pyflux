@@ -9,7 +9,6 @@ import scipy.special as sp
 import matplotlib.pyplot as plt
 import seaborn as sns
 
-from ..parameter import Parameter, Parameters
 from .. import inference as ifr
 from .. import tsm as tsm
 from .. import distributions as dst
@@ -17,6 +16,8 @@ from .. import data_check as dc
 
 from .scores import *
 from .gasmodels import *
+
+from .gas_recursions import gas_llev_recursion
 
 class GASLLEV(tsm.TSM):
     """ Inherits time series methods from TSM class.
@@ -50,14 +51,15 @@ class GASLLEV(tsm.TSM):
 
         self.integ = integ
         self.gradient_only = gradient_only
-        self.param_no = 1
+        self.z_no = 1
         self.max_lag = 1
-        self._param_hide = 0 # Whether to cutoff variance parameters from results
+        self._z_hide = 0 # Whether to cutoff variance latent variables from results
         self.supported_methods = ["MLE","PML","Laplace","M-H","BBVI"]
         self.default_method = "MLE"
         self.multivariate_model = False
 
         self.data, self.data_name, self.is_pandas, self.index = dc.data_check(data,target)
+        self.data = self.data.astype(np.float) 
         self.data_original = self.data.copy()
 
         for order in range(0,self.integ):
@@ -65,16 +67,16 @@ class GASLLEV(tsm.TSM):
             self.data_name = "Differenced " + self.data_name
 
         self._create_model_matrices()
-        self._create_parameters()
+        self._create_latent_variables()
 
         self.family = family
         
         self.model_name2, self.link, self.scale, self.shape, self.skewness, self.mean_transform = self.family.setup()
         self.model_name = self.model_name2 + " LLM"
 
-        for no, i in enumerate(self.family.build_parameters()):
-            self.parameters.add_parameter(i[0],i[1],i[2])
-            self.parameters.parameter_list[no+1].start = i[3]
+        for no, i in enumerate(self.family.build_latent_variables()):
+            self.latent_variables.add_z(i[0],i[1],i[2])
+            self.latent_variables.z_list[no+1].start = i[3]
 
     def _create_model_matrices(self):
         """ Creates model matrices/vectors
@@ -87,23 +89,23 @@ class GASLLEV(tsm.TSM):
         self.model_Y = np.array(self.data[self.max_lag:self.data.shape[0]])
         self.model_scores = np.zeros(self.model_Y.shape[0])
 
-    def _create_parameters(self):
-        """ Creates model parameters
+    def _create_latent_variables(self):
+        """ Creates model latent varaibles
 
         Returns
         ----------
         None (changes model attributes)
         """
 
-        self.parameters.add_parameter('SC(1)',ifr.Normal(0,0.5,transform=None),dst.q_Normal(0,3))
+        self.latent_variables.add_z('SC(1)',ifr.Normal(0,0.5,transform=None),dst.q_Normal(0,3))
 
     def _get_scale_and_shape(self,parm):
-        """ Obtains appropriate model scale and shape parameters
+        """ Obtains appropriate model scale and shape latent variables
 
         Parameters
         ----------
         parm : np.array
-            Transformed parameter vector
+            Transformed latent variables vector
 
         Returns
         ----------
@@ -134,7 +136,7 @@ class GASLLEV(tsm.TSM):
         Parameters
         ----------
         beta : np.array
-            Contains untransformed starting values for parameters
+            Contains untransformed starting values for latent variables
 
         Returns
         ----------
@@ -148,18 +150,13 @@ class GASLLEV(tsm.TSM):
             Contains the scores for the time series
         """
 
-        parm = np.array([self.parameters.parameter_list[k].prior.transform(beta[k]) for k in range(beta.shape[0])])
+        parm = np.array([self.latent_variables.z_list[k].prior.transform(beta[k]) for k in range(beta.shape[0])])
         theta = np.zeros(self.model_Y.shape[0])
         model_scale, model_shape, model_skewness = self._get_scale_and_shape(parm)
 
-        # Loop over time series
-        for t in range(0,self.model_Y.shape[0]):
-            if t < self.max_lag:
-                theta[t] = 0.0
-            else:
-                theta[t] = theta[t-1] + parm[0]*self.model_scores[t-1]
-
-            self.model_scores[t] = self.family.score_function(self.model_Y[t],self.link(theta[t]),model_scale,model_shape,model_skewness)
+         # Loop over time series
+        theta, self.model_scores = gas_llev_recursion(parm, theta, self.model_scores, self.model_Y, self.model_Y.shape[0], 
+            self.family.score_function, self.link, model_scale, model_shape, model_skewness, self.max_lag)
 
         return theta, self.model_Y, self.model_scores
 
@@ -181,7 +178,7 @@ class GASLLEV(tsm.TSM):
             How many steps ahead for the prediction
 
         t_params : np.array
-            A vector of (transformed) parameters
+            A vector of (transformed) latent variables
 
         Returns
         ----------
@@ -222,7 +219,7 @@ class GASLLEV(tsm.TSM):
             How many steps ahead for the prediction
 
         t_params : np.array
-            A vector of (transformed) parameters
+            A vector of (transformed) latent variables
 
         simulations : int
             How many simulations to perform
@@ -292,7 +289,7 @@ class GASLLEV(tsm.TSM):
 
     def neg_loglik(self,beta):
         theta, Y, _ = self._model(beta)
-        parm = np.array([self.parameters.parameter_list[k].prior.transform(beta[k]) for k in range(beta.shape[0])])
+        parm = np.array([self.latent_variables.z_list[k].prior.transform(beta[k]) for k in range(beta.shape[0])])
         model_scale, model_shape, model_skewness = self._get_scale_and_shape(parm)
         return self.family.neg_loglikelihood(Y,self.link(theta),model_scale,model_shape,model_skewness)
 
@@ -306,11 +303,11 @@ class GASLLEV(tsm.TSM):
 
         figsize = kwargs.get('figsize',(10,7))
 
-        if self.parameters.estimated is False:
-            raise Exception("No parameters estimated!")
+        if self.latent_variables.estimated is False:
+            raise Exception("No latent variables estimated!")
         else:
             date_index = self.index[1:]
-            mu, Y, scores = self._model(self.parameters.get_parameter_values())
+            mu, Y, scores = self._model(self.latent_variables.get_z_values())
 
             plt.figure(figsize=figsize)
             plt.subplot(2,1,1)
@@ -319,7 +316,7 @@ class GASLLEV(tsm.TSM):
             if self.model_name2 == "Exponential GAS":
                 values_to_plot = 1.0/self.link(mu)
             elif self.model_name2 == "Skewt GAS":
-                t_params = self.transform_parameters()
+                t_params = self.transform_z()
                 model_scale, model_shape, model_skewness = self._get_scale_and_shape(t_params)
                 m1 = (np.sqrt(model_shape)*sp.gamma((model_shape-1.0)/2.0))/(np.sqrt(np.pi)*sp.gamma(model_shape/2.0))
                 additional_loc = (model_skewness - (1.0/model_skewness))*model_scale*m1
@@ -359,14 +356,14 @@ class GASLLEV(tsm.TSM):
 
         figsize = kwargs.get('figsize',(10,7))
 
-        if self.parameters.estimated is False:
-            raise Exception("No parameters estimated!")
+        if self.latent_variables.estimated is False:
+            raise Exception("No latent variables estimated!")
         else:
 
-            # Retrieve data, dates and (transformed) parameters
-            theta, Y, scores = self._model(self.parameters.get_parameter_values())          
+            # Retrieve data, dates and (transformed) latent variables
+            theta, Y, scores = self._model(self.latent_variables.get_z_values())          
             date_index = self.shift_dates(h)
-            t_params = self.transform_parameters()
+            t_params = self.transform_z()
 
             # Get mean prediction and simulations (for errors)
             mean_values = self._mean_prediction(theta,Y,scores,h,t_params)
@@ -458,13 +455,13 @@ class GASLLEV(tsm.TSM):
         - pd.DataFrame with predicted values
         """     
 
-        if self.parameters.estimated is False:
-            raise Exception("No parameters estimated!")
+        if self.latent_variables.estimated is False:
+            raise Exception("No latent variables estimated!")
         else:
 
-            theta, Y, scores = self._model(self.parameters.get_parameter_values())          
+            theta, Y, scores = self._model(self.latent_variables.get_z_values())          
             date_index = self.shift_dates(h)
-            t_params = self.transform_parameters()
+            t_params = self.transform_z()
 
             mean_values = self._mean_prediction(theta,Y,scores,h,t_params)
             if self.model_name2 == "Skewt GAS":

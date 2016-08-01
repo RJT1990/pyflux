@@ -43,9 +43,9 @@ class GASExponential(GASDistribution):
         return name, link, scale, shape, skewness, mean_transform
 
     @staticmethod
-    def build_parameters():
-        parameters_to_build = []
-        return parameters_to_build
+    def build_latent_variables():
+        lvs_to_build = []
+        return lvs_to_build
 
     @staticmethod
     def draw_variable(loc,scale,shape,skewness,nsims):
@@ -87,10 +87,10 @@ class GASLaplace(GASDistribution):
         return name, link, scale, shape, skewness, mean_transform
 
     @staticmethod
-    def build_parameters():
-        parameters_to_build = []
-        parameters_to_build.append(['Laplace Scale',ifr.Uniform(transform='exp'),dst.q_Normal(0,3),2.0])
-        return parameters_to_build
+    def build_latent_variables():
+        lvs_to_build = []
+        lvs_to_build.append(['Laplace Scale',ifr.Uniform(transform='exp'),dst.q_Normal(0,3),2.0])
+        return lvs_to_build
 
     @staticmethod
     def draw_variable(loc,scale,shape,skewness,nsims):
@@ -126,10 +126,10 @@ class GASNormal(GASDistribution):
         return name, link, scale, shape, skewness, mean_transform
 
     @staticmethod
-    def build_parameters():
-        parameters_to_build = []
-        parameters_to_build.append(['Normal Scale',ifr.Uniform(transform='exp'),dst.q_Normal(0,3),0.0])
-        return parameters_to_build
+    def build_latent_variables():
+        lvs_to_build = []
+        lvs_to_build.append(['Normal Scale',ifr.Uniform(transform='exp'),dst.q_Normal(0,3),0.0])
+        return lvs_to_build
 
     @staticmethod
     def draw_variable(loc,scale,shape,skewness,nsims):
@@ -165,9 +165,9 @@ class GASPoisson(GASDistribution):
         return name, link, scale, shape, skewness, mean_transform
 
     @staticmethod
-    def build_parameters():
-        parameters_to_build = []
-        return parameters_to_build
+    def build_latent_variables():
+        lvs_to_build = []
+        return lvs_to_build
 
     @staticmethod
     def draw_variable(loc,scale,shape,skewness,nsims):
@@ -209,11 +209,11 @@ class GASt(GASDistribution):
         return name, link, scale, shape, skewness, mean_transform
 
     @staticmethod
-    def build_parameters():
-        parameters_to_build = []
-        parameters_to_build.append(['t Scale',ifr.Uniform(transform='exp'),dst.q_Normal(0,3),0.0])
-        parameters_to_build.append(['v',ifr.Uniform(transform='exp'),dst.q_Normal(0,3),2.0])
-        return parameters_to_build
+    def build_latent_variables():
+        lvs_to_build = []
+        lvs_to_build.append(['t Scale',ifr.Uniform(transform='exp'),dst.q_Normal(0,3),0.0])
+        lvs_to_build.append(['v',ifr.Uniform(transform='exp'),dst.q_Normal(0,3),2.0])
+        return lvs_to_build
 
     @staticmethod
     def draw_variable(loc,scale,shape,skewness,nsims):
@@ -255,12 +255,12 @@ class GASSkewt(GASDistribution):
         return name, link, scale, shape, skewness, mean_transform
 
     @staticmethod
-    def build_parameters():
-        parameters_to_build = []
-        parameters_to_build.append(['Skewness',ifr.Uniform(transform='exp'),dst.q_Normal(0,3),0.0])
-        parameters_to_build.append(['Skewt Scale',ifr.Uniform(transform='exp'),dst.q_Normal(0,3),0.0])
-        parameters_to_build.append(['v',ifr.Uniform(transform='exp'),dst.q_Normal(0,3),2.0])
-        return parameters_to_build
+    def build_latent_variables():
+        lvs_to_build = []
+        lvs_to_build.append(['Skewness',ifr.Uniform(transform='exp'),dst.q_Normal(0,3),0.0])
+        lvs_to_build.append(['Skewt Scale',ifr.Uniform(transform='exp'),dst.q_Normal(0,3),0.0])
+        lvs_to_build.append(['v',ifr.Uniform(transform='exp'),dst.q_Normal(0,3),2.0])
+        return lvs_to_build
 
     @staticmethod
     def draw_variable(loc,scale,shape,skewness,nsims):

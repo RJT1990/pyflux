@@ -16,6 +16,9 @@ from .. import tests as tst
 from .. import tsm as tsm
 from .. import data_check as dc
 
+from .var_recursions import create_design_matrix, custom_covariance_matrix, var_likelihood
+
+
 class VAR(tsm.TSM):
     """ Inherits time series methods from TSM class.
 
@@ -47,7 +50,7 @@ class VAR(tsm.TSM):
 
         self.neg_logposterior = self.multivariate_neg_logposterior
 
-        # Parameters
+        # Latent Variables
         self.lags = lags
         self.integ = integ
         self.max_lag = lags
@@ -69,11 +72,11 @@ class VAR(tsm.TSM):
         self.data = X   
         self.ylen = self.data_name.shape[0]
 
-        self._create_parameters()
+        self._create_latent_variables()
 
         # Other attributes
-        self._param_hide = np.power(self.data.shape[0],2) - (np.power(self.data.shape[0],2) - self.data.shape[0])/2 # Whether to cutoff variance parameters from results        
-        self.param_no = len(self.parameters.parameter_list)
+        self._z_hide = np.power(self.data.shape[0],2) - (np.power(self.data.shape[0],2) - self.data.shape[0])/2 # Whether to cutoff variance latent variables from results        
+        self.z_no = len(self.latent_variables.z_list)
 
     def _create_B(self,Y):
         """ Creates OLS coefficient matrix
@@ -103,8 +106,8 @@ class VAR(tsm.TSM):
         Z = self._create_Z(Y)
         return np.dot(np.dot(Y,np.transpose(Z)),np.linalg.inv(np.dot(Z,np.transpose(Z))))
 
-    def _create_parameters(self):
-        """ Creates model parameters
+    def _create_latent_variables(self):
+        """ Creates model latent variables
 
         Returns
         ----------
@@ -113,24 +116,24 @@ class VAR(tsm.TSM):
 
         # TODO: There must be a cleaner way to do this below
 
-        # Create VAR parameters
+        # Create VAR latent variables
         for variable in range(self.ylen):
-            self.parameters.add_parameter(self.data_name[variable] + ' Constant',ifr.Normal(0,3,transform=None),dst.q_Normal(0,3))
+            self.latent_variables.add_z(self.data_name[variable] + ' Constant',ifr.Normal(0,3,transform=None),dst.q_Normal(0,3))
             other_variables = np.delete(range(self.ylen), [variable])
             for lag_no in range(self.lags):
-                self.parameters.add_parameter(str(self.data_name[variable]) + ' AR(' + str(lag_no+1) + ')',ifr.Normal(0,0.5,transform=None),dst.q_Normal(0,3))
+                self.latent_variables.add_z(str(self.data_name[variable]) + ' AR(' + str(lag_no+1) + ')',ifr.Normal(0,0.5,transform=None),dst.q_Normal(0,3))
                 for other in other_variables:
-                    self.parameters.add_parameter(str(self.data_name[other]) + ' to ' + str(self.data_name[variable]) + ' AR(' + str(lag_no+1) + ')',ifr.Normal(0,0.5,transform=None),dst.q_Normal(0,3))
+                    self.latent_variables.add_z(str(self.data_name[other]) + ' to ' + str(self.data_name[variable]) + ' AR(' + str(lag_no+1) + ')',ifr.Normal(0,0.5,transform=None),dst.q_Normal(0,3))
 
         starting_params_temp = self._create_B_direct().flatten()
 
-        # Variance parameters
+        # Variance latent variables
         for i in range(self.ylen):
             for k in range(self.ylen):
                 if i == k:
-                    self.parameters.add_parameter('Cholesky Diagonal ' + str(i),ifr.Uniform(transform='exp'),dst.q_Normal(0,3))
+                    self.latent_variables.add_z('Cholesky Diagonal ' + str(i),ifr.Uniform(transform='exp'),dst.q_Normal(0,3))
                 elif i > k:
-                    self.parameters.add_parameter('Cholesky Off-Diagonal (' + str(i) + ',' + str(k) + ')',ifr.Uniform(transform=None),dst.q_Normal(0,3))
+                    self.latent_variables.add_z('Cholesky Off-Diagonal (' + str(i) + ',' + str(k) + ')',ifr.Uniform(transform=None),dst.q_Normal(0,3))
 
         for i in range(0,self.ylen):
             for k in range(0,self.ylen):
@@ -139,7 +142,7 @@ class VAR(tsm.TSM):
                 elif i > k:
                     starting_params_temp = np.append(starting_params_temp,np.array([0.0]))
 
-        self.parameters.set_parameter_starting_values(starting_params_temp)
+        self.latent_variables.set_z_starting_values(starting_params_temp)
 
     def _create_Z(self,Y):
         """ Creates design matrix holding the lagged variables
@@ -155,12 +158,7 @@ class VAR(tsm.TSM):
         """ 
 
         Z = np.ones(((self.ylen*self.lags +1),Y[0].shape[0]))
-        row_count = 1
-        for lag in range(1,self.lags+1):
-            for reg in range(Y.shape[0]):
-                Z[row_count,:] = self.data[reg][(self.lags-lag):-lag]           
-                row_count += 1
-        return Z
+        return create_design_matrix(Z, self.data, Y.shape[0], self.lags)
 
     def _forecast_mean(self,h,t_params,Y,shock_type=None,shock_index=0,shock_value=None,shock_dir='positive',irf_intervals=False):
         """ Function allows for mean prediction; also allows shock specification for simulations or impulse response effects
@@ -171,7 +169,7 @@ class VAR(tsm.TSM):
             How many steps ahead to forecast
 
         t_params : np.array
-            Transformed parameter vector
+            Transformed latent variables vector
 
         Y : np.array
             Data for series that is being forecast
@@ -180,7 +178,7 @@ class VAR(tsm.TSM):
             Type of shock; options include None, 'Cov' (simulate from covariance matrix), 'IRF' (impulse response shock)
 
         shock_index : int
-            Which parameter to apply the shock to if using an IRF.
+            Which latent variable to apply the shock to if using an IRF.
 
         shock_value : None or float
             If specified, applies a custom-sized impulse response shock.
@@ -228,7 +226,7 @@ class VAR(tsm.TSM):
         Parameters
         ----------
         beta : np.array
-            Contains untransformed starting values for parameters
+            Contains untransformed starting values for latent variables
 
         Returns
         ----------
@@ -241,8 +239,8 @@ class VAR(tsm.TSM):
 
         Y = np.array([reg[self.lags:reg.shape[0]] for reg in self.data])
 
-        # Transform parameters
-        beta = np.array([self.parameters.parameter_list[k].prior.transform(beta[k]) for k in range(beta.shape[0])])
+        # Transform latent variables
+        beta = np.array([self.latent_variables.z_list[k].prior.transform(beta[k]) for k in range(beta.shape[0])])
 
         params = []
         col_length = 1 + self.ylen*self.lags
@@ -264,7 +262,7 @@ class VAR(tsm.TSM):
             Type of shock; options include None, 'Cov' (simulate from covariance matrix), 'IRF' (impulse response shock)
 
         shock_index : int
-            Which parameter to apply the shock to if using an IRF.
+            Which latent variables to apply the shock to if using an IRF.
 
         shock_value : None or float
             If specified, applies a custom-sized impulse response shock.
@@ -287,7 +285,7 @@ class VAR(tsm.TSM):
         elif shock_type == 'IRF':
 
             if self.use_ols_covariance is False:
-                cov = self.custom_covariance(self.parameters.get_parameter_values())
+                cov = self.custom_covariance(self.latent_variables.get_z_values())
             else:
                 cov = self.ols_covariance()
 
@@ -312,7 +310,7 @@ class VAR(tsm.TSM):
         elif shock_type == 'Cov':
             
             if self.use_ols_covariance is False:
-                cov = self.custom_covariance(self.parameters.get_parameter_values())
+                cov = self.custom_covariance(self.latent_variables.get_z_values())
             else:
                 cov = self.ols_covariance()
 
@@ -360,7 +358,7 @@ class VAR(tsm.TSM):
         Parameters
         ----------
         beta : np.array
-            Contains untransformed starting values for parameters
+            Contains untransformed starting values for latent variables
 
         Returns
         ----------
@@ -368,42 +366,8 @@ class VAR(tsm.TSM):
         """         
 
         cov_matrix = np.zeros((self.ylen,self.ylen))
-
-        quick_count = 0
-        for i in range(0,self.ylen):
-            for k in range(0,self.ylen):
-                if i >= k:
-                    index = self.ylen + self.lags*(self.ylen**2) + quick_count
-                    quick_count += 1
-                    cov_matrix[i,k] = self.parameters.parameter_list[index].prior.transform(beta[index])
-
-        return np.dot(cov_matrix,cov_matrix.T)
-
-    def custom_covariance_old(self,beta):
-        """ Creates Covariance Matrix for a given Beta Vector
-        (Not necessarily the OLS covariance)
-
-        Parameters
-        ----------
-        beta : np.array
-            Contains untransformed starting values for parameters
-
-        Returns
-        ----------
-        A Covariance Matrix
-        """         
-
-        cov_matrix = np.zeros((self.ylen,self.ylen))
-
-        quick_count = 0
-        for i in range(0,self.ylen):
-            for k in range(0,self.ylen):
-                if i >= k:
-                    index = self.ylen + self.lags*(self.ylen**2) + quick_count
-                    quick_count += 1
-                    cov_matrix[i,k] = self.parameters.parameter_list[index].prior.transform(beta[index])
-
-        return cov_matrix + np.transpose(np.tril(cov_matrix,k=-1))
+        parm = np.array([self.latent_variables.z_list[k].prior.transform(beta[k]) for k in range(beta.shape[0])])
+        return custom_covariance_matrix(cov_matrix, self.ylen, self.lags, parm)
 
     def estimator_cov(self,method):
         """ Creates covariance matrix for the estimators
@@ -423,7 +387,7 @@ class VAR(tsm.TSM):
         if method == 'OLS':
             sigma = self.ols_covariance()
         else:           
-            sigma = self.custom_covariance(self.parameters.get_parameter_values())
+            sigma = self.custom_covariance(self.latent_variables.get_z_values())
         return np.kron(np.linalg.inv(np.dot(Z,np.transpose(Z))), sigma)
 
     def neg_loglik(self,beta):
@@ -432,7 +396,7 @@ class VAR(tsm.TSM):
         Parameters
         ----------
         beta : np.array
-            Contains untransformed starting values for parameters
+            Contains untransformed starting values for latent variables
 
         Returns
         ----------
@@ -445,16 +409,12 @@ class VAR(tsm.TSM):
             cm = self.custom_covariance(beta)
         else:
             cm = self.ols_covariance()
+
         diff = Y.T - mu.T
-
         ll1 =  -(mu.T.shape[0]*mu.T.shape[1]/2.0)*np.log(2.0*np.pi) - (mu.T.shape[0]/2.0)*np.linalg.slogdet(cm)[1]
-        ll2 = 0.0
-
         inverse = np.linalg.pinv(cm)
-        for t in range(0,mu.T.shape[0]):
-            ll2 += np.dot(np.dot(diff[t].T,inverse),diff[t])
 
-        return -(ll1 -0.5*ll2)
+        return var_likelihood(ll1, mu.T.shape[0], diff, inverse)
 
     def ols_covariance(self):
         """ Creates OLS estimate of the covariance matrix
@@ -477,11 +437,11 @@ class VAR(tsm.TSM):
 
         figsize = kwargs.get('figsize',(10,7))
 
-        if self.parameters.estimated is False:
-            raise Exception("No parameters estimated!")
+        if self.latent_variables.estimated is False:
+            raise Exception("No latent variables estimated!")
         else:
             date_index = self.index[self.lags:self.data[0].shape[0]]
-            mu, Y = self._model(self.parameters.get_parameter_values())
+            mu, Y = self._model(self.latent_variables.get_z_values())
             for series in range(0,Y.shape[0]):
                 plt.figure(figsize=figsize)
                 plt.plot(date_index,Y[series],label='Data ' + str(series))
@@ -512,14 +472,14 @@ class VAR(tsm.TSM):
 
         figsize = kwargs.get('figsize',(10,7))
 
-        if self.parameters.estimated is False:
-            raise Exception("No parameters estimated!")
+        if self.latent_variables.estimated is False:
+            raise Exception("No latent varaibles estimated!")
         else:
 
-            # Retrieve data, dates and (transformed) parameters
-            mu, Y = self._model(self.parameters.get_parameter_values()) 
+            # Retrieve data, dates and (transformed) latent variables
+            mu, Y = self._model(self.latent_variables.get_z_values()) 
             date_index = self.shift_dates(h)
-            t_params = self.transform_parameters()
+            t_params = self.transform_z()
 
             # Expectation
             exps = self._forecast_mean(h,t_params,Y,None,None)
@@ -591,14 +551,14 @@ class VAR(tsm.TSM):
         - pd.DataFrame with predicted values
         """     
 
-        if self.parameters.estimated is False:
-            raise Exception("No parameters estimated!")
+        if self.latent_variables.estimated is False:
+            raise Exception("No latent variables estimated!")
         else:
 
-            # Retrieve data, dates and (transformed) parameters
-            mu, Y = self._model(self.parameters.get_parameter_values()) 
+            # Retrieve data, dates and (transformed) latent variables
+            mu, Y = self._model(self.latent_variables.get_z_values()) 
             date_index = self.shift_dates(h)
-            t_params = self.transform_parameters()
+            t_params = self.transform_z()
 
             # Expectation
             exps = self._forecast_mean(h,t_params,Y,None,None)
@@ -661,5 +621,5 @@ class VAR(tsm.TSM):
         """
         Constructs a Wishart prior for the covariance matrix
         """
-        self.adjust_prior(list(range(int((len(self.parameters.parameter_list)-self.ylen-(self.ylen**2-self.ylen)/2)),
-            int(len(self.parameters.parameter_list)))),ifr.InverseWishart(v,X))
+        self.adjust_prior(list(range(int((len(self.latent_variables.z_list)-self.ylen-(self.ylen**2-self.ylen)/2)),
+            int(len(self.latent_variables.z_list)))),ifr.InverseWishart(v,X))

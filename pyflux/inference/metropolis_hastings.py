@@ -5,6 +5,8 @@ if sys.version_info < (3,):
 
 from scipy.stats import multivariate_normal
 
+from .metropolis_sampler import metropolis_sampler
+
 class MetropolisHastings(object):
     """ RANDOM-WALK METROPOLIS-HASTINGS MCMC
 
@@ -121,20 +123,8 @@ class MetropolisHastings(object):
             for k in range(1,sims_to_do): 
                 rnums = np.vstack((rnums,post.rvs()*self.scale))
 
-            old_lik = -self.posterior(self.phi[0]) # Initial posterior
-
-            # Sampling time!
-            for i in range(1,sims_to_do):
-                phi_prop = self.phi[i-1] + rnums[i]
-                post_prop = -self.posterior(phi_prop)
-                lik_rat = np.exp(post_prop - old_lik)
-
-                if crit[i] < lik_rat:
-                    self.phi[i] = phi_prop
-                    a_rate[i] = 1
-                    old_lik = post_prop
-                else:
-                    self.phi[i] = self.phi[i-1]
+            self.phi, a_rate = metropolis_sampler(sims_to_do, self.phi, self.posterior, 
+                a_rate, rnums, crit)
 
             acceptance = a_rate.sum()/a_rate.shape[0]
             self.scale = self.tune_scale(acceptance,self.scale)

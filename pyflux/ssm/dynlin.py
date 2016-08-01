@@ -17,10 +17,10 @@ from .. import data_check as dc
 
 from .kalman import *
 
-class DynLin(tsm.TSM):
+class DynReg(tsm.TSM):
     """ Inherits time series methods from TSM class.
 
-    **** DYNAMIC LINEAR REGRESSION MODEL ****
+    **** DYNAMIC REGRESSION MODEL ****
 
     Parameters
     ----------
@@ -35,11 +35,11 @@ class DynLin(tsm.TSM):
     def __init__(self,formula,data):
 
         # Initialize TSM object
-        super(DynLin,self).__init__('DynLin')
+        super(DynReg,self).__init__('DynReg')
 
-        # Parameters
+        # Latent variables
         self.max_lag = 0
-        self._param_hide = 0 # Whether to cutoff variance parameters from results
+        self._z_hide = 0 # Whether to cutoff variance latent variables from results
         self.supported_methods = ["MLE","PML","Laplace","M-H","BBVI"]
         self.default_method = "MLE"
         self.model_name = "Dynamic Linear Regression"
@@ -59,20 +59,20 @@ class DynLin(tsm.TSM):
         self.X = np.array([self.X])[0]
         self.index = data.index
 
-        self._create_parameters()
+        self._create_latent_variables()
 
-    def _create_parameters(self):
-        """ Creates model parameters
+    def _create_latent_variables(self):
+        """ Creates model latent variables
 
         Returns
         ----------
         None (changes model attributes)
         """
 
-        self.parameters.add_parameter('Sigma^2 irregular',ifr.Uniform(transform='exp'),dst.q_Normal(0,3))
+        self.latent_variables.add_z('Sigma^2 irregular',ifr.Uniform(transform='exp'),dst.q_Normal(0,3))
 
         for parm in range(self.param_no-1):
-            self.parameters.add_parameter('Sigma^2 ' + self.X_names[parm],ifr.Uniform(transform='exp'),dst.q_Normal(0,3))
+            self.latent_variables.add_z('Sigma^2 ' + self.X_names[parm],ifr.Uniform(transform='exp'),dst.q_Normal(0,3))
 
     def _forecast_model(self,beta,Z,h):
         """ Creates forecasted states and variances
@@ -80,7 +80,7 @@ class DynLin(tsm.TSM):
         Parameters
         ----------
         beta : np.ndarray
-            Contains untransformed starting values for parameters
+            Contains untransformed starting values for latent variables
 
         Returns
         ----------
@@ -103,7 +103,7 @@ class DynLin(tsm.TSM):
             Contains the time series
 
         beta : np.array
-            Contains untransformed starting values for parameters
+            Contains untransformed starting values for latent variables
 
         Returns
         ----------
@@ -121,7 +121,7 @@ class DynLin(tsm.TSM):
         Parameters
         ----------
         beta : np.array
-            Contains untransformed starting values for parameters
+            Contains untransformed starting values for latent variables
 
         Returns
         ----------
@@ -130,13 +130,13 @@ class DynLin(tsm.TSM):
         """     
 
         T = np.identity(self.param_no-1)
-        H = np.identity(1)*self.parameters.parameter_list[0].prior.transform(beta[0])       
+        H = np.identity(1)*self.latent_variables.z_list[0].prior.transform(beta[0])       
         Z = self.X
         R = np.identity(self.param_no-1)
         
         Q = np.identity(self.param_no-1)
         for i in range(0,self.param_no-1):
-            Q[i][i] = self.parameters.parameter_list[i+1].prior.transform(beta[i+1])
+            Q[i][i] = self.latent_variables.z_list[i+1].prior.transform(beta[i+1])
 
         return T, Z, R, Q, H
 
@@ -146,7 +146,7 @@ class DynLin(tsm.TSM):
         Parameters
         ----------
         beta : np.array
-            Contains untransformed starting values for parameters
+            Contains untransformed starting values for latent variables
 
         Returns
         ----------
@@ -182,8 +182,8 @@ class DynLin(tsm.TSM):
 
         figsize = kwargs.get('figsize',(10,7))
 
-        if self.parameters.estimated is False:
-            raise Exception("No parameters estimated!")
+        if self.latent_variables.estimated is False:
+            raise Exception("No latent variables estimated!")
         else:
             # Sort/manipulate the out-of-sample data
             _, X_oos = dmatrices(self.formula, oos_data)
@@ -192,13 +192,13 @@ class DynLin(tsm.TSM):
             full_X = np.append(full_X,X_oos,axis=0)
             Z = full_X
 
-            # Retrieve data, dates and (transformed) parameters         
-            a, P = self._forecast_model(self.parameters.get_parameter_values(),Z,h)
+            # Retrieve data, dates and (transformed) latent variables         
+            a, P = self._forecast_model(self.latent_variables.get_z_values(),Z,h)
             smoothed_series = np.zeros(self.y.shape[0]+h)
             series_variance = np.zeros(self.y.shape[0]+h)
             for t in range(self.y.shape[0]+h):
                 smoothed_series[t] = np.dot(Z[t],a[:,t])
-                series_variance[t] = np.dot(np.dot(Z[t],P[:,:,t]),Z[t].T) + self.parameters.parameter_list[0].prior.transform(self.parameters.get_parameter_values()[0])    
+                series_variance[t] = np.dot(np.dot(Z[t],P[:,:,t]),Z[t].T) + self.latent_variables.z_list[0].prior.transform(self.latent_variables.get_z_values()[0])    
 
             date_index = self.shift_dates(h)
             plot_values = smoothed_series[-h-past_values:]
@@ -236,21 +236,21 @@ class DynLin(tsm.TSM):
         figsize = kwargs.get('figsize',(10,7))
         series_type = kwargs.get('series_type','Smoothed')
 
-        if self.parameters.estimated is False:
-            raise Exception("No parameters estimated!")
+        if self.latent_variables.estimated is False:
+            raise Exception("No latent variables estimated!")
         else:
             date_index = copy.deepcopy(self.index)
             date_index = date_index[:self.y.shape[0]+1]
 
             if series_type == 'Smoothed':
-                mu, V = self.smoothed_state(self.data,self.parameters.get_parameter_values())
+                mu, V = self.smoothed_state(self.data,self.latent_variables.get_z_values())
             elif series_type == 'Filtered':
-                mu, V, _, _, _ = self._model(self.data,self.parameters.get_parameter_values())
+                mu, V, _, _, _ = self._model(self.data,self.latent_variables.get_z_values())
             else:
-                mu, V = self.smoothed_state(self.data,self.parameters.get_parameter_values())
+                mu, V = self.smoothed_state(self.data,self.latent_variables.get_z_values())
 
             # Create smoothed/filtered aggregate series
-            _, Z, _, _, _ = self._ss_matrices(self.parameters.get_parameter_values())
+            _, Z, _, _, _ = self._ss_matrices(self.latent_variables.get_z_values())
             smoothed_series = np.zeros(self.y.shape[0])
 
             for t in range(0,self.y.shape[0]):
@@ -298,8 +298,8 @@ class DynLin(tsm.TSM):
         - pd.DataFrame with predictions
         """     
 
-        if self.parameters.estimated is False:
-            raise Exception("No parameters estimated!")
+        if self.latent_variables.estimated is False:
+            raise Exception("No latent variables estimated!")
         else:
             # Sort/manipulate the out-of-sample data
             _, X_oos = dmatrices(self.formula, oos_data)
@@ -309,7 +309,7 @@ class DynLin(tsm.TSM):
             Z = full_X
 
             # Retrieve data, dates and (transformed) parameters         
-            a, P = self._forecast_model(self.parameters.get_parameter_values(),Z,h)
+            a, P = self._forecast_model(self.latent_variables.get_z_values(),Z,h)
             smoothed_series = np.zeros(h)
             for t in range(h):
                 smoothed_series[t] = np.dot(Z[self.y.shape[0]+t],a[:,self.y.shape[0]+t])
@@ -340,7 +340,7 @@ class DynLin(tsm.TSM):
         for t in range(0,h):
             data1 = self.data_original.iloc[0:-h+t,:]
             data2 = self.data_original.iloc[-h+t:,:]
-            x = DynLin(formula=self.formula,data=data1)
+            x = DynReg(formula=self.formula,data=data1)
             x.fit(printer=False)
             if t == 0:
                 predictions = x.predict(1,oos_data=data2)
@@ -385,7 +385,7 @@ class DynLin(tsm.TSM):
         ----------
 
         beta : np.array
-            Contains untransformed starting values for parameters
+            Contains untransformed starting values for latent variables
 
         Returns
         ----------
@@ -429,7 +429,7 @@ class DynLin(tsm.TSM):
             Data to be smoothed
 
         beta : np.array
-            Contains untransformed starting values for parameters
+            Contains untransformed starting values for latent variables
 
         Returns
         ----------

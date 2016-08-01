@@ -16,43 +16,45 @@ from .. import tests as tst
 from .. import tsm as tsm
 from .. import data_check as dc
 
+from .arma_recursions import arimax_recursion
+
 class ARIMAX(tsm.TSM):
-    """ Inherits time series methods from TSM class.
+    """ Inherits time series methods from TSM parent class.
 
     **** AUTOREGRESSIVE INTEGRATED MOVING AVERAGE EXOGENOUS (ARIMAX) MODELS ****
 
     Parameters
     ----------
-    data : pd.DataFrame or np.array
-        Field to specify the time series data that will be used.
+    data : pd.DataFrame
+        Field to specify the univariate time series data that will be used.
 
     formula : string
         patsy string describing the regression
 
     ar : int
-        Field to specify how many AR terms the model will have.
+        Field to specify how many AR lags the model will have.
 
     ma : int
-        Field to specify how many MA terms the model will have.
+        Field to specify how many MA lags the model will have.
 
     integ : int (default : 0)
         Specifies how many times to difference the time series.
     """
 
-    def __init__(self,data,formula,ar,ma,integ=0):
+    def __init__(self, data, formula, ar, ma, integ=0):
 
         # Initialize TSM object
         super(ARIMAX,self).__init__('ARIMAX')
 
-        # Parameters
+        # Latent Variables
         self.ar = ar
         self.ma = ma
         self.integ = integ
         self.model_name = "ARIMAX(" + str(self.ar) + "," + str(self.integ) + "," + str(self.ma) + ")"
-        self.param_no = self.ar + self.ma + 2
+        self.z_no = self.ar + self.ma + 2
         self.max_lag = max(self.ar,self.ma)
-        self._param_hide = 0 # Whether to cutoff variance parameters from results
-        self.supported_methods = ["MLE","PML","Laplace","M-H","BBVI"]
+        self._z_hide = 0 # Whether to cutoff variance latent variables from results
+        self.supported_methods = ["MLE", "PML", "Laplace", "M-H", "BBVI"]
         self.default_method = "MLE"
         self.multivariate_model = False
 
@@ -61,10 +63,12 @@ class ARIMAX(tsm.TSM):
         self.data_original = data.copy()
         self.formula = formula
         self.y, self.X = dmatrices(formula, data)
-        self.param_no = self.X.shape[1]
         self.y_name = self.y.design_info.describe()
-        self.data_name = self.y_name
         self.X_names = self.X.design_info.describe().split(" + ")
+        self.y = self.y.astype(np.float) 
+        self.X = self.X.astype(np.float) 
+        self.z_no = self.X.shape[1]
+        self.data_name = self.y_name
         self.y = np.array([self.y]).ravel()
         self.data = self.y.copy()
         self.X = np.array([self.X])[0]
@@ -77,14 +81,14 @@ class ARIMAX(tsm.TSM):
             self.data_name = "Differenced " + self.data_name
 
         self.ar_matrix = self._ar_matrix()
-        self._create_parameters()
+        self._create_latent_variables()
 
     def _ar_matrix(self):
-        """ Creates Autoregressive Matrix
+        """ Creates the autoregressive Matrix
 
         Returns
         ----------
-        X : np.array
+        X : np.ndarray
             Autoregressive Matrix
 
         """
@@ -97,8 +101,8 @@ class ARIMAX(tsm.TSM):
         else:
             return np.zeros(self.data.shape[0]-self.max_lag)
 
-    def _create_parameters(self):
-        """ Creates model parameters
+    def _create_latent_variables(self):
+        """ Creates model latent variables
 
         Returns
         ----------
@@ -106,58 +110,57 @@ class ARIMAX(tsm.TSM):
         """
 
         for ar_term in range(self.ar):
-            self.parameters.add_parameter('AR(' + str(ar_term+1) + ')',ifr.Normal(0,0.5,transform=None),dst.q_Normal(0,3))
+            self.latent_variables.add_z('AR(' + str(ar_term+1) + ')',ifr.Normal(0,0.5,transform=None),dst.q_Normal(0,3))
 
         for ma_term in range(self.ma):
-            self.parameters.add_parameter('MA(' + str(ma_term+1) + ')',ifr.Normal(0,0.5,transform=None),dst.q_Normal(0,3))
+            self.latent_variables.add_z('MA(' + str(ma_term+1) + ')',ifr.Normal(0,0.5,transform=None),dst.q_Normal(0,3))
 
-        for parm in range(len(self.X_names)):
-            self.parameters.add_parameter('Beta ' + self.X_names[parm],ifr.Normal(0,3,transform=None),dst.q_Normal(0,3))
+        for z in range(len(self.X_names)):
+            self.latent_variables.add_z('Beta ' + self.X_names[z],ifr.Normal(0,3,transform=None),dst.q_Normal(0,3))
 
-        self.parameters.add_parameter('Sigma',ifr.Uniform(transform='exp'),dst.q_Normal(0,3))
+        self.latent_variables.add_z('Sigma',ifr.Uniform(transform='exp'),dst.q_Normal(0,3))
+        self.z_no = len(self.latent_variables.z_list)
 
-    def _model(self,beta):
-        """ Creates the structure of the model
+    def _model(self, beta):
+        """ Creates the structure of the model (model matrices, etc)
 
         Parameters
         ----------
-        beta : np.array
-            Contains untransformed starting values for parameters
+        beta : np.ndarray
+            Contains untransformed starting values for latent variables
 
         Returns
         ----------
-        mu : np.array
-            Contains the predicted values for the time series
+        mu : np.ndarray
+            Contains the predicted values (location) for the time series
 
-        Y : np.array
+        Y : np.ndarray
             Contains the length-adjusted time series (accounting for lags)
         """     
 
         Y = self.y[self.max_lag:]
 
-        # Transform parameters
-        parm = np.array([self.parameters.parameter_list[k].prior.transform(beta[k]) for k in range(beta.shape[0])])
+        # Transform latent variables
+        z = np.array([self.latent_variables.z_list[k].prior.transform(beta[k]) for k in range(beta.shape[0])])
 
         # Constant and AR terms
         if self.ar == 0:
             mu = np.transpose(self.ar_matrix)
         elif self.ar == 1:
-            mu = np.transpose(self.ar_matrix)*parm[0:-1-self.ma-len(self.X_names)][0]
+            mu = np.transpose(self.ar_matrix)*z[0:-1-self.ma-len(self.X_names)][0]
         else:
-            mu = np.matmul(np.transpose(self.ar_matrix),parm[0:-1-self.ma-len(self.X_names)])
+            mu = np.matmul(np.transpose(self.ar_matrix),z[0:-1-self.ma-len(self.X_names)])
 
         # X terms
-        mu = mu + np.matmul(self.X[self.integ+self.max_lag:],parm[self.ma+self.ar:(self.ma+self.ar+len(self.X_names))])
+        mu = mu + np.matmul(self.X[self.integ+self.max_lag:],z[self.ma+self.ar:(self.ma+self.ar+len(self.X_names))])
 
         # MA terms
         if self.ma != 0:
-            for t in range(self.max_lag,Y.shape[0]):
-                for k in range(0,self.ma):
-                        mu[t] += parm[self.ar+k]*(Y[t-1-k]-mu[t-1-k])
+            mu = arimax_recursion(z, mu, Y, self.max_lag, Y.shape[0], self.ar, self.ma)
 
         return mu, Y 
 
-    def _mean_prediction(self,mu,Y,h,t_params,X_oos):
+    def _mean_prediction(self, mu, Y, h, t_z, X_oos):
         """ Creates a h-step ahead mean prediction
 
         Parameters
@@ -171,8 +174,8 @@ class ARIMAX(tsm.TSM):
         h : int
             How many steps ahead for the prediction
 
-        t_params : np.array
-            A vector of (transformed) parameters
+        t_z : np.array
+            A vector of (transformed) latent variables
 
         X_oos : np.array
             Out of sample X data
@@ -182,7 +185,7 @@ class ARIMAX(tsm.TSM):
         h-length vector of mean predictions
         """     
 
-        # Create arrays to iteratre over
+        # Create arrays to iterate over
         Y_exp = Y.copy()
         mu_exp = mu.copy()
 
@@ -191,38 +194,38 @@ class ARIMAX(tsm.TSM):
             new_value = 0
             if self.ar != 0:
                 for j in range(0,self.ar):
-                    new_value += t_params[j]*Y_exp[-j-1]
+                    new_value += t_z[j]*Y_exp[-j-1]
 
             if self.ma != 0:
                 for k in range(0,self.ma):
                     if k >= t:
-                        new_value += t_params[k+self.ar]*(Y_exp[-k-1]-mu_exp[-k-1])
+                        new_value += t_z[k+self.ar]*(Y_exp[-k-1]-mu_exp[-k-1])
 
             # X terms
-            new_value += np.matmul(X_oos[t,:],t_params[self.ma+self.ar:(self.ma+self.ar+len(self.X_names))])            
+            new_value += np.matmul(X_oos[t,:],t_z[self.ma+self.ar:(self.ma+self.ar+len(self.X_names))])            
             Y_exp = np.append(Y_exp,[new_value])
             mu_exp = np.append(mu_exp,[0]) # For indexing consistency
 
         return Y_exp
 
-    def _sim_prediction(self,mu,Y,h,t_params,X_oos,simulations):
+    def _sim_prediction(self, mu, Y, h, t_z, X_oos, simulations):
         """ Simulates a h-step ahead mean prediction
 
         Parameters
         ----------
-        mu : np.array
+        mu : np.ndarray
             The past predicted values
 
-        Y : np.array
+        Y : np.ndarray
             The past data
 
         h : int
             How many steps ahead for the prediction
 
-        t_params : np.array
-            A vector of (transformed) parameters
+        t_z : np.ndarray
+            A vector of (transformed) latent variables
 
-        X_oos : np.array
+        X_oos : np.ndarray
             Out of sample X data
 
         simulations : int
@@ -235,46 +238,46 @@ class ARIMAX(tsm.TSM):
 
         sim_vector = np.zeros([simulations,h])
 
-        for n in range(0,simulations):
+        for n in range(0, simulations):
             # Create arrays to iteratre over
             Y_exp = Y.copy()
             mu_exp = mu.copy()
 
             # Loop over h time periods          
-            for t in range(0,h):
-                new_value = np.random.randn(1)*t_params[-1]
+            for t in range(0, h):
+                new_value = np.random.randn(1)*t_z[-1]
 
                 if self.ar != 0:
-                    for j in range(0,self.ar):
-                        new_value += t_params[j]*Y_exp[-j-1]
+                    for j in range(0, self.ar):
+                        new_value += t_z[j]*Y_exp[-j-1]
 
                 if self.ma != 0:
-                    for k in range(0,self.ma):
+                    for k in range(0, self.ma):
                         if k >= t:
-                            new_value += t_params[k+self.ar]*(Y_exp[-k-1]-mu_exp[-k-1])
+                            new_value += t_z[k+self.ar]*(Y_exp[-k-1]-mu_exp[-k-1])
 
                 # X terms
-                new_value += np.matmul(X_oos[t,:],t_params[self.ma+self.ar:(self.ma+self.ar+len(self.X_names))])            
+                new_value += np.matmul(X_oos[t,:], t_z[self.ma+self.ar:(self.ma+self.ar+len(self.X_names))])            
 
-                Y_exp = np.append(Y_exp,[new_value])
-                mu_exp = np.append(mu_exp,[0]) # For indexing consistency
+                Y_exp = np.append(Y_exp, [new_value])
+                mu_exp = np.append(mu_exp, [0]) # For indexing consistency
 
             sim_vector[n] = Y_exp[-h:]
 
         return np.transpose(sim_vector)
 
-    def _summarize_simulations(self,mean_values,sim_vector,date_index,h,past_values):
-        """ Summarizes a simulation vector and a mean vector of predictions
+    def _summarize_simulations(self, mean_values, sim_vector, date_index, h, past_values):
+        """ Produces forecasted values to plot, along with prediction intervals
 
         Parameters
         ----------
-        mean_values : np.array
+        mean_values : np.ndarray
             Mean predictions for h-step ahead forecasts
 
-        sim_vector : np.array
+        sim_vector : np.ndarray
             N simulation predictions for h-step ahead forecasts
 
-        date_index : pd.DateIndex or np.array
+        date_index : pd.DateIndex or np.ndarray
             Dates for the simulations
 
         h : int
@@ -295,13 +298,13 @@ class ARIMAX(tsm.TSM):
         plot_index = date_index[-h-past_values:]
         return error_bars, forecasted_values, plot_values, plot_index
         
-    def neg_loglik(self,beta):
+    def neg_loglik(self, beta):
         """ Creates the negative log-likelihood of the model
 
         Parameters
         ----------
-        beta : np.array
-            Contains untransformed starting values for parameters
+        beta : np.ndarray
+            Contains untransformed starting values for latent variables
 
         Returns
         ----------
@@ -309,21 +312,18 @@ class ARIMAX(tsm.TSM):
         """     
 
         mu, Y = self._model(beta)
-        return -np.sum(ss.norm.logpdf(Y,loc=mu,scale=self.parameters.parameter_list[-1].prior.transform(beta[-1])))
+        return -np.sum(ss.norm.logpdf(Y, loc=mu, scale=self.latent_variables.z_list[-1].prior.transform(beta[-1])))
 
     def plot_fit(self,**kwargs):
-        """ Plots the fit of the model
-
-        Returns
-        ----------
-        None (plots data and the fit)
+        """ 
+        Plots the fit of the model
         """
 
         figsize = kwargs.get('figsize',(10,7))
 
         plt.figure(figsize=figsize)
         date_index = self.index[max(self.ar,self.ma):self.data.shape[0]]
-        mu, Y = self._model(self.parameters.get_parameter_values())
+        mu, Y = self._model(self.latent_variables.get_z_values())
         plt.plot(date_index,Y,label='Data')
         plt.plot(date_index,mu,label='Filter',c='black')
         plt.title(self.data_name)
@@ -354,22 +354,22 @@ class ARIMAX(tsm.TSM):
 
         figsize = kwargs.get('figsize',(10,7))
 
-        if self.parameters.estimated is False:
-            raise Exception("No parameters estimated!")
+        if self.latent_variables.estimated is False:
+            raise Exception("No latent variables estimated!")
         else:
             # Sort/manipulate the out-of-sample data
             _, X_oos = dmatrices(self.formula, oos_data)
             X_oos = np.array([X_oos])[0]
             X_pred = X_oos[:h]
 
-            # Retrieve data, dates and (transformed) parameters
-            mu, Y = self._model(self.parameters.get_parameter_values())         
+            # Retrieve data, dates and (transformed) latent variables
+            mu, Y = self._model(self.latent_variables.get_z_values())         
             date_index = self.shift_dates(h)
-            t_params = self.transform_parameters()
+            t_z = self.transform_z()
 
             # Get mean prediction and simulations (for errors)
-            mean_values = self._mean_prediction(mu,Y,h,t_params,X_pred)
-            sim_values = self._sim_prediction(mu,Y,h,t_params,X_pred,15000)
+            mean_values = self._mean_prediction(mu,Y,h,t_z,X_pred)
+            sim_values = self._sim_prediction(mu,Y,h,t_z,X_pred,15000)
             error_bars, forecasted_values, plot_values, plot_index = self._summarize_simulations(mean_values,sim_values,date_index,h,past_values)
 
             plt.figure(figsize=figsize)
@@ -383,7 +383,7 @@ class ARIMAX(tsm.TSM):
             plt.ylabel(self.data_name)
             plt.show()
 
-    def predict_is(self,h=5):
+    def predict_is(self, h=5):
         """ Makes dynamic in-sample predictions with the estimated model
 
         Parameters
@@ -398,7 +398,7 @@ class ARIMAX(tsm.TSM):
 
         predictions = []
 
-        for t in range(0,h):
+        for t in range(0, h):
             data1 = self.data_original.iloc[:-(h+t),:]
             data2 = self.data_original.iloc[-h+t:,:]
             x = ARIMAX(ar=self.ar,ma=self.ma,integ=self.integ,formula=self.formula,data=self.data_original[:(-h+t)])
@@ -413,7 +413,7 @@ class ARIMAX(tsm.TSM):
 
         return predictions
 
-    def plot_predict_is(self,h=5,**kwargs):
+    def plot_predict_is(self, h=5, **kwargs):
         """ Plots forecasts with the estimated model against data
             (Simulated prediction with data)
 
@@ -439,7 +439,7 @@ class ARIMAX(tsm.TSM):
         plt.legend(loc=2)   
         plt.show()          
 
-    def predict(self,h=5,oos_data=None):
+    def predict(self, h=5, oos_data=None):
         """ Makes forecast with the estimated model
 
         Parameters
@@ -455,24 +455,21 @@ class ARIMAX(tsm.TSM):
         - pd.DataFrame with predicted values
         """     
 
-        if self.parameters.estimated is False:
-            raise Exception("No parameters estimated!")
+        if self.latent_variables.estimated is False:
+            raise Exception("No latent_variables estimated!")
         else:
             # Sort/manipulate the out-of-sample data
             _, X_oos = dmatrices(self.formula, oos_data)
             X_oos = np.array([X_oos])[0]
             X_pred = X_oos[:h]
-            mu, Y = self._model(self.parameters.get_parameter_values())         
+            mu, Y = self._model(self.latent_variables.get_z_values())         
             date_index = self.shift_dates(h)
-            t_params = self.transform_parameters()
+            t_z = self.transform_z()
 
-            mean_values = self._mean_prediction(mu,Y,h,t_params,X_pred)
+            mean_values = self._mean_prediction(mu,Y,h,t_z,X_pred)
             forecasted_values = mean_values[-h:]
             result = pd.DataFrame(forecasted_values)
             result.rename(columns={0:self.data_name}, inplace=True)
             result.index = date_index[-h:]
 
             return result
-
-
-

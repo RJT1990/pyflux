@@ -9,6 +9,9 @@ import scipy.stats as ss
 
 from .stoch_optim import RMSProp, ADAM
 
+from .bbvi_routines import alpha_recursion, log_p_posterior
+
+
 class BBVI(object):
     """
     Black Box Variational Inference
@@ -67,15 +70,13 @@ class BBVI(object):
         The control variate augmented Monte Carlo gradient estimate
         """
         gradient = np.zeros(np.sum(self.approx_param_no))
-        alpha0 = np.zeros(np.sum(self.approx_param_no))  
         z_t = z.T      
         log_q = self.normal_log_q(z.T)
         log_p = self.log_p(z.T)
         grad_log_q = self.grad_log_q(z)
         gradient = grad_log_q*(log_p-log_q)
 
-        for lambda_i in range(np.sum(self.approx_param_no)):
-            alpha0[lambda_i] = np.cov(grad_log_q[lambda_i],gradient[lambda_i])[0][1]             
+        alpha0 = alpha_recursion(np.zeros(np.sum(self.approx_param_no)), grad_log_q, gradient, np.sum(self.approx_param_no))           
 
         vectorized = gradient - ((alpha0/np.var(grad_log_q,axis=1))*grad_log_q.T).T
 
@@ -86,15 +87,13 @@ class BBVI(object):
         The control variate augmented Monte Carlo gradient estimate
         """
         gradient = np.zeros(np.sum(self.approx_param_no))
-        alpha0 = np.zeros(np.sum(self.approx_param_no))  
         z_t = z.T      
         log_q = self.normal_log_q_initial(z.T)
         log_p = self.log_p(z.T)
         grad_log_q = self.grad_log_q(z)
         gradient = grad_log_q*(log_p-log_q)
 
-        for lambda_i in range(np.sum(self.approx_param_no)):
-            alpha0[lambda_i] = np.cov(grad_log_q[lambda_i],gradient[lambda_i])[0][1]             
+        alpha0 = alpha_recursion(np.zeros(np.sum(self.approx_param_no)), grad_log_q, gradient, np.sum(self.approx_param_no))
 
         vectorized = gradient - ((alpha0/np.var(grad_log_q,axis=1))*grad_log_q.T).T
 
@@ -156,8 +155,7 @@ class BBVI(object):
         """
         The unnormalized log posterior components (the quantity we want to approximate)
         """
-        import time
-        return np.array([-self.neg_posterior(i) for i in z])
+        return log_p_posterior(z, self.neg_posterior)
 
     def normal_log_q(self,z):
         """
@@ -305,15 +303,13 @@ class CBBVI(BBVI):
         The control variate augmented Monte Carlo gradient estimate
         RAO-BLACKWELLIZED!
         """        
-        alpha0 = np.zeros(np.sum(self.approx_param_no))        
         z_t = np.transpose(z)
         log_q = self.normal_log_q(z_t)
         log_p = self.log_p(z_t)
         grad_log_q = self.grad_log_q(z)
         gradient = grad_log_q*np.repeat((log_p - log_q).T,2,axis=0)
 
-        for lambda_i in range(np.sum(self.approx_param_no)):
-            alpha0[lambda_i] = np.cov(grad_log_q[lambda_i],gradient[lambda_i])[0][1]              
+        alpha0 = alpha_recursion(np.zeros(np.sum(self.approx_param_no)), grad_log_q, gradient, np.sum(self.approx_param_no))      
         
         vectorized = gradient - ((alpha0/np.var(grad_log_q,axis=1))*grad_log_q.T).T
 
@@ -324,16 +320,14 @@ class CBBVI(BBVI):
         The control variate augmented Monte Carlo gradient estimate
         RAO-BLACKWELLIZED!
         """        
-        alpha0 = np.zeros(np.sum(self.approx_param_no))        
         z_t = np.transpose(z)
         log_q = self.normal_log_q_initial(z_t)
         log_p = self.log_p(z_t)
         grad_log_q = self.grad_log_q(z)
         gradient = grad_log_q*np.repeat((log_p - log_q).T,2,axis=0)
 
-        for lambda_i in range(np.sum(self.approx_param_no)):
-            alpha0[lambda_i] = np.cov(grad_log_q[lambda_i],gradient[lambda_i])[0][1]              
-        
+        alpha0 = alpha_recursion(np.zeros(np.sum(self.approx_param_no)), grad_log_q, gradient, np.sum(self.approx_param_no))
+
         vectorized = gradient - ((alpha0/np.var(grad_log_q,axis=1))*grad_log_q.T).T
 
         return np.mean(vectorized,axis=1)

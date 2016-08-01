@@ -12,9 +12,9 @@ class Results(object):
 
 class MLEResults(Results):
 
-    def __init__(self,data_name,X_names,model_name,model_type,parameters, 
+    def __init__(self,data_name,X_names,model_name,model_type,latent_variables, 
         results,data,index, multivariate_model,objective_object,method,
-        param_hide,max_lag,ihessian=None,signal=None,scores=None,states=None,
+        z_hide,max_lag,ihessian=None,signal=None,scores=None,states=None,
         states_var=None):
 
         self.data_name = data_name
@@ -22,8 +22,8 @@ class MLEResults(Results):
         self.max_lag = max_lag
         self.model_name = model_name
         self.model_type = model_type
-        self.parameters = parameters
-        self.parameters_values = parameters.get_parameter_values()
+        self.z = latent_variables
+        self.z_values = latent_variables.get_z_values()
         self.results = results
         self.method = method
 
@@ -35,7 +35,7 @@ class MLEResults(Results):
         self.index = index
         self.signal = signal
         self.multivariate_model = multivariate_model
-        self.param_hide = int(param_hide)
+        self.z_hide = int(z_hide)
 
         if self.multivariate_model is True:
             self.data_length = self.data[0].shape[0]
@@ -46,12 +46,12 @@ class MLEResults(Results):
         self.objective_object = objective_object
 
         if self.method == 'MLE' or self.method == 'OLS':
-            self.loglik = -self.objective_object(self.parameters_values)
-            self.aic = 2*len(self.parameters_values)+2*self.objective_object(self.parameters_values)
-            self.bic = 2*self.objective_object(self.parameters_values) + len(self.parameters_values)*np.log(self.data_length)
+            self.loglik = -self.objective_object(self.z_values)
+            self.aic = 2*len(self.z_values)+2*self.objective_object(self.z_values)
+            self.bic = 2*self.objective_object(self.z_values) + len(self.z_values)*np.log(self.data_length)
         elif self.method == 'PML':
-            self.aic = 2*len(self.parameters_values)+2*self.objective_object(self.parameters_values)
-            self.bic = 2*self.objective_object(self.parameters_values) + len(self.parameters_values)*np.log(self.data_length)
+            self.aic = 2*len(self.z_values)+2*self.objective_object(self.z_values)
+            self.bic = 2*self.objective_object(self.z_values) + len(self.z_values)*np.log(self.data_length)
 
         if self.model_type in ['LLT','LLEV']:
             self.rounding_points = 10
@@ -69,10 +69,10 @@ class MLEResults(Results):
         print("Dependent variable: " + self.data_name)
         print("Regressors: " + str(self.X_names))
         print("==========================")
-        print("Parameter Attributes: ")
+        print("Latent Variable Attributes: ")
         if self.ihessian is not None:
             print(".ihessian: Inverse Hessian")     
-        print(".parameters : Parameters() object")
+        print(".z : LatentVariables() object")
         if self.results is not None:
             print(".results : optimizer results")
         print("")
@@ -106,36 +106,36 @@ class MLEResults(Results):
     def summary_with_hessian(self):
 
         ses = np.power(np.abs(np.diag(self.ihessian)),0.5)
-        t_params = self.parameters.get_parameter_values(transformed=True)
+        t_z = self.z.get_z_values(transformed=True)
         t_p_std = ses.copy() # vector for transformed standard errors
 
         # Create transformed variables
-        for k in range(len(t_params)-self.param_hide):
-            z_temp = (self.parameters_values[k]/float(ses[k]))
-            t_p_std[k] = t_params[k] / z_temp
+        for k in range(len(t_z)-self.z_hide):
+            z_temp = (self.z_values[k]/float(ses[k]))
+            t_p_std[k] = t_z[k] / z_temp
 
         data = []
 
-        for i in range(len(self.parameters.parameter_list)-self.param_hide):
-            if self.parameters.parameter_list[i].prior.transform == np.array:
+        for i in range(len(self.z.z_list)-self.z_hide):
+            if self.z.z_list[i].prior.transform == np.array:
                 data.append({
-                    'param_name': self.parameters.parameter_list[i].name, 
-                    'param_value':np.round(self.parameters.parameter_list[i].prior.transform(self.parameters_values[i]),self.rounding_points), 
-                    'param_std': np.round(t_p_std[i],self.rounding_points),
-                    'param_z': np.round(t_params[i]/float(t_p_std[i]),self.rounding_points),
-                    'param_p': np.round(find_p_value(t_params[i]/float(t_p_std[i])),self.rounding_points),
-                    'ci': "(" + str(np.round(t_params[i] - t_p_std[i]*1.96,self.rounding_points)) + " | " + str(np.round(t_params[i] + t_p_std[i]*1.96,self.rounding_points)) + ")"})
+                    'z_name': self.z.z_list[i].name, 
+                    'z_value':np.round(self.z.z_list[i].prior.transform(self.z_values[i]),self.rounding_points), 
+                    'z_std': np.round(t_p_std[i],self.rounding_points),
+                    'z_z': np.round(t_z[i]/float(t_p_std[i]),self.rounding_points),
+                    'z_p': np.round(find_p_value(t_z[i]/float(t_p_std[i])),self.rounding_points),
+                    'ci': "(" + str(np.round(t_z[i] - t_p_std[i]*1.96,self.rounding_points)) + " | " + str(np.round(t_z[i] + t_p_std[i]*1.96,self.rounding_points)) + ")"})
             else:
                 data.append({
-                    'param_name': self.parameters.parameter_list[i].name, 
-                    'param_value':np.round(self.parameters.parameter_list[i].prior.transform(self.parameters_values[i]),self.rounding_points)})                     
+                    'z_name': self.z.z_list[i].name, 
+                    'z_value':np.round(self.z.z_list[i].prior.transform(self.z_values[i]),self.rounding_points)})                     
         
         fmt = [
-            ('Parameter',       'param_name',   40),
-            ('Estimate',          'param_value',       10),
-            ('Std Error', 'param_std', 10),
-            ('z',          'param_z',       8),
-            ('P>|z|',          'param_p',       8),
+            ('Latent Variable',       'z_name',   40),
+            ('Estimate',          'z_value',       10),
+            ('Std Error', 'z_std', 10),
+            ('z',          'z_z',       8),
+            ('P>|z|',          'z_p',       8),
             ('95% C.I.',          'ci',       25)
             ]
 
@@ -147,18 +147,18 @@ class MLEResults(Results):
             ]
 
         if self.method == 'MLE' or self.method == 'OLS' :
-            obj_desc = "Log Likelihood: " + str(np.round(-self.objective_object(self.parameters_values),4))
+            obj_desc = "Log Likelihood: " + str(np.round(-self.objective_object(self.z_values),4))
         else:
-            obj_desc = "Unnormalized Log Posterior: " + str(np.round(-self.objective_object(self.parameters_values),4))
+            obj_desc = "Unnormalized Log Posterior: " + str(np.round(-self.objective_object(self.z_values),4))
 
         model_details.append({'model_details': 'Dependent Variable: ' + str(self.data_name), 
             'model_results': 'Method: ' + str(self.method)})
         model_details.append({'model_details': 'Start Date: ' + str(self.index[self.max_lag]),
             'model_results': obj_desc})
         model_details.append({'model_details': 'End Date: ' + str(self.index[-1]),
-            'model_results': 'AIC: ' + str(np.round(2*len(self.parameters_values)+2*self.objective_object(self.parameters_values),4))})
+            'model_results': 'AIC: ' + str(np.round(2*len(self.z_values)+2*self.objective_object(self.z_values),4))})
         model_details.append({'model_details': 'Number of observations: ' + str(self.data_length),
-            'model_results': 'BIC: ' + str(np.round(2*self.objective_object(self.parameters_values) + len(self.parameters_values)*np.log(self.data_length),4))})
+            'model_results': 'BIC: ' + str(np.round(2*self.objective_object(self.z_values) + len(self.z_values)*np.log(self.data_length),4))})
 
 
         print( TablePrinter(model_fmt, ul='=')(model_details) )
@@ -168,19 +168,19 @@ class MLEResults(Results):
 
     def summary_without_hessian(self):
 
-        t_params = self.parameters.get_parameter_values(transformed=True)
+        t_z = self.z.get_z_values(transformed=True)
 
         print ("Hessian not invertible! Consider a different model specification.")
         print ("")      
 
         data = []
 
-        for i in range(len(self.parameters.parameter_list)):
-            data.append({'param_name': self.parameters.parameter_list[i].name, 'param_value':np.round(self.parameters.parameter_list[i].prior.transform(self.results.x[i]),4)})
+        for i in range(len(self.z.z_list)):
+            data.append({'z_name': self.z.z_list[i].name, 'z_value':np.round(self.z.z_list[i].prior.transform(self.results.x[i]),4)})
 
         fmt = [
-            ('Parameter',       'param_name',   40),
-            ('Estimate',          'param_value',       10)
+            ('Latent Variable',       'z_name',   40),
+            ('Estimate',          'z_value',       10)
             ]
 
         model_details = []
@@ -213,9 +213,9 @@ class MLEResults(Results):
 
 class BBVIResults(Results):
 
-    def __init__(self,data_name,X_names,model_name,model_type,parameters, 
+    def __init__(self,data_name,X_names,model_name,model_type,latent_variables, 
         data,index,multivariate_model,objective_object,method,
-        param_hide,max_lag,ses,signal=None,scores=None,states=None,
+        z_hide,max_lag,ses,signal=None,scores=None,states=None,
         states_var=None):
 
         self.data_name = data_name
@@ -223,7 +223,7 @@ class BBVIResults(Results):
         self.max_lag = max_lag
         self.model_name = model_name
         self.model_type = model_type
-        self.parameters = parameters
+        self.z = latent_variables
         self.method = method
 
         self.ses = ses
@@ -234,7 +234,7 @@ class BBVIResults(Results):
         self.index = index
         self.signal = signal
         self.multivariate_model = multivariate_model
-        self.param_hide = param_hide
+        self.z_hide = z_hide
 
         if self.multivariate_model is True:
             self.data_length = self.data[0].shape[0]
@@ -242,11 +242,11 @@ class BBVIResults(Results):
         else:
             self.data_length = self.data.shape[0]
 
-        params = self.parameters.get_parameter_values(transformed=False)
+        z_values = self.z.get_z_values(transformed=False)
 
         self.objective_object = objective_object
-        self.aic = 2*len(params)+2*self.objective_object(params)
-        self.bic = 2*self.objective_object(params) + len(params)*np.log(self.data_length)
+        self.aic = 2*len(z_values)+2*self.objective_object(z_values)
+        self.bic = 2*self.objective_object(z_values) + len(z_values)*np.log(self.data_length)
 
         if self.model_type in ['LLT','LLEV']:
             self.rounding_points = 10
@@ -259,8 +259,8 @@ class BBVIResults(Results):
         print("Dependent variable: " + self.data_name)
         print("Regressors: " + str(self.X_names))
         print("==========================")
-        print("Parameter Attributes: ")
-        print(".parameters : Parameters() object")
+        print("Latent Variables Attributes: ")
+        print(".z : LatentVariables() object")
         print(".results : optimizer results")
         print("")
         print("Implied Model Attributes: ")
@@ -283,33 +283,33 @@ class BBVIResults(Results):
 
     def summary(self):
         ihessian = np.diag(np.power(np.exp(self.ses),2))
-        params = self.parameters.get_parameter_values(transformed=False)
-        chain, mean_est, median_est, upper_95_est, lower_95_est = norm_post_sim(params,ihessian)
+        z_values = self.z.get_z_values(transformed=False)
+        chain, mean_est, median_est, upper_95_est, lower_95_est = norm_post_sim(z_values,ihessian)
 
         for k in range(len(chain)):
-            chain[k] = self.parameters.parameter_list[k].prior.transform(chain[k])
-            mean_est[k] = self.parameters.parameter_list[k].prior.transform(mean_est[k])
-            median_est[k] = self.parameters.parameter_list[k].prior.transform(median_est[k])
-            upper_95_est[k] = self.parameters.parameter_list[k].prior.transform(upper_95_est[k])
-            lower_95_est[k] = self.parameters.parameter_list[k].prior.transform(lower_95_est[k])                
+            chain[k] = self.z.z_list[k].prior.transform(chain[k])
+            mean_est[k] = self.z.z_list[k].prior.transform(mean_est[k])
+            median_est[k] = self.z.z_list[k].prior.transform(median_est[k])
+            upper_95_est[k] = self.z.z_list[k].prior.transform(upper_95_est[k])
+            lower_95_est[k] = self.z.z_list[k].prior.transform(lower_95_est[k])                
 
         mean_est = np.array(mean_est)
         self.chains = chain[:]
 
         data = []
 
-        for i in range(len(self.parameters.parameter_list)-self.param_hide):
+        for i in range(len(self.z.z_list)-self.z_hide):
             data.append({
-                'param_name': self.parameters.parameter_list[i].name, 
-                'param_mean': np.round(mean_est[i],self.rounding_points),
-                'param_median': np.round(median_est[i],self.rounding_points),
+                'z_name': self.z.z_list[i].name, 
+                'z_mean': np.round(mean_est[i],self.rounding_points),
+                'z_median': np.round(median_est[i],self.rounding_points),
                 'ci':  "(" + str(np.round(lower_95_est[i],self.rounding_points)) + " | " + str(np.round(upper_95_est[i],self.rounding_points)) + ")"
                 })                  
 
         fmt = [
-            ('Parameter','param_name',40),
-            ('Median','param_median',18),
-            ('Mean', 'param_mean', 18),
+            ('Latent Variable','z_name',40),
+            ('Median','z_median',18),
+            ('Mean', 'z_mean', 18),
             ('95% Credibility Interval','ci',25)]
 
         model_details = []
@@ -320,9 +320,9 @@ class BBVIResults(Results):
             ]
 
         if self.method == 'MLE':
-            obj_desc = "Log Likelihood: " + str(np.round(-self.objective_object(params),4))
+            obj_desc = "Log Likelihood: " + str(np.round(-self.objective_object(z_values),4))
         else:
-            obj_desc = "Unnormalized Log Posterior: " + str(np.round(-self.objective_object(params),4))
+            obj_desc = "Unnormalized Log Posterior: " + str(np.round(-self.objective_object(z_values),4))
 
         model_details.append({'model_details': 'Dependent Variable: ' + self.data_name, 
             'model_results': 'Method: ' + str(self.method)})
@@ -341,9 +341,9 @@ class BBVIResults(Results):
 
 class BBVISSResults(Results):
 
-    def __init__(self,data_name,X_names,model_name,model_type,parameters, 
+    def __init__(self,data_name,X_names,model_name,model_type,latent_variables, 
         data,index,multivariate_model,objective,method,
-        param_hide,max_lag,ses,signal=None,scores=None,states=None,
+        z_hide,max_lag,ses,signal=None,scores=None,states=None,
         states_var=None):
 
         self.data_name = data_name
@@ -351,7 +351,7 @@ class BBVISSResults(Results):
         self.max_lag = max_lag
         self.model_name = model_name
         self.model_type = model_type
-        self.parameters = parameters
+        self.z = latent_variables
         self.method = method
 
         self.ses = ses
@@ -362,7 +362,7 @@ class BBVISSResults(Results):
         self.index = index
         self.signal = signal
         self.multivariate_model = multivariate_model
-        self.param_hide = param_hide
+        self.z_hide = z_hide
 
         if self.multivariate_model is True:
             self.data_length = self.data[0].shape[0]
@@ -370,11 +370,11 @@ class BBVISSResults(Results):
         else:
             self.data_length = self.data.shape[0]
 
-        params = self.parameters.get_parameter_values(transformed=False)
+        z_values = self.z.get_z_values(transformed=False)
 
         self.objective = objective
-        self.aic = 2*len(params)+2*self.objective
-        self.bic = 2*self.objective + len(params)*np.log(self.data_length)
+        self.aic = 2*len(z_values)+2*self.objective
+        self.bic = 2*self.objective + len(z_values)*np.log(self.data_length)
 
         if self.model_type in ['LLT','LLEV']:
             self.rounding_points = 10
@@ -387,8 +387,8 @@ class BBVISSResults(Results):
         print("Dependent variable: " + self.data_name)
         print("Regressors: " + str(self.X_names))
         print("==========================")
-        print("Parameter Attributes: ")
-        print(".parameters : Parameters() object")
+        print("Latent Variable Attributes: ")
+        print(".z : LatentVariables() object")
         print("")
         print("Implied Model Attributes: ")
         print(".aic: Akaike Information Criterion") 
@@ -411,32 +411,32 @@ class BBVISSResults(Results):
 
     def summary(self):
         ihessian = np.diag(np.power(np.exp(self.ses),2))
-        params = self.parameters.get_parameter_values(transformed=False)
-        chain, mean_est, median_est, upper_95_est, lower_95_est = norm_post_sim(params,ihessian)
-        for k in range(len(params)):
-            chain[k] = self.parameters.parameter_list[k].prior.transform(chain[k])
-            mean_est[k] = self.parameters.parameter_list[k].prior.transform(mean_est[k])
-            median_est[k] = self.parameters.parameter_list[k].prior.transform(median_est[k])
-            upper_95_est[k] = self.parameters.parameter_list[k].prior.transform(upper_95_est[k])
-            lower_95_est[k] = self.parameters.parameter_list[k].prior.transform(lower_95_est[k])                
+        z_values = self.z.get_z_values(transformed=False)
+        chain, mean_est, median_est, upper_95_est, lower_95_est = norm_post_sim(z_values,ihessian)
+        for k in range(len(z_values)):
+            chain[k] = self.z.z_list[k].prior.transform(chain[k])
+            mean_est[k] = self.z.z_list[k].prior.transform(mean_est[k])
+            median_est[k] = self.z.z_list[k].prior.transform(median_est[k])
+            upper_95_est[k] = self.z.z_list[k].prior.transform(upper_95_est[k])
+            lower_95_est[k] = self.z.z_list[k].prior.transform(lower_95_est[k])                
 
         mean_est = np.array(mean_est)
         self.chains = chain[:]
 
         data = []
 
-        for i in range(len(self.parameters.parameter_list)-self.param_hide):
+        for i in range(len(self.z.z_list)-self.z_hide):
             data.append({
-                'param_name': self.parameters.parameter_list[i].name, 
-                'param_mean': np.round(mean_est[i],self.rounding_points),
-                'param_median': np.round(median_est[i],self.rounding_points),
+                'z_name': self.z.z_list[i].name, 
+                'z_mean': np.round(mean_est[i],self.rounding_points),
+                'z_median': np.round(median_est[i],self.rounding_points),
                 'ci':  "(" + str(np.round(lower_95_est[i],self.rounding_points)) + " | " + str(np.round(upper_95_est[i],self.rounding_points)) + ")"
                 })                  
 
         fmt = [
-            ('Parameter','param_name',40),
-            ('Median','param_median',18),
-            ('Mean', 'param_mean', 18),
+            ('Latent Variable','z_name',40),
+            ('Median','z_median',18),
+            ('Mean', 'z_mean', 18),
             ('95% Credibility Interval','ci',25)]
 
         model_details = []
@@ -465,9 +465,9 @@ class BBVISSResults(Results):
 
 class LaplaceResults(Results):
 
-    def __init__(self,data_name,X_names,model_name,model_type,parameters, 
+    def __init__(self,data_name,X_names,model_name,model_type,latent_variables, 
         data,index,multivariate_model,objective_object,method,
-        param_hide,max_lag,ihessian,signal=None,scores=None,states=None,
+        z_hide,max_lag,ihessian,signal=None,scores=None,states=None,
         states_var=None):
 
         self.data_name = data_name
@@ -475,7 +475,7 @@ class LaplaceResults(Results):
         self.max_lag = max_lag
         self.model_name = model_name
         self.model_type = model_type
-        self.parameters = parameters
+        self.z = latent_variables
         self.method = method
 
         self.ihessian = ihessian
@@ -486,7 +486,7 @@ class LaplaceResults(Results):
         self.index = index
         self.signal = signal
         self.multivariate_model = multivariate_model
-        self.param_hide = param_hide
+        self.z_hide = z_hide
 
         if self.multivariate_model is True:
             self.data_length = self.data[0].shape[0]
@@ -494,11 +494,11 @@ class LaplaceResults(Results):
         else:
             self.data_length = self.data.shape[0]
 
-        params = self.parameters.get_parameter_values(transformed=False)
+        z_values = self.z.get_z_values(transformed=False)
 
         self.objective_object = objective_object
-        self.aic = 2*len(params)+2*self.objective_object(params)
-        self.bic = 2*self.objective_object(params) + len(params)*np.log(self.data_length)
+        self.aic = 2*len(z_values)+2*self.objective_object(z_values)
+        self.bic = 2*self.objective_object(z_values) + len(z_values)*np.log(self.data_length)
 
         if self.model_type in ['LLT','LLEV']:
             self.rounding_points = 10
@@ -511,10 +511,10 @@ class LaplaceResults(Results):
         print("Dependent variable: " + self.data_name)
         print("Regressors: " + str(self.X_names))
         print("==========================")
-        print("Parameter Attributes: ")
+        print("Latent Variables Attributes: ")
         if self.ihessian is not None:
             print(".ihessian: Inverse Hessian")             
-        print(".parameters : Parameters() object")
+        print(".z : LatentVariables() object")
         print(".results : optimizer results")
         print("")
         print("Implied Model Attributes: ")
@@ -536,33 +536,33 @@ class LaplaceResults(Results):
         return("")
 
     def summary(self):
-        params = self.parameters.get_parameter_values(transformed=False)
-        chain, mean_est, median_est, upper_95_est, lower_95_est = norm_post_sim(params,self.ihessian)
+        z_values = self.z.get_z_values(transformed=False)
+        chain, mean_est, median_est, upper_95_est, lower_95_est = norm_post_sim(z_values,self.ihessian)
 
         for k in range(len(chain)):
-            chain[k] = self.parameters.parameter_list[k].prior.transform(chain[k])
-            mean_est[k] = self.parameters.parameter_list[k].prior.transform(mean_est[k])
-            median_est[k] = self.parameters.parameter_list[k].prior.transform(median_est[k])
-            upper_95_est[k] = self.parameters.parameter_list[k].prior.transform(upper_95_est[k])
-            lower_95_est[k] = self.parameters.parameter_list[k].prior.transform(lower_95_est[k])                
+            chain[k] = self.z.z_list[k].prior.transform(chain[k])
+            mean_est[k] = self.z.z_list[k].prior.transform(mean_est[k])
+            median_est[k] = self.z.z_list[k].prior.transform(median_est[k])
+            upper_95_est[k] = self.z.z_list[k].prior.transform(upper_95_est[k])
+            lower_95_est[k] = self.z.z_list[k].prior.transform(lower_95_est[k])                
 
         mean_est = np.array(mean_est)
         self.chains = chain[:]
 
         data = []
 
-        for i in range(len(self.parameters.parameter_list)-self.param_hide):
+        for i in range(len(self.z.z_list)-self.z_hide):
             data.append({
-                'param_name': self.parameters.parameter_list[i].name, 
-                'param_mean': np.round(mean_est[i],self.rounding_points),
-                'param_median': np.round(median_est[i],self.rounding_points),
+                'z_name': self.z.z_list[i].name, 
+                'z_mean': np.round(mean_est[i],self.rounding_points),
+                'z_median': np.round(median_est[i],self.rounding_points),
                 'ci':  "(" + str(np.round(lower_95_est[i],self.rounding_points)) + " | " + str(np.round(upper_95_est[i],self.rounding_points)) + ")"
                 })                  
 
         fmt = [
-            ('Parameter','param_name',40),
-            ('Median','param_median',18),
-            ('Mean', 'param_mean', 18),
+            ('Latent Variable','z_name',40),
+            ('Median','z_median',18),
+            ('Mean', 'z_mean', 18),
             ('95% Credibility Interval','ci',25)]
 
         model_details = []
@@ -573,9 +573,9 @@ class LaplaceResults(Results):
             ]
 
         if self.method == 'MLE':
-            obj_desc = "Log Likelihood: " + str(np.round(-self.objective_object(params),4))
+            obj_desc = "Log Likelihood: " + str(np.round(-self.objective_object(z_values),4))
         else:
-            obj_desc = "Unnormalized Log Posterior: " + str(np.round(-self.objective_object(params),4))
+            obj_desc = "Unnormalized Log Posterior: " + str(np.round(-self.objective_object(z_values),4))
 
         model_details.append({'model_details': 'Dependent Variable: ' + self.data_name, 
             'model_results': 'Method: ' + str(self.method)})
@@ -593,16 +593,16 @@ class LaplaceResults(Results):
 
 class MCMCResults(Results):
 
-    def __init__(self,data_name,X_names,model_name,model_type,parameters, 
+    def __init__(self,data_name,X_names,model_name,model_type,latent_variables, 
         data,index,multivariate_model,objective_object,method,
-        param_hide,max_lag,samples,mean_est,median_est,lower_95_est,upper_95_est,
+        z_hide,max_lag,samples,mean_est,median_est,lower_95_est,upper_95_est,
         signal=None,scores=None,states=None,states_var=None):
         self.data_name = data_name
         self.X_names = X_names
         self.max_lag = max_lag
         self.model_name = model_name
         self.model_type = model_type
-        self.parameters = parameters
+        self.z = latent_variables
         self.method = method
 
         self.samples = samples
@@ -617,7 +617,7 @@ class MCMCResults(Results):
         self.index = index
         self.signal = signal
         self.multivariate_model = multivariate_model
-        self.param_hide = param_hide
+        self.z_hide = z_hide
 
         if self.multivariate_model is True:
             self.data_length = self.data[0].shape[0]
@@ -625,11 +625,11 @@ class MCMCResults(Results):
         else:
             self.data_length = self.data.shape[0]
 
-        params = self.parameters.get_parameter_values(transformed=False)
+        z_values = self.z.get_z_values(transformed=False)
 
         self.objective_object = objective_object
-        self.aic = 2*len(params)+2*self.objective_object(params)
-        self.bic = 2*self.objective_object(params) + len(params)*np.log(self.data_length)
+        self.aic = 2*len(z_values)+2*self.objective_object(z_values)
+        self.bic = 2*self.objective_object(z_values) + len(z_values)*np.log(self.data_length)
 
         if self.model_type in ['LLT','LLEV']:
             self.rounding_points = 10
@@ -642,9 +642,8 @@ class MCMCResults(Results):
         print("Dependent variable: " + self.data_name)
         print("Regressors: " + str(self.X_names))
         print("==========================")
-        print("Parameter Attributes: ")     
-        print(".parameters : Parameters() object")
-        print(".results : optimizer results")
+        print("Latent Variable Attributes: ")     
+        print(".z : LatentVariables() object")
         if self.samples is not None:
             print(".samples: MCMC samples")             
         print("")
@@ -667,22 +666,22 @@ class MCMCResults(Results):
         return("")
 
     def summary(self):
-        params = self.parameters.get_parameter_values(transformed=False)
+        z_values = self.z.get_z_values(transformed=False)
 
         data = []
 
-        for i in range(len(self.parameters.parameter_list)-self.param_hide):
+        for i in range(len(self.z.z_list)-self.z_hide):
             data.append({
-                'param_name': self.parameters.parameter_list[i].name, 
-                'param_mean': np.round(self.mean_est[i],self.rounding_points),
-                'param_median': np.round(self.median_est[i],self.rounding_points),
+                'z_name': self.z.z_list[i].name, 
+                'z_mean': np.round(self.mean_est[i],self.rounding_points),
+                'z_median': np.round(self.median_est[i],self.rounding_points),
                 'ci':  "(" + str(np.round(self.lower_95_est[i],self.rounding_points)) + " | " + str(np.round(self.upper_95_est[i],self.rounding_points)) + ")"
                 })                  
 
         fmt = [
-            ('Parameter','param_name',40),
-            ('Median','param_median',18),
-            ('Mean', 'param_mean', 18),
+            ('Latent Variable','z_name',40),
+            ('Median','z_median',18),
+            ('Mean', 'z_mean', 18),
             ('95% Credibility Interval','ci',25)]
 
         model_details = []
@@ -693,9 +692,9 @@ class MCMCResults(Results):
             ]
 
         if self.method == 'MLE':
-            obj_desc = "Log Likelihood: " + str(np.round(-self.objective_object(params),4))
+            obj_desc = "Log Likelihood: " + str(np.round(-self.objective_object(z_values),4))
         else:
-            obj_desc = "Unnormalized Log Posterior: " + str(np.round(-self.objective_object(params),4))
+            obj_desc = "Unnormalized Log Posterior: " + str(np.round(-self.objective_object(z_values),4))
 
         model_details.append({'model_details': 'Dependent Variable: ' + self.data_name, 
             'model_results': 'Method: ' + str(self.method)})

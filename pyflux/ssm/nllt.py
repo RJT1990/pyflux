@@ -44,10 +44,10 @@ class NLLT(tsm.TSM):
         # Initialize TSM object
         super(NLLT,self).__init__('NLLT')
 
-        # Parameters
+        # Latent Variables
         self.integ = integ
         self.max_lag = 0
-        self._param_hide = 0 # Whether to cutoff variance parameters from results
+        self._z_hide = 0 # Whether to cutoff variance latent variables from results
         self.supported_methods = ["MLE","PML","Laplace","M-H","BBVI"]
         self.default_method = "MLE"
         self.multivariate_model = False
@@ -55,6 +55,7 @@ class NLLT(tsm.TSM):
 
         # Format the data
         self.data, self.data_name, self.is_pandas, self.index = dc.data_check(data,target)
+        self.data = self.data.astype(np.float)
         self.data_original = self.data
 
         # Difference data
@@ -66,7 +67,7 @@ class NLLT(tsm.TSM):
         self.data_length = X
         self.cutoff = 0
 
-        self._create_parameters()
+        self._create_latent_variables()
 
     def _animate_bbvi(self,stored_parameters,stored_predictive_likelihood):
         """ Produces animated plot of BBVI optimization
@@ -78,7 +79,7 @@ class NLLT(tsm.TSM):
 
         fig = plt.figure()
         ax = fig.add_subplot(1, 1, 1)
-        ud = BBVINLLTAnimate(ax,self.data,stored_parameters,self.index,self.param_no,self.link)
+        ud = BBVINLLTAnimate(ax,self.data,stored_parameters,self.index,self.z_no,self.link)
         anim = FuncAnimation(fig, ud, frames=np.arange(stored_parameters.shape[0]), init_func=ud.init,
                 interval=10, blit=True)
         plt.plot(self.data)
@@ -86,16 +87,16 @@ class NLLT(tsm.TSM):
         plt.ylabel(self.data_name)
         plt.show()
 
-    def _create_parameters(self):
-        """ Creates model parameters
+    def _create_latent_variables(self):
+        """ Creates model latent variables
 
         Returns
         ----------
         None (changes model attributes)
         """
 
-        self.parameters.add_parameter('Sigma^2 level',ifr.Uniform(transform='exp'),dst.q_Normal(0,3))
-        self.parameters.add_parameter('Sigma^2 trend',ifr.Uniform(transform='exp'),dst.q_Normal(0,3))
+        self.latent_variables.add_z('Sigma^2 level',ifr.Uniform(transform='exp'),dst.q_Normal(0,3))
+        self.latent_variables.add_z('Sigma^2 trend',ifr.Uniform(transform='exp'),dst.q_Normal(0,3))
 
     def _get_scale_and_shape(self):
         """ Retrieves the scale and shape for the model
@@ -105,11 +106,11 @@ class NLLT(tsm.TSM):
         Scale (float) and shape (float)
         """
         if self.dist == 't':
-            return self.parameters.get_parameter_values(transformed=True)[-2],self.parameters.get_parameter_values(transformed=True)[-1],0
+            return self.latent_variables.get_z_values(transformed=True)[-2],self.latent_variables.get_z_values(transformed=True)[-1],0
         elif self.dist == 'Laplace':
-            return self.parameters.get_parameter_values(transformed=True)[-1],0,0
+            return self.latent_variables.get_z_values(transformed=True)[-1],0,0
         elif self.dist == 'skewt':
-            return self.parameters.get_parameter_values(transformed=True)[-2],self.parameters.get_parameter_values(transformed=True)[-1],self.parameters.get_parameter_values(transformed=True)[-3]
+            return self.latent_variables.get_z_values(transformed=True)[-2],self.latent_variables.get_z_values(transformed=True)[-1],self.latent_variables.get_z_values(transformed=True)[-3]
         else:
             return 0, 0, 0
 
@@ -122,7 +123,7 @@ class NLLT(tsm.TSM):
             Contains the time series
 
         beta : np.array
-            Contains untransformed starting values for parameters
+            Contains untransformed starting values for latent variables
 
         Returns
         ----------
@@ -140,7 +141,7 @@ class NLLT(tsm.TSM):
         Parameters
         ----------
         beta : np.array
-            Contains untransformed starting values for parameters
+            Contains untransformed starting values for latent variables
 
         Returns
         ----------
@@ -156,8 +157,8 @@ class NLLT(tsm.TSM):
 
         R = np.identity(2)
         Q = np.identity(2)
-        Q[0][0] = self.parameters.parameter_list[0].prior.transform(beta[0])
-        Q[1][1] = self.parameters.parameter_list[1].prior.transform(beta[1])
+        Q[0][0] = self.latent_variables.z_list[0].prior.transform(beta[0])
+        Q[1][1] = self.latent_variables.z_list[1].prior.transform(beta[1])
 
         return T, Z, R, Q
 
@@ -167,7 +168,7 @@ class NLLT(tsm.TSM):
         Parameters
         ----------
         beta : np.array
-            Contains untransformed starting values for parameters
+            Contains untransformed starting values for latent variables
 
         T, Z, R, Q : np.array
             State space matrices used in KFS algorithm
@@ -196,7 +197,7 @@ class NLLT(tsm.TSM):
         Parameters
         ----------
         beta : np.array
-            Contains untransformed starting values for parameters
+            Contains untransformed starting values for latent variables
 
         T, Z, R, Q : np.array
             State space matrices used in KFS algorithm
@@ -240,7 +241,7 @@ class NLLT(tsm.TSM):
         Parameters
         ----------
         beta : np.array
-            Contains untransformed starting values for parameters
+            Contains untransformed starting values for latent variables
 
         T, Z, R, Q : np.array
             State space matrices used in KFS algorithm
@@ -255,7 +256,7 @@ class NLLT(tsm.TSM):
             Approximating measurement constants
         """     
 
-        H = np.ones(self.data.shape[0])*self.parameters.parameter_list[1].prior.transform(beta[1])
+        H = np.ones(self.data.shape[0])*self.latent_variables.z_list[1].prior.transform(beta[1])
         mu = np.zeros(self.data.shape[0])
 
         return H, mu
@@ -266,7 +267,7 @@ class NLLT(tsm.TSM):
         Parameters
         ----------
         beta : np.array
-            Contains untransformed starting values for parameters
+            Contains untransformed starting values for latent variabes
 
         T, Z, R, Q : np.array
             State space matrices used in KFS algorithm
@@ -281,7 +282,7 @@ class NLLT(tsm.TSM):
             Approximating measurement constants
         """     
 
-        H = np.ones(self.data.shape[0])*self.parameters.parameter_list[-2].prior.transform(beta[-2])
+        H = np.ones(self.data.shape[0])*self.latent_variables.z_list[-2].prior.transform(beta[-2])
         mu = np.zeros(self.data.shape[0])
 
         return H, mu
@@ -311,14 +312,14 @@ class NLLT(tsm.TSM):
         x.meas_likelihood = x.exponential_likelihood
         x.model_name = "Exponential Local Linear Trend Model"   
         x.dist = "Exponential"
-        x.param_no = 2  
+        x.z_no = 2  
         x.link = np.exp
         temp = LLT(data,integ=integ,target=target)
         temp.fit()
-        x.parameters.set_parameter_starting_values(np.array([temp.parameters.get_parameter_values()[1],temp.parameters.get_parameter_values()[2]]))
+        x.latent_variables.set_z_starting_values(np.array([temp.latent_variables.get_z_values()[1],temp.latent_variables.get_z_values()[2]]))
 
         def approx_model(beta,T,Z,R,Q):
-            return x._general_approximating_model(beta,T,Z,R,Q,temp.parameters.get_parameter_values(transformed=True)[0])
+            return x._general_approximating_model(beta,T,Z,R,Q,temp.latent_variables.get_z_values(transformed=True)[0])
 
         x._approximating_model = approx_model
 
@@ -353,19 +354,19 @@ class NLLT(tsm.TSM):
 
         x = NLLT(data=data,integ=integ,target=target)
         
-        x.parameters.add_parameter('Laplace Scale',ifr.Uniform(transform='exp'),dst.q_Normal(0,3))
+        x.latent_variables.add_z('Laplace Scale',ifr.Uniform(transform='exp'),dst.q_Normal(0,3))
 
         x.meas_likelihood = x.laplace_likelihood
         x.model_name = "Laplace Local Linear Trend Model"
         x.dist = "Laplace"
-        x.param_no = 3  
+        x.z_no = 3  
         x.link = np.array
         temp = LLT(data,integ=integ,target=target)
         temp.fit()
-        x.parameters.set_parameter_starting_values(np.array([temp.parameters.get_parameter_values()[1],temp.parameters.get_parameter_values()[2],2]))
+        x.latent_variables.set_z_starting_values(np.array([temp.latent_variables.get_z_values()[1],temp.latent_variables.get_z_values()[2],2]))
         
         def approx_model(beta,T,Z,R,Q):
-            return x._general_approximating_model(beta,T,Z,R,Q,temp.parameters.get_parameter_values(transformed=True)[0])
+            return x._general_approximating_model(beta,T,Z,R,Q,temp.latent_variables.get_z_values(transformed=True)[0])
 
         x._approximating_model = approx_model
 
@@ -403,11 +404,11 @@ class NLLT(tsm.TSM):
         x.meas_likelihood = x.poisson_likelihood
         x.model_name = "Poisson Local Linear Trend Model"   
         x.dist = "Poisson"
-        x.param_no = 2  
+        x.z_no = 2  
         x.link = np.exp
         temp = LLT(data,integ=integ,target=target)
         temp.fit()
-        x.parameters.set_parameter_starting_values(np.array([temp.parameters.get_parameter_values()[1],temp.parameters.get_parameter_values()[2]]))
+        x.latent_variables.set_z_starting_values(np.array([temp.latent_variables.get_z_values()[1],temp.latent_variables.get_z_values()[2]]))
 
         def draw_variable(loc,scale,shape,skewness,nsims):
             return np.random.poisson(loc, nsims)
@@ -440,14 +441,14 @@ class NLLT(tsm.TSM):
 
         x = NLLT(data=data,integ=integ,target=target)
         
-        x.parameters.add_parameter('Signal^2 irregular',ifr.Uniform(transform='exp'),dst.q_Normal(0,3))
-        x.parameters.add_parameter('v',ifr.Uniform(transform='exp'),dst.q_Normal(0,3))
+        x.latent_variables.add_z('Signal^2 irregular',ifr.Uniform(transform='exp'),dst.q_Normal(0,3))
+        x.latent_variables.add_z('v',ifr.Uniform(transform='exp'),dst.q_Normal(0,3))
 
         x._approximating_model = x._t_approximating_model
         x.meas_likelihood = x.t_likelihood
         x.model_name = "t-distributed Local Linear Trend Model"
         x.dist = "t"
-        x.param_no = 4  
+        x.z_no = 4  
         x.link = np.array
         temp = LLT(data,integ=integ,target=target)
         temp.fit()
@@ -458,7 +459,7 @@ class NLLT(tsm.TSM):
 
         p = optimize.minimize(temp_function,np.array([2.0,0.0,-1.0]),method='L-BFGS-B')
 
-        x.parameters.set_parameter_starting_values(np.array([temp.parameters.get_parameter_values()[1],temp.parameters.get_parameter_values()[2],p.x[2],p.x[0]]))
+        x.latent_variables.set_z_starting_values(np.array([temp.latent_variables.get_z_values()[1],temp.latent_variables.get_z_values()[2],p.x[2],p.x[0]]))
 
         def draw_variable(loc,scale,shape,skewness,nsims):
             return loc + scale*np.random.standard_t(shape,nsims)
@@ -491,15 +492,15 @@ class NLLT(tsm.TSM):
 
         x = NLLT(data=data,integ=integ,target=target)
         
-        x.parameters.add_parameter('Skewness',ifr.Uniform(transform='exp'),dst.q_Normal(0,3))
-        x.parameters.add_parameter('Scale',ifr.Uniform(transform='exp'),dst.q_Normal(0,3))
-        x.parameters.add_parameter('v',ifr.Uniform(transform='exp'),dst.q_Normal(0,3))
+        x.latent_variables.add_z('Skewness',ifr.Uniform(transform='exp'),dst.q_Normal(0,3))
+        x.latent_variables.add_z('Scale',ifr.Uniform(transform='exp'),dst.q_Normal(0,3))
+        x.latent_variables.add_z('v',ifr.Uniform(transform='exp'),dst.q_Normal(0,3))
 
         x._approximating_model = x._skewt_approximating_model
         x.meas_likelihood = x.skewt_likelihood
         x.model_name = "skewt-distributed Local Linear Trend Model"
         x.dist = "skewt"
-        x.param_no = 5 
+        x.z_no = 5 
         x.link = np.array
         temp = LLT(data,integ=integ,target=target)
         temp.fit()
@@ -510,7 +511,7 @@ class NLLT(tsm.TSM):
 
         p = optimize.minimize(temp_function,np.array([2.0,0.0,-1.0,0.0]),method='L-BFGS-B')
 
-        x.parameters.set_parameter_starting_values(np.array([temp.parameters.get_parameter_values()[1],temp.parameters.get_parameter_values()[2],p.x[3],p.x[2],p.x[0]]))
+        x.latent_variables.set_z_starting_values(np.array([temp.latent_variables.get_z_values()[1],temp.latent_variables.get_z_values()[2],p.x[3],p.x[2],p.x[0]]))
 
         def draw_variable(loc,scale,shape,skewness,nsims):
             return loc + scale*dst.skewt.rvs(shape,skewness,nsims)
@@ -526,7 +527,7 @@ class NLLT(tsm.TSM):
         Parameters
         ----------
         beta : np.array
-            Contains untransformed starting values for parameters
+            Contains untransformed starting values for latent variables
 
         alpha : np.array
             State matrix
@@ -536,17 +537,17 @@ class NLLT(tsm.TSM):
         Negative log posterior
         """
         post = self.neg_loglik(beta)
-        for k in range(0,self.param_no):
-            post += -self.parameters.parameter_list[k].prior.logpdf(beta[k])
+        for k in range(0,self.z_no):
+            post += -self.latent_variables.z_list[k].prior.logpdf(beta[k])
         return post     
 
     def state_likelihood_markov_blanket(self,beta,alpha,col_no):
-        """ Returns Markov blanket of the states given the evolution parameters
+        """ Returns Markov blanket of the states given the evolution latent variables
 
         Parameters
         ----------
         beta : np.array
-            Contains untransformed starting values for parameters
+            Contains untransformed starting values for latent variables
 
         alpha : np.array
             State matrix
@@ -562,12 +563,12 @@ class NLLT(tsm.TSM):
         return blanket
 
     def state_likelihood(self,beta,alpha):
-        """ Returns likelihood of the states given the evolution parameters
+        """ Returns likelihood of the states given the evolution latent variables
 
         Parameters
         ----------
         beta : np.array
-            Contains untransformed starting values for parameters
+            Contains untransformed starting values for latent variables
 
         alpha : np.array
             State matrix
@@ -588,7 +589,7 @@ class NLLT(tsm.TSM):
         Parameters
         ----------
         beta : np.array
-            Contains untransformed starting values for parameters
+            Contains untransformed starting values for latent variables
 
         alpha : np.array
             A vector of states
@@ -606,16 +607,16 @@ class NLLT(tsm.TSM):
         Parameters
         ----------
         beta : np.array
-            Contains untransformed starting values for parameters
+            Contains untransformed starting values for latent variables
 
         Returns
         ----------
         Negative loglikelihood
         """             
         states = np.zeros([self.state_no, self.data.shape[0]])
-        states[0,:] = beta[self.param_no:self.param_no+self.data.shape[0]] 
-        states[1,:] = beta[self.param_no+self.data.shape[0]:] 
-        return -self.loglik(beta[:self.param_no],states) 
+        states[0,:] = beta[self.z_no:self.z_no+self.data.shape[0]] 
+        states[1,:] = beta[self.z_no+self.data.shape[0]:] 
+        return -self.loglik(beta[:self.z_no],states) 
 
     def fit(self,optimizer='RMSProp',iterations=3000,print_progress=True,start_diffuse=False,**kwargs):
         """ Fits the model
@@ -669,17 +670,17 @@ class NLLT(tsm.TSM):
 
         animate = kwargs.get('animate',False)
 
-        # Starting parameters
-        phi = self.parameters.get_parameter_starting_values()
+        # Starting latent variables
+        phi = self.latent_variables.get_z_starting_values()
 
         # Starting values for approximate distribution
-        for i in range(len(self.parameters.parameter_list)):
-            approx_dist = self.parameters.parameter_list[i].q
+        for i in range(len(self.latent_variables.z_list)):
+            approx_dist = self.latent_variables.z_list[i].q
             if isinstance(approx_dist, dst.q_Normal):
-                self.parameters.parameter_list[i].q.loc = phi[i]
-                self.parameters.parameter_list[i].q.scale = -3.0
+                self.latent_variables.z_list[i].q.loc = phi[i]
+                self.latent_variables.z_list[i].q.scale = -3.0
 
-        q_list = [k.q for k in self.parameters.parameter_list]
+        q_list = [k.q for k in self.latent_variables.z_list]
 
         # Get starting values for states
         T, Z, R, Q = self._ss_matrices(phi)
@@ -711,29 +712,29 @@ class NLLT(tsm.TSM):
         else:
             q, q_params, q_ses = bbvi_obj.run()
 
-        self.parameters.set_parameter_values(q_params[:self.param_no],'BBVI',np.exp(q_ses[:self.param_no]),None)    
+        self.latent_variables.set_z_values(q_params[:self.z_no],'BBVI',np.exp(q_ses[:self.z_no]),None)    
 
-        for k in range(len(self.parameters.parameter_list)):
-            self.parameters.parameter_list[k].q = q[k]
+        for k in range(len(self.latent_variables.z_list)):
+            self.latent_variables.z_list[k].q = q[k]
 
-        theta = q_params[self.param_no:self.param_no+self.data.shape[0]]
+        theta = q_params[self.z_no:self.z_no+self.data.shape[0]]
 
         Y = self.data
         scores = None
-        states = np.array([q_params[self.param_no:self.param_no+self.data.shape[0]],
-            q_params[self.param_no+self.data.shape[0]:]])
+        states = np.array([q_params[self.z_no:self.z_no+self.data.shape[0]],
+            q_params[self.z_no+self.data.shape[0]:]])
         X_names = None
-        states_var = np.array([np.exp(q_ses[self.param_no:self.param_no+self.data.shape[0]]),
-            np.exp(q_ses[self.param_no+self.data.shape[0]:])])
+        states_var = np.array([np.exp(q_ses[self.z_no:self.z_no+self.data.shape[0]]),
+            np.exp(q_ses[self.z_no+self.data.shape[0]:])])
 
         self.states = states
         self.states_var = states_var
 
         return res.BBVISSResults(data_name=self.data_name,X_names=X_names,model_name=self.model_name,
-            model_type=self.model_type, parameters=self.parameters,data=Y,index=self.index,
+            model_type=self.model_type, latent_variables=self.latent_variables,data=Y,index=self.index,
             multivariate_model=self.multivariate_model,objective=posterior(q_params), 
-            method='BBVI',ses=q_ses[:self.param_no],signal=theta,scores=scores,
-            param_hide=self._param_hide,max_lag=self.max_lag,states=states,states_var=states_var)
+            method='BBVI',ses=q_ses[:self.z_no],signal=theta,scores=scores,
+            z_hide=self._z_hide,max_lag=self.max_lag,states=states,states_var=states_var)
 
     def exponential_likelihood(self,beta,alpha):
         """ Creates Exponential loglikelihood of the data given the states
@@ -741,7 +742,7 @@ class NLLT(tsm.TSM):
         Parameters
         ----------
         beta : np.array
-            Contains untransformed starting values for parameters
+            Contains untransformed starting values for latent variables
 
         alpha : np.array
             A vector of states
@@ -760,7 +761,7 @@ class NLLT(tsm.TSM):
         Parameters
         ----------
         beta : np.array
-            Contains untransformed starting values for parameters
+            Contains untransformed starting values for latent variables
 
         alpha : np.array
             A vector of states
@@ -779,7 +780,7 @@ class NLLT(tsm.TSM):
         Parameters
         ----------
         beta : np.array
-            Contains untransformed starting values for parameters
+            Contains untransformed starting values for latent variables
 
         alpha : np.array
             A vector of states
@@ -790,7 +791,7 @@ class NLLT(tsm.TSM):
         """     
         Z = np.zeros(2)
         Z[0] = 1    
-        return np.sum(ss.laplace.logpdf(self.data,np.dot(Z,alpha),scale=self.parameters.parameter_list[-1].prior.transform(beta[-1])))
+        return np.sum(ss.laplace.logpdf(self.data,np.dot(Z,alpha),scale=self.latent_variables.z_list[-1].prior.transform(beta[-1])))
 
     def laplace_likelihood_markov_blanket(self,beta,alpha):
         """ Creates Laplace Markov blanket for each state
@@ -798,7 +799,7 @@ class NLLT(tsm.TSM):
         Parameters
         ----------
         beta : np.array
-            Contains untransformed starting values for parameters
+            Contains untransformed starting values for latent variables
 
         alpha : np.array
             A vector of states
@@ -809,7 +810,7 @@ class NLLT(tsm.TSM):
         """     
         Z = np.zeros(2)
         Z[0] = 1            
-        return ss.laplace.logpdf(self.data,np.dot(Z,alpha),scale=self.parameters.parameter_list[-1].prior.transform(beta[-1]))
+        return ss.laplace.logpdf(self.data,np.dot(Z,alpha),scale=self.latent_variables.z_list[-1].prior.transform(beta[-1]))
 
     def poisson_likelihood(self,beta,alpha):
         """ Creates Poisson loglikelihood of the data given the states
@@ -817,7 +818,7 @@ class NLLT(tsm.TSM):
         Parameters
         ----------
         beta : np.array
-            Contains untransformed starting values for parameters
+            Contains untransformed starting values for latent variables
 
         alpha : np.array
             A vector of states
@@ -836,7 +837,7 @@ class NLLT(tsm.TSM):
         Parameters
         ----------
         beta : np.array
-            Contains untransformed starting values for parameters
+            Contains untransformed starting values for latent variables
 
         alpha : np.array
             A vector of states
@@ -855,7 +856,7 @@ class NLLT(tsm.TSM):
         Parameters
         ----------
         beta : np.array
-            Contains untransformed starting values for parameters
+            Contains untransformed starting values for latent variables
 
         alpha : np.array
             A vector of states
@@ -867,10 +868,10 @@ class NLLT(tsm.TSM):
         Z = np.zeros(2)
         Z[0] = 1    
         return np.sum(dst.skewt.logpdf(x=self.data,
-            df=self.parameters.parameter_list[-1].prior.transform(beta[-1]),
+            df=self.latent_variables.z_list[-1].prior.transform(beta[-1]),
             loc=np.dot(Z,alpha),
-            scale=self.parameters.parameter_list[-2].prior.transform(beta[-2]),
-            gamma=self.parameters.parameter_list[-3].prior.transform(beta[-3])))
+            scale=self.latent_variables.z_list[-2].prior.transform(beta[-2]),
+            gamma=self.latent_variables.z_list[-3].prior.transform(beta[-3])))
 
     def skewt_likelihood_markov_blanket(self,beta,alpha):
         """ Creates skewt Markov blanket for each state
@@ -878,7 +879,7 @@ class NLLT(tsm.TSM):
         Parameters
         ----------
         beta : np.array
-            Contains untransformed starting values for parameters
+            Contains untransformed starting values for latent variables
 
         alpha : np.array
             A vector of states
@@ -890,10 +891,10 @@ class NLLT(tsm.TSM):
         Z = np.zeros(2)
         Z[0] = 1    
         return dst.skewt.logpdf(x=self.data,
-            df=self.parameters.parameter_list[-1].prior.transform(beta[-1]),
+            df=self.latent_variables.z_list[-1].prior.transform(beta[-1]),
             loc=np.dot(Z,alpha),
-            scale=self.parameters.parameter_list[-2].prior.transform(beta[-2]),
-            gamma=self.parameters.parameter_list[-3].prior.transform(beta[-3]))
+            scale=self.latent_variables.z_list[-2].prior.transform(beta[-2]),
+            gamma=self.latent_variables.z_list[-3].prior.transform(beta[-3]))
 
     def t_likelihood(self,beta,alpha):
         """ Creates t loglikelihood of the date given the states
@@ -901,7 +902,7 @@ class NLLT(tsm.TSM):
         Parameters
         ----------
         beta : np.array
-            Contains untransformed starting values for parameters
+            Contains untransformed starting values for latent variables
 
         alpha : np.array
             A vector of states
@@ -913,9 +914,9 @@ class NLLT(tsm.TSM):
         Z = np.zeros(2)
         Z[0] = 1    
         return np.sum(ss.t.logpdf(x=self.data,
-            df=self.parameters.parameter_list[2].prior.transform(beta[2]),
+            df=self.latent_variables.z_list[2].prior.transform(beta[2]),
             loc=np.dot(Z,alpha),
-            scale=self.parameters.parameter_list[1].prior.transform(beta[1])))
+            scale=self.latent_variables.z_list[1].prior.transform(beta[1])))
 
     def t_likelihood_markov_blanket(self,beta,alpha):
         """ Creates t Markov blanket for each state
@@ -923,7 +924,7 @@ class NLLT(tsm.TSM):
         Parameters
         ----------
         beta : np.array
-            Contains untransformed starting values for parameters
+            Contains untransformed starting values for latent variables
 
         alpha : np.array
             A vector of states
@@ -935,9 +936,9 @@ class NLLT(tsm.TSM):
         Z = np.zeros(2)
         Z[0] = 1    
         return ss.t.logpdf(x=self.data,
-            df=self.parameters.parameter_list[2].prior.transform(beta[2]),
+            df=self.latent_variables.z_list[2].prior.transform(beta[2]),
             loc=np.dot(Z,alpha),
-            scale=self.parameters.parameter_list[1].prior.transform(beta[1]))
+            scale=self.latent_variables.z_list[1].prior.transform(beta[1]))
 
     def markov_blanket(self,beta,alpha):
         """ Creates total Markov blanket for states
@@ -945,7 +946,7 @@ class NLLT(tsm.TSM):
         Parameters
         ----------
         beta : np.array
-            Contains untransformed starting values for parameters
+            Contains untransformed starting values for latent variables
 
         alpha : np.array
             A vector of states
@@ -962,19 +963,19 @@ class NLLT(tsm.TSM):
         return likelihood_blanket + state_blanket
         
     def evo_blanket(self,beta,alpha):
-        """ Creates Markov blanket for the evolution parameters
+        """ Creates Markov blanket for the evolution latent variables
 
         Parameters
         ----------
         beta : np.array
-            Contains untransformed starting values for parameters
+            Contains untransformed starting values for latent variables
 
         alpha : np.array
             A vector of states
 
         Returns
         ----------
-        Markov blanket for evolution parameters
+        Markov blanket for evolution latent variables
         """     
         evo_blanket = np.zeros(self.state_no)
         for i in range(evo_blanket.shape[0]):
@@ -990,20 +991,20 @@ class NLLT(tsm.TSM):
         return evo_blanket
 
     def log_p_blanket(self,beta):
-        """ Creates complete Markov blanket for parameters
+        """ Creates complete Markov blanket for latent variables
 
         Parameters
         ----------
         beta : np.array
-            Contains untransformed starting values for parameters
+            Contains untransformed starting values for latent variables
 
         Returns
         ----------
-        Markov blanket for parameters
+        Markov blanket for latent variables
         """     
         states = np.zeros([self.state_no, self.data.shape[0]])
         for state_i in range(self.state_no):
-            states[state_i,:] = beta[(self.param_no + (self.data.shape[0]*state_i)):(self.param_no + (self.data.shape[0]*(state_i+1)))]     
+            states[state_i,:] = beta[(self.z_no + (self.data.shape[0]*state_i)):(self.z_no + (self.data.shape[0]*(state_i+1)))]     
         
         return np.append(self.evo_blanket(beta,states),self.markov_blanket(beta,states))
 
@@ -1028,10 +1029,10 @@ class NLLT(tsm.TSM):
 
         figsize = kwargs.get('figsize',(10,7))
 
-        if self.parameters.estimated is False:
-            raise Exception("No parameters estimated!")
+        if self.latent_variables.estimated is False:
+            raise Exception("No latent variables estimated!")
         else:
-            # Retrieve data, dates and (transformed) parameters
+            # Retrieve data, dates and (transformed) latent variables
             scale, shape, skewness = self._get_scale_and_shape()
 
             # Get expected values
@@ -1049,8 +1050,8 @@ class NLLT(tsm.TSM):
             sim_vector = np.zeros([simulations,h])
 
             for n in range(0,simulations):  
-                rnd_q = np.random.normal(0,np.sqrt(self.parameters.get_parameter_values(transformed=True)[0]),h)
-                rnd_q2 = np.random.normal(0,np.sqrt(self.parameters.get_parameter_values(transformed=True)[1]),h)
+                rnd_q = np.random.normal(0,np.sqrt(self.latent_variables.get_z_values(transformed=True)[0]),h)
+                rnd_q2 = np.random.normal(0,np.sqrt(self.latent_variables.get_z_values(transformed=True)[1]),h)
                 exp_0 = np.zeros(h)
                 exp_1 = np.zeros(h)
 
@@ -1092,8 +1093,8 @@ class NLLT(tsm.TSM):
 
         figsize = kwargs.get('figsize',(10,7))
 
-        if self.parameters.estimated is False:
-            raise Exception("No parameters estimated!")
+        if self.latent_variables.estimated is False:
+            raise Exception("No latent variables estimated!")
         else:
             date_index = copy.deepcopy(self.index)
             date_index = date_index[self.integ:self.data_original.shape[0]+1]
@@ -1151,10 +1152,10 @@ class NLLT(tsm.TSM):
         - pd.DataFrame with predictions
         """     
 
-        if self.parameters.estimated is False:
-            raise Exception("No parameters estimated!")
+        if self.latent_variables.estimated is False:
+            raise Exception("No latent variables estimated!")
         else:
-            # Retrieve data, dates and (transformed) parameters         
+            # Retrieve data, dates and (transformed) latent variables         
             date_index = self.shift_dates(h)
             forecasted_values = np.ones(h)*self.states[0][-1]
 
@@ -1234,7 +1235,7 @@ class NLLT(tsm.TSM):
         ----------
 
         beta : np.array
-            Contains untransformed starting values for parameters
+            Contains untransformed starting values for latent variables
 
         Returns
         ----------
@@ -1270,7 +1271,7 @@ class NLLT(tsm.TSM):
 
     def smoothed_state(self,data,beta, H, mu):
         """ Creates smoothed state estimate given state matrices and 
-        parameters.
+        latent variables.
 
         Parameters
         ----------
@@ -1279,7 +1280,7 @@ class NLLT(tsm.TSM):
             Data to be smoothed
 
         beta : np.array
-            Contains untransformed starting values for parameters
+            Contains untransformed starting values for latent variables
 
         Returns
         ----------

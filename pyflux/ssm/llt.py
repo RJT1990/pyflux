@@ -39,11 +39,11 @@ class LLT(tsm.TSM):
         # Initialize TSM object
         super(LLT,self).__init__('LLT')
 
-        # Parameters
+        # Latent Variables
         self.integ = integ
         self.param_no = 3
         self.max_lag = 0
-        self._param_hide = 0 # Whether to cutoff variance parameters from results
+        self._z_hide = 0 # Whether to cutoff variance latent variables from results
         self.supported_methods = ["MLE","PML","Laplace","M-H","BBVI"]
         self.default_method = "MLE"
         self.model_name = "LLT"
@@ -51,6 +51,7 @@ class LLT(tsm.TSM):
 
         # Format the data
         self.data, self.data_name, self.is_pandas, self.index = dc.data_check(data,target)
+        self.data = self.data.astype(np.float)
         self.data_original = self.data
 
         # Difference data
@@ -58,19 +59,19 @@ class LLT(tsm.TSM):
             self.data = np.diff(self.data)
             self.data_name = "Differenced " + self.data_name
 
-        self._create_parameters()
+        self._create_latent_variables()
 
-    def _create_parameters(self):
-        """ Creates model parameters
+    def _create_latent_variables(self):
+        """ Creates model latent variables
 
         Returns
         ----------
         None (changes model attributes)
         """
 
-        self.parameters.add_parameter('Sigma^2 irregular',ifr.Uniform(transform='exp'),dst.q_Normal(0,3))
-        self.parameters.add_parameter('Sigma^2 level',ifr.Uniform(transform='exp'),dst.q_Normal(0,3))
-        self.parameters.add_parameter('Sigma^2 trend',ifr.Uniform(transform='exp'),dst.q_Normal(0,3))
+        self.latent_variables.add_z('Sigma^2 irregular',ifr.Uniform(transform='exp'),dst.q_Normal(0,3))
+        self.latent_variables.add_z('Sigma^2 level',ifr.Uniform(transform='exp'),dst.q_Normal(0,3))
+        self.latent_variables.add_z('Sigma^2 trend',ifr.Uniform(transform='exp'),dst.q_Normal(0,3))
 
     def _forecast_model(self,beta,h):
         """ Creates forecasted states and variances
@@ -78,7 +79,7 @@ class LLT(tsm.TSM):
         Parameters
         ----------
         beta : np.ndarray
-            Contains untransformed starting values for parameters
+            Contains untransformed starting values for latent variables
 
         Returns
         ----------
@@ -90,7 +91,7 @@ class LLT(tsm.TSM):
         """     
 
         T, Z, R, Q, H = self._ss_matrices(beta)
-        return univariate_kalman_fcst(self.data,Z,H,T,Q,R,0.0,h)
+        return llt_univariate_kalman_fcst(self.data,Z,H,T,Q,R,0.0,h)
 
     def _model(self,data,beta):
         """ Creates the structure of the model
@@ -101,7 +102,7 @@ class LLT(tsm.TSM):
             Contains the time series
 
         beta : np.array
-            Contains untransformed starting values for parameters
+            Contains untransformed starting values for latent variables
 
         Returns
         ----------
@@ -111,7 +112,7 @@ class LLT(tsm.TSM):
 
         T, Z, R, Q, H = self._ss_matrices(beta)
 
-        return univariate_kalman(data,Z,H,T,Q,R,0.0)
+        return llt_univariate_kalman(data,Z,H,T,Q,R,0.0)
 
     def _ss_matrices(self,beta):
         """ Creates the state space matrices required
@@ -119,7 +120,7 @@ class LLT(tsm.TSM):
         Parameters
         ----------
         beta : np.array
-            Contains untransformed starting values for parameters
+            Contains untransformed starting values for latent variables
 
         Returns
         ----------
@@ -135,9 +136,9 @@ class LLT(tsm.TSM):
 
         R = np.identity(2)
         Q = np.identity(2)
-        H = np.identity(1)*self.parameters.parameter_list[0].prior.transform(beta[0])
-        Q[0][0] = self.parameters.parameter_list[1].prior.transform(beta[1])
-        Q[1][1] = self.parameters.parameter_list[2].prior.transform(beta[2])
+        H = np.identity(1)*self.latent_variables.z_list[0].prior.transform(beta[0])
+        Q[0][0] = self.latent_variables.z_list[1].prior.transform(beta[1])
+        Q[1][1] = self.latent_variables.z_list[2].prior.transform(beta[2])
 
         return T, Z, R, Q, H
 
@@ -147,7 +148,7 @@ class LLT(tsm.TSM):
         Parameters
         ----------
         beta : np.array
-            Contains untransformed starting values for parameters
+            Contains untransformed starting values for latent variables
 
         Returns
         ----------
@@ -180,16 +181,16 @@ class LLT(tsm.TSM):
 
         figsize = kwargs.get('figsize',(10,7))
 
-        if self.parameters.estimated is False:
-            raise Exception("No parameters estimated!")
+        if self.latent_variables.estimated is False:
+            raise Exception("No latent variables estimated!")
         else:
-            # Retrieve data, dates and (transformed) parameters         
-            a, P = self._forecast_model(self.parameters.get_parameter_values(),h)
+            # Retrieve data, dates and (transformed) latent variables         
+            a, P = self._forecast_model(self.latent_variables.get_z_values(),h)
             date_index = self.shift_dates(h)
             plot_values = a[0][-h-past_values:]
             forecasted_values = a[0][-h:]
-            lower = forecasted_values - 1.98*np.power(P[0][0][-h:] + self.parameters.parameter_list[0].prior.transform(self.parameters.get_parameter_values()[0]),0.5)
-            upper = forecasted_values + 1.98*np.power(P[0][0][-h:] + self.parameters.parameter_list[0].prior.transform(self.parameters.get_parameter_values()[0]),0.5)
+            lower = forecasted_values - 1.98*np.power(P[0][0][-h:] + self.latent_variables.z_list[0].prior.transform(self.latent_variables.get_z_values()[0]),0.5)
+            upper = forecasted_values + 1.98*np.power(P[0][0][-h:] + self.latent_variables.z_list[0].prior.transform(self.latent_variables.get_z_values()[0]),0.5)
             lower = np.append(plot_values[-h-1],lower)
             upper = np.append(plot_values[-h-1],upper)
 
@@ -221,18 +222,18 @@ class LLT(tsm.TSM):
         figsize = kwargs.get('figsize',(10,7))
         series_type = kwargs.get('series_type','Smoothed')
 
-        if self.parameters.estimated is False:
-            raise Exception("No parameters estimated!")
+        if self.latent_variables.estimated is False:
+            raise Exception("No latent variables estimated!")
         else:
             date_index = copy.deepcopy(self.index)
             date_index = date_index[self.integ:self.data_original.shape[0]+1]
 
             if series_type == 'Smoothed':
-                mu, V= self.smoothed_state(self.data,self.parameters.get_parameter_values())
+                mu, V= self.smoothed_state(self.data,self.latent_variables.get_z_values())
             elif series_type == 'Filtered':
-                mu, V, _, _, _ = self._model(self.data,self.parameters.get_parameter_values())
+                mu, V, _, _, _ = self._model(self.data,self.latent_variables.get_z_values())
             else:
-                mu, V = self.smoothed_state(self.data,self.parameters.get_parameter_values())
+                mu, V = self.smoothed_state(self.data,self.latent_variables.get_z_values())
 
             mu0 = mu[0][:-1]
             mu1 = mu[1][:-1]
@@ -246,7 +247,7 @@ class LLT(tsm.TSM):
 
             if intervals == True:
                 alpha =[0.15*i/float(100) for i in range(50,12,-2)]
-                plt.fill_between(date_index[5:], mu0[5:] + 1.98*np.sqrt(Vlev[5:]), mu0[5:] - 1.98*np.sqrt(Vlev[5:]), alpha=0.15,label='95% C.I.')   
+                plt.fill_between(date_index[2:], mu0[2:] + 1.98*np.sqrt(Vlev[2:]), mu0[2:] - 1.98*np.sqrt(Vlev[2:]), alpha=0.15,label='95% C.I.')   
 
             plt.plot(date_index,self.data,label='Data')
             plt.plot(date_index,mu0,label=series_type,c='black')
@@ -256,7 +257,7 @@ class LLT(tsm.TSM):
 
             if intervals == True:
                 alpha =[0.15*i/float(100) for i in range(50,12,-2)]
-                plt.fill_between(date_index[5:], mu0[5:] + 1.98*np.sqrt(Vlev[5:]), mu0[5:] - 1.98*np.sqrt(Vlev[5:]), alpha=0.15,label='95% C.I.')   
+                plt.fill_between(date_index[2:], mu0[2:] + 1.98*np.sqrt(Vlev[2:]), mu0[2:] - 1.98*np.sqrt(Vlev[2:]), alpha=0.15,label='95% C.I.')   
 
             plt.title(self.data_name + " Local Level")  
             plt.plot(date_index,mu0,label='Local Level')
@@ -266,7 +267,7 @@ class LLT(tsm.TSM):
 
             if intervals == True:
                 alpha =[0.15*i/float(100) for i in range(50,12,-2)]
-                plt.fill_between(date_index[5:], mu1[5:] + 1.98*np.sqrt(Vtrend[5:]), mu1[5:] - 1.98*np.sqrt(Vtrend[5:]), alpha=0.15,label='95% C.I.')   
+                plt.fill_between(date_index[2:], mu1[2:] + 1.98*np.sqrt(Vtrend[2:]), mu1[2:] - 1.98*np.sqrt(Vtrend[2:]), alpha=0.15,label='95% C.I.')   
 
             plt.title(self.data_name + " Trend")    
             plt.plot(date_index,mu1,label='Stochastic Trend')
@@ -290,11 +291,11 @@ class LLT(tsm.TSM):
         - pd.DataFrame with predictions
         """     
 
-        if self.parameters.estimated is False:
-            raise Exception("No parameters estimated!")
+        if self.latent_variables.estimated is False:
+            raise Exception("No latent variables estimated!")
         else:
-            # Retrieve data, dates and (transformed) parameters         
-            a, P = self._forecast_model(self.parameters.get_parameter_values(),h)
+            # Retrieve data, dates and (transformed) latent variables         
+            a, P = self._forecast_model(self.latent_variables.get_z_values(),h)
             date_index = self.shift_dates(h)
             forecasted_values = a[0][-h:]
 
@@ -359,13 +360,13 @@ class LLT(tsm.TSM):
 
     def simulation_smoother(self,beta):
         """ Koopman's simulation smoother - simulates from states given
-        model parameters and observations
+        model latent variables and observations
 
         Parameters
         ----------
 
         beta : np.array
-            Contains untransformed starting values for parameters
+            Contains untransformed starting values for latent variables
 
         Returns
         ----------
@@ -409,7 +410,7 @@ class LLT(tsm.TSM):
             Data to be smoothed
 
         beta : np.array
-            Contains untransformed starting values for parameters
+            Contains untransformed starting values for latent variables
 
         Returns
         ----------
@@ -417,5 +418,5 @@ class LLT(tsm.TSM):
         """         
 
         T, Z, R, Q, H = self._ss_matrices(beta)
-        alpha, V = univariate_KFS(data,Z,H,T,Q,R,0.0)
+        alpha, V = llt_univariate_KFS(data,Z,H,T,Q,R,0.0)
         return alpha, V

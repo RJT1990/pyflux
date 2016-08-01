@@ -42,50 +42,49 @@ class LMEGARCH(tsm.TSM):
         # Initialize TSM object
         super(LMEGARCH,self).__init__('LMEGARCH')
 
-        # Parameters
+        # Latent variables
         self.p = p
         self.q = q
-        self.param_no = self.p*2 + self.q*2 + 3
+        self.z_no = self.p*2 + self.q*2 + 3
         self.max_lag = max(self.p,self.q)
         self.leverage = False
         self.model_name = "LMEGARCH(" + str(self.p) + "," + str(self.q) + ")"
-        self._param_hide = 0 # Whether to cutoff variance parameters from results
+        self._z_hide = 0 # Whether to cutoff variance latent variables from results
         self.supported_methods = ["MLE","PML","Laplace","M-H","BBVI"]
         self.default_method = "MLE"
         self.multivariate_model = False
 
         # Format the data
         self.data, self.data_name, self.is_pandas, self.index = dc.data_check(data,target)
-        self._create_parameters()
+        self._create_latent_variables()
 
-    def _create_parameters(self):
-        """ Creates model parameters
+    def _create_latent_variables(self):
+        """ Creates model latent variables
 
         Returns
         ----------
         None (changes model attributes)
         """
 
-        self.parameters.add_parameter('Vol Constant',ifr.Normal(0,3,transform=None),dst.q_Normal(0,3))
+        self.latent_variables.add_z('Vol Constant',ifr.Normal(0,3,transform=None),dst.q_Normal(0,3))
 
         for component in range(2):
             increment = 0.05
             for p_term in range(self.p):
-                self.parameters.add_parameter("Component " + str(component+1) + ' p(' + str(p_term+1) + ')',ifr.Normal(0,0.5,transform=None),dst.q_Normal(0,3))
+                self.latent_variables.add_z("Component " + str(component+1) + ' p(' + str(p_term+1) + ')',ifr.Normal(0,0.5,transform='logit'),dst.q_Normal(0,3))
                 if p_term == 0:
-                    self.parameters.parameter_list[1+p_term+component*(self.p+self.q)].start = 0.00
+                    self.latent_variables.z_list[1+p_term+component*(self.p+self.q)].start = 3.00
 
             for q_term in range(self.q):
-                self.parameters.add_parameter("Component " + str(component+1) + ' q(' + str(q_term+1) + ')',ifr.Normal(0,0.5,transform=None),dst.q_Normal(0,3))
+                self.latent_variables.add_z("Component " + str(component+1) + ' q(' + str(q_term+1) + ')',ifr.Normal(0,0.5,transform='logit'),dst.q_Normal(0,3))
                 if p_term == 0 and component == 0:
-                    self.parameters.parameter_list[1+self.p+q_term+component*(self.p+self.q)].start = 0.001
+                    self.latent_variables.z_list[1+self.p+q_term+component*(self.p+self.q)].start = -4.00  
                 elif p_term == 0 and component == 1:
-                    self.parameters.parameter_list[1+self.p+q_term+component*(self.p+self.q)].start = 0.01
+                    self.latent_variables.z_list[1+self.p+q_term+component*(self.p+self.q)].start = -3.00  
 
-        self.parameters.add_parameter('v',ifr.Uniform(transform='exp'),dst.q_Normal(0,3))
-        self.parameters.add_parameter('Returns Constant',ifr.Normal(0,3,transform=None),dst.q_Normal(0,3))
-        self.parameters.parameter_list[0].start = self.parameters.parameter_list[0].prior.itransform(np.log(np.mean(np.power(self.data,2))))
-        self.parameters.parameter_list[-2].start = 2.0
+        self.latent_variables.add_z('v',ifr.Uniform(transform='exp'),dst.q_Normal(0,3))
+        self.latent_variables.add_z('Returns Constant',ifr.Normal(0,3,transform=None),dst.q_Normal(0,3))
+        self.latent_variables.z_list[-2].start = 2.0
 
     def _model(self,beta):
         """ Creates the structure of the model
@@ -93,7 +92,7 @@ class LMEGARCH(tsm.TSM):
         Parameters
         ----------
         beta : np.array
-            Contains untransformed starting values for parameters
+            Contains untransformed starting values for latent variables
 
         Returns
         ----------
@@ -111,8 +110,8 @@ class LMEGARCH(tsm.TSM):
         X = np.ones(Y.shape[0])
         scores = np.zeros(Y.shape[0])
 
-        # Transform parameters
-        parm = np.array([self.parameters.parameter_list[k].prior.transform(beta[k]) for k in range(beta.shape[0])])
+        # Transform latent variables
+        parm = np.array([self.latent_variables.z_list[k].prior.transform(beta[k]) for k in range(beta.shape[0])])
 
         lmda = np.ones(Y.shape[0])*parm[0]
         lmda_c = np.zeros((Y.shape[0],2))
@@ -166,7 +165,7 @@ class LMEGARCH(tsm.TSM):
             How many steps ahead for the prediction
 
         t_params : np.array
-            A vector of (transformed) parameters
+            A vector of (transformed) latent variables
 
         Returns
         ----------
@@ -226,7 +225,7 @@ class LMEGARCH(tsm.TSM):
             How many steps ahead for the prediction
 
         t_params : np.array
-            A vector of (transformed) parameters
+            A vector of (transformed) latent variables
 
         simulations : int
             How many simulations to perform
@@ -317,13 +316,13 @@ class LMEGARCH(tsm.TSM):
             pass
         else:
             self.leverage = True
-            self.param_no += 1
-            self.parameters.parameter_list.pop()
-            self.parameters.parameter_list.pop()
-            self.parameters.add_parameter('Leverage Term',ifr.Uniform(transform=None),dst.q_Normal(0,3))
-            self.parameters.add_parameter('v',ifr.Uniform(transform='exp'),dst.q_Normal(0,3))
-            self.parameters.add_parameter('Returns Constant',ifr.Normal(0,3,transform=None),dst.q_Normal(0,3))
-            self.parameters.parameter_list[-2].start = 2.0
+            self.z_no += 1
+            self.latent_variables.z_list.pop()
+            self.latent_variables.z_list.pop()
+            self.latent_variables.add_z('Leverage Term',ifr.Uniform(transform=None),dst.q_Normal(0,3))
+            self.latent_variables.add_z('v',ifr.Uniform(transform='exp'),dst.q_Normal(0,3))
+            self.latent_variables.add_z('Returns Constant',ifr.Normal(0,3,transform=None),dst.q_Normal(0,3))
+            self.latent_variables.z_list[-2].start = 2.0
 
     def neg_loglik(self,beta):
         """ Creates the negative log-likelihood of the model
@@ -331,7 +330,7 @@ class LMEGARCH(tsm.TSM):
         Parameters
         ----------
         beta : np.array
-            Contains untransformed starting values for parameters
+            Contains untransformed starting values for latent variables
 
         Returns
         ----------
@@ -340,8 +339,8 @@ class LMEGARCH(tsm.TSM):
 
         lmda, _, Y, ___ = self._model(beta)
         return -np.sum(ss.t.logpdf(x=Y,
-            df=self.parameters.parameter_list[-2].prior.transform(beta[-2]),
-            loc=np.ones(lmda.shape[0])*self.parameters.parameter_list[-1].prior.transform(beta[-1]),scale=np.exp(lmda/2.0)))
+            df=self.latent_variables.z_list[-2].prior.transform(beta[-2]),
+            loc=np.ones(lmda.shape[0])*self.latent_variables.z_list[-1].prior.transform(beta[-1]),scale=np.exp(lmda/2.0)))
     
     def plot_fit(self,**kwargs):
         """ Plots the fit of the model
@@ -353,13 +352,13 @@ class LMEGARCH(tsm.TSM):
 
         figsize = kwargs.get('figsize',(10,7))
 
-        if self.parameters.estimated is False:
-            raise Exception("No parameters estimated!")
+        if self.latent_variables.estimated is False:
+            raise Exception("No latent variables estimated!")
         else:
-            t_params = self.transform_parameters()
+            t_params = self.transform_z()
             plt.figure(figsize=figsize)
             date_index = self.index[max(self.p,self.q):]
-            sigma2, lmda_c, Y, ___ = self._model(self.parameters.get_parameter_values())
+            sigma2, lmda_c, Y, ___ = self._model(self.latent_variables.get_z_values())
             plt.plot(date_index,np.abs(Y-t_params[-1]),label=self.data_name + ' Demeaned Absolute Values')
             plt.plot(date_index,np.exp(sigma2/2.0),label='LMEGARCH(' + str(self.p) + ',' + str(self.q) + ') Conditional Volaility',c='black')                   
             plt.title(self.data_name + " Volatility Plot")  
@@ -388,14 +387,14 @@ class LMEGARCH(tsm.TSM):
 
         figsize = kwargs.get('figsize',(10,7))
 
-        if self.parameters.estimated is False:
-            raise Exception("No parameters estimated!")
+        if self.latent_variables.estimated is False:
+            raise Exception("No latent variables estimated!")
         else:
 
-            # Retrieve data, dates and (transformed) parameters
-            lmda, lmda_c, Y, scores = self._model(self.parameters.get_parameter_values())           
+            # Retrieve data, dates and (transformed) latent variables
+            lmda, lmda_c, Y, scores = self._model(self.latent_variables.get_z_values())           
             date_index = self.shift_dates(h)
-            t_params = self.transform_parameters()
+            t_params = self.transform_z()
 
             # Get mean prediction and simulations (for errors)
             mean_values = self._mean_prediction(lmda,lmda_c,Y,scores,h,t_params)
@@ -464,7 +463,7 @@ class LMEGARCH(tsm.TSM):
         predictions = self.predict_is(h)
         data = self.data[-h:]
 
-        t_params = self.transform_parameters()
+        t_params = self.transform_z()
 
         plt.plot(date_index,np.abs(data-t_params[-1]),label='Data')
         plt.plot(date_index,predictions,label='Predictions',c='black')
@@ -485,15 +484,15 @@ class LMEGARCH(tsm.TSM):
         - pd.DataFrame with predicted values
         """     
 
-        if self.parameters.estimated is False:
-            raise Exception("No parameters estimated!")
+        if self.latent_variables.estimated is False:
+            raise Exception("No latent variables estimated!")
         else:
 
-            sigma2, lmda_c, Y, scores = self._model(self.parameters.get_parameter_values()) 
+            lmda, lmda_c, Y, scores = self._model(self.latent_variables.get_z_values()) 
             date_index = self.shift_dates(h)
-            t_params = self.transform_parameters()
+            t_params = self.transform_z()
 
-            mean_values = self._mean_prediction(sigma2,Y,scores,h,t_params)
+            mean_values = self._mean_prediction(lmda, lmda_c, Y,scores,h,t_params)
             forecasted_values = mean_values[-h:]
             result = pd.DataFrame(np.exp(forecasted_values/2.0))
             result.rename(columns={0:self.data_name}, inplace=True)

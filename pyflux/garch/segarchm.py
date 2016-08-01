@@ -17,7 +17,28 @@ from .. import tsm as tsm
 from .. import gas as gas
 from .. import data_check as dc
 
-def logpdf(x, shape, loc=0.0, scale=1.0, skewness = 1.0):
+def logpdf(x, shape, loc=0.0, scale=1.0, skewness=1.0):
+    """
+    Log PDF for the Skew-t distribution
+
+    Parameters
+    ----------
+    x : np.array
+        random variables
+
+    shape : float
+        The degrees of freedom for the skew-t distribution
+
+    loc : np.array
+        The location parameter for the skew-t distribution
+
+    scale : float
+        The scale of the distribution
+
+    skewness : float
+        Skewness parameter (if 1, no skewness, if > 1, +ve skew, if < 1, -ve skew)
+
+    """
     m1 = (np.sqrt(shape)*sp.gamma((shape-1.0)/2.0))/(np.sqrt(np.pi)*sp.gamma(shape/2.0))
     loc = loc + (skewness - (1.0/skewness))*scale*m1
     result = np.zeros(x.shape[0])
@@ -27,14 +48,14 @@ def logpdf(x, shape, loc=0.0, scale=1.0, skewness = 1.0):
 
 
 class SEGARCHM(tsm.TSM):
-    """ Inherits time series methods from TSM class.
+    """ Inherits time series methods from TSM parent class.
 
     **** skew BETA-t-EGARCH IN MEAN MODELS ****
 
     Parameters
     ----------
     data : pd.DataFrame or np.array
-        Field to specify the time series data that will be used.
+        Field to specify the univariate time series data that will be used.
 
     p : int
         Field to specify how many GARCH terms the model will have.
@@ -47,68 +68,75 @@ class SEGARCHM(tsm.TSM):
         column/array will be selected as the dependent variable.
     """
 
-    def __init__(self,data,p,q,target=None):
+    def __init__(self, data, p, q, target=None):
 
         # Initialize TSM object
         super(SEGARCHM,self).__init__('SEGARCHM')
 
-        # Parameters
+        # Latent variables
         self.p = p
         self.q = q
-        self.param_no = self.p + self.q + 5
+        self.z_no = self.p + self.q + 5
         self.max_lag = max(self.p,self.q)
         self.leverage = False
         self.model_name = "SEGARCHM(" + str(self.p) + "," + str(self.q) + ")"
-        self._param_hide = 0 # Whether to cutoff variance parameters from results
+        self._z_hide = 0 # Whether to cutoff variance latent variables from results
         self.supported_methods = ["MLE","PML","Laplace","M-H","BBVI"]
         self.default_method = "MLE"
         self.multivariate_model = False
 
         # Format the data
         self.data, self.data_name, self.is_pandas, self.index = dc.data_check(data,target)
-        self._create_parameters()
+        self._create_latent_variables()
 
-    def _create_parameters(self):
-        """ Creates model parameters
+    def _create_latent_variables(self):
+        """ Creates model latent variables
 
         Returns
         ----------
         None (changes model attributes)
         """
 
-        self.parameters.add_parameter('Vol Constant',ifr.Normal(0,3,transform=None),dst.q_Normal(0,3))
+        self.latent_variables.add_z('Vol Constant',ifr.Normal(0,3,transform=None),dst.q_Normal(0,3))
 
         for p_term in range(self.p):
-            self.parameters.add_parameter('p(' + str(p_term+1) + ')',ifr.Normal(0,0.5,transform=None),dst.q_Normal(0,3))
-
+            self.latent_variables.add_z('p(' + str(p_term+1) + ')',ifr.Normal(0,0.5,transform='logit'),dst.q_Normal(0,3))
+            if p_term == 0:
+                self.latent_variables.z_list[-1].start = 3.00
+            else:
+                self.latent_variables.z_list[-1].start = -4.00
+                
         for q_term in range(self.q):
-            self.parameters.add_parameter('q(' + str(q_term+1) + ')',ifr.Normal(0,0.5,transform=None),dst.q_Normal(0,3))
+            self.latent_variables.add_z('q(' + str(q_term+1) + ')',ifr.Normal(0,0.5,transform='logit'),dst.q_Normal(0,3))
+            if q_term == 0:
+                self.latent_variables.z_list[-1].start = -1.50  
+            else: 
+                self.latent_variables.z_list[-1].start = -4.00 
 
-        self.parameters.add_parameter('Skewness',ifr.Uniform(transform='exp'),dst.q_Normal(0,3))
-        self.parameters.add_parameter('v',ifr.Uniform(transform='exp'),dst.q_Normal(0,3))
-        self.parameters.add_parameter('Returns Constant',ifr.Normal(0,3,transform=None),dst.q_Normal(0,3))
-        self.parameters.add_parameter('GARCH-M',ifr.Normal(0,3,transform=None),dst.q_Normal(0,3))
+        self.latent_variables.add_z('Skewness',ifr.Uniform(transform='exp'),dst.q_Normal(0,3))
+        self.latent_variables.add_z('v',ifr.Uniform(transform='exp'),dst.q_Normal(0,3))
+        self.latent_variables.add_z('Returns Constant',ifr.Normal(0,3,transform=None),dst.q_Normal(0,3))
+        self.latent_variables.add_z('GARCH-M',ifr.Normal(0,3,transform=None),dst.q_Normal(0,3))
 
-        self.parameters.parameter_list[0].start = self.parameters.parameter_list[0].prior.itransform(np.log(np.mean(np.power(self.data,2))))
-        self.parameters.parameter_list[-3].start = 3.0
+        self.latent_variables.z_list[-3].start = 3.0
 
-    def _model(self,beta):
-        """ Creates the structure of the model
+    def _model(self, beta):
+        """ Creates the structure of the model (model matrices etc)
 
         Parameters
         ----------
-        beta : np.array
-            Contains untransformed starting values for parameters
+        beta : np.ndarray
+            Contains untransformed starting values for latent variables
 
         Returns
         ----------
-        lambda : np.array
+        lambda : np.ndarray
             Contains the values for the conditional volatility series
 
-        Y : np.array
+        Y : np.ndarray
             Contains the length-adjusted time series (accounting for lags)
 
-        scores : np.array
+        scores : np.ndarray
             Contains the score terms for the time series
         """
 
@@ -116,8 +144,8 @@ class SEGARCHM(tsm.TSM):
         X = np.ones(Y.shape[0])
         scores = np.zeros(Y.shape[0])
 
-        # Transform parameters
-        parm = np.array([self.parameters.parameter_list[k].prior.transform(beta[k]) for k in range(beta.shape[0])])
+        # Transform latent variables
+        parm = np.array([self.latent_variables.z_list[k].prior.transform(beta[k]) for k in range(beta.shape[0])])
 
         lmda = np.ones(Y.shape[0])*parm[0]
         theta = np.ones(Y.shape[0])*parm[-2]
@@ -141,30 +169,30 @@ class SEGARCHM(tsm.TSM):
                 if self.leverage is True:
                     lmda[t] += parm[-5]*np.sign(-(Y[t-1]-theta[t-1]))*(scores[t-1]+1)
 
-            theta[t] += parm[-1]*np.exp(lmda[t]/2.0) + (parm[-4] - (1.0/parm[-4]))*np.exp(lmda[t]/2.0)*(np.sqrt(parm[-3])*sp.gamma((parm[-3]-1.0)/2.0))/(np.sqrt(np.pi)*sp.gamma(parm[-3]/2.0))
+                theta[t] += parm[-1]*np.exp(lmda[t]/2.0) + (parm[-4] - (1.0/parm[-4]))*np.exp(lmda[t]/2.0)*(np.sqrt(parm[-3])*sp.gamma((parm[-3]-1.0)/2.0))/(np.sqrt(np.pi)*sp.gamma(parm[-3]/2.0))
             scores[t] = gas.SkewBetatScore.mu_adj_score(Y[t],theta[t],lmda[t],parm[-3],parm[-4])
 
         return lmda, Y, scores, theta
 
-    def _mean_prediction(self,lmda,Y,scores,h,t_params):
+    def _mean_prediction(self, lmda, Y, scores, h, t_params):
         """ Creates a h-step ahead mean prediction
 
         Parameters
         ----------
-        lmda : np.array
+        lmda : np.ndarray
             The past predicted values
 
-        Y : np.array
+        Y : np.ndarray
             The past data
 
-        scores : np.array
+        scores : np.ndarray
             The past scores
 
         h : int
             How many steps ahead for the prediction
 
-        t_params : np.array
-            A vector of (transformed) parameters
+        t_params : np.ndarray
+            A vector of (transformed) latent variables
 
         Returns
         ----------
@@ -177,16 +205,17 @@ class SEGARCHM(tsm.TSM):
         Y_exp = Y.copy()
         m1 = (np.sqrt(t_params[-3])*sp.gamma((t_params[-3]-1.0)/2.0))/(np.sqrt(np.pi)*sp.gamma(t_params[-3]/2.0))
         temp_theta = t_params[-2] + (t_params[-4] - (1.0/t_params[-4]))*np.exp(lmda_exp[-1]/2.0)*m1
+        
         # Loop over h time periods          
-        for t in range(0,h):
+        for t in range(0, h):
             new_value = t_params[0]
 
             if self.p != 0:
-                for j in range(1,self.p+1):
+                for j in range(1, self.p+1):
                     new_value += t_params[j]*lmda_exp[-j]
 
             if self.q != 0:
-                for k in range(1,self.q+1):
+                for k in range(1, self.q+1):
                     new_value += t_params[k+self.p]*scores_exp[-k]
 
             if self.leverage is True:
@@ -200,7 +229,7 @@ class SEGARCHM(tsm.TSM):
 
         return lmda_exp
 
-    def _sim_prediction(self,lmda,Y,scores,h,t_params,simulations):
+    def _sim_prediction(self, lmda, Y, scores, h, t_params, simulations):
         """ Simulates a h-step ahead mean prediction
 
         Parameters
@@ -218,7 +247,7 @@ class SEGARCHM(tsm.TSM):
             How many steps ahead for the prediction
 
         t_params : np.array
-            A vector of (transformed) parameters
+            A vector of (transformed) latent variables
 
         simulations : int
             How many simulations to perform
@@ -306,17 +335,17 @@ class SEGARCHM(tsm.TSM):
             pass
         else:
             self.leverage = True
-            self.param_no += 1
-            self.parameters.parameter_list.pop()
-            self.parameters.parameter_list.pop()
-            self.parameters.parameter_list.pop()
-            self.parameters.parameter_list.pop()
-            self.parameters.add_parameter('Leverage Term',ifr.Uniform(transform=None),dst.q_Normal(0,3))
-            self.parameters.add_parameter('Skewness',ifr.Uniform(transform='exp'),dst.q_Normal(0,3))
-            self.parameters.add_parameter('v',ifr.Uniform(transform='exp'),dst.q_Normal(0,3))
-            self.parameters.add_parameter('Returns Constant',ifr.Normal(0,3,transform=None),dst.q_Normal(0,3))
-            self.parameters.add_parameter('GARCH-M',ifr.Normal(0,3,transform=None),dst.q_Normal(0,3))
-            self.parameters.parameter_list[-3].start = 2.0
+            self.z_no += 1
+            self.latent_variables.z_list.pop()
+            self.latent_variables.z_list.pop()
+            self.latent_variables.z_list.pop()
+            self.latent_variables.z_list.pop()
+            self.latent_variables.add_z('Leverage Term',ifr.Uniform(transform=None),dst.q_Normal(0,3))
+            self.latent_variables.add_z('Skewness',ifr.Uniform(transform='exp'),dst.q_Normal(0,3))
+            self.latent_variables.add_z('v',ifr.Uniform(transform='exp'),dst.q_Normal(0,3))
+            self.latent_variables.add_z('Returns Constant',ifr.Normal(0,3,transform=None),dst.q_Normal(0,3))
+            self.latent_variables.add_z('GARCH-M',ifr.Normal(0,3,transform=None),dst.q_Normal(0,3))
+            self.latent_variables.z_list[-3].start = 2.0
 
     def neg_loglik(self,beta):
         """ Creates the negative log-likelihood of the model
@@ -324,7 +353,7 @@ class SEGARCHM(tsm.TSM):
         Parameters
         ----------
         beta : np.array
-            Contains untransformed starting values for parameters
+            Contains untransformed starting values for latent variables
 
         Returns
         ----------
@@ -332,9 +361,9 @@ class SEGARCHM(tsm.TSM):
         """     
 
         lmda, Y, ___, theta = self._model(beta)
-        return -np.sum(logpdf(Y, self.parameters.parameter_list[-3].prior.transform(beta[-3]), 
+        return -np.sum(logpdf(Y, self.latent_variables.z_list[-3].prior.transform(beta[-3]), 
             loc=theta, scale=np.exp(lmda/2.0), 
-            skewness = self.parameters.parameter_list[-4].prior.transform(beta[-4])))
+            skewness = self.latent_variables.z_list[-4].prior.transform(beta[-4])))
     
     def plot_fit(self,**kwargs):
         """ Plots the fit of the model
@@ -346,13 +375,13 @@ class SEGARCHM(tsm.TSM):
 
         figsize = kwargs.get('figsize',(10,7))
 
-        if self.parameters.estimated is False:
-            raise Exception("No parameters estimated!")
+        if self.latent_variables.estimated is False:
+            raise Exception("No latent variables estimated!")
         else:
-            t_params = self.transform_parameters()
+            t_params = self.transform_z()
             plt.figure(figsize=figsize)
             date_index = self.index[max(self.p,self.q):]
-            sigma2, Y, ___, theta = self._model(self.parameters.get_parameter_values())
+            sigma2, Y, ___, theta = self._model(self.latent_variables.get_z_values())
             plt.plot(date_index,np.abs(Y-theta),label=self.data_name + ' Absolute Demeaned Values')
             plt.plot(date_index,np.exp(sigma2/2.0),label='SEGARCHM(' + str(self.p) + ',' + str(self.q) + ') Conditional Volatility',c='black')                   
             plt.title(self.data_name + " Volatility Plot")  
@@ -381,14 +410,14 @@ class SEGARCHM(tsm.TSM):
 
         figsize = kwargs.get('figsize',(10,7))
 
-        if self.parameters.estimated is False:
-            raise Exception("No parameters estimated!")
+        if self.latent_variables.estimated is False:
+            raise Exception("No latent variables estimated!")
         else:
 
-            # Retrieve data, dates and (transformed) parameters
-            lmda, Y, scores, __ = self._model(self.parameters.get_parameter_values())           
+            # Retrieve data, dates and (transformed) latent variables
+            lmda, Y, scores, __ = self._model(self.latent_variables.get_z_values())           
             date_index = self.shift_dates(h)
-            t_params = self.transform_parameters()
+            t_params = self.transform_z()
 
             # Get mean prediction and simulations (for errors)
             mean_values = self._mean_prediction(lmda,Y,scores,h,t_params)
@@ -455,7 +484,7 @@ class SEGARCHM(tsm.TSM):
         date_index = self.index[-h:]
         predictions = self.predict_is(h)
         data = self.data[-h:]
-        t_params = self.transform_parameters()
+        t_params = self.transform_z()
         loc = t_params[-2] + t_params[-1]*predictions.values.T[0] + (t_params[-4] - (1.0/t_params[-4]))*predictions.values.T[0]*(np.sqrt(t_params[-3])*sp.gamma((t_params[-3]-1.0)/2.0))/(np.sqrt(np.pi)*sp.gamma(t_params[-3]/2.0))
 
         plt.plot(date_index,np.abs(data-loc),label='Data')
@@ -477,13 +506,13 @@ class SEGARCHM(tsm.TSM):
         - pd.DataFrame with predicted values
         """     
 
-        if self.parameters.estimated is False:
-            raise Exception("No parameters estimated!")
+        if self.latent_variables.estimated is False:
+            raise Exception("No latent variables estimated!")
         else:
 
-            sigma2, Y, scores, __ = self._model(self.parameters.get_parameter_values()) 
+            sigma2, Y, scores, __ = self._model(self.latent_variables.get_z_values()) 
             date_index = self.shift_dates(h)
-            t_params = self.transform_parameters()
+            t_params = self.transform_z()
 
             mean_values = self._mean_prediction(sigma2,Y,scores,h,t_params)
             forecasted_values = mean_values[-h:]

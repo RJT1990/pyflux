@@ -17,7 +17,7 @@ from .inference import BBVI, MetropolisHastings, norm_post_sim, Normal, InverseG
 from .output import TablePrinter
 from .tests import find_p_value
 from .distributions import q_Normal
-from .parameter import Parameter, Parameters
+from .latent_variables import LatentVariable, LatentVariables
 from .results import BBVIResults, MLEResults, LaplaceResults, MCMCResults
 
 class TSM(object):
@@ -35,53 +35,53 @@ class TSM(object):
 
         # Holding variables for model output
         self.model_type = model_type
-        self.parameters = Parameters(self.model_type)
+        self.latent_variables = LatentVariables(self.model_type)
 
-    def _categorize_model_output(self, parameters):
+    def _categorize_model_output(self, z):
         if self.model_type in ['GAS','GASX','GASLLEV','GARCH','EGARCH','EGARCHM']:
-            theta, Y, scores = self._model(parameters)
+            theta, Y, scores = self._model(z)
             states = None
             states_var = None
             X_names = None
         elif self.model_type in ['GASLLT']:
-            theta, mu_t, Y, scores = self._model(parameters)
+            theta, mu_t, Y, scores = self._model(z)
             states = np.array([theta, mu_t])
             states_var = None
             X_names = None
         elif self.model_type in ['LMEGARCH']:
-            theta, _, Y, scores = self._model(parameters)
+            theta, _, Y, scores = self._model(z)
             states = None
             states_var = None
             X_names = None    
         elif self.model_type in ['SEGARCH','SEGARCHM']:
-            theta, Y, scores, y_theta = self._model(parameters)
+            theta, Y, scores, y_theta = self._model(z)
             states = None
             states_var = None
             X_names = None    
         elif self.model_type in ['EGARCHMReg']:
-            theta, Y, scores, _ = self._model(parameters)
+            theta, Y, scores, _ = self._model(z)
             states = None
             states_var = None
             X_names = None           
         elif self.model_type in ['GASReg']:
-            theta, Y, scores, states = self._model(parameters)
+            theta, Y, scores, states = self._model(z)
             states_var = None
             X_names = self.X_names
-        elif self.model_type in ['LLEV','LLT','DynLin']:
+        elif self.model_type in ['LLEV','LLT','DynReg']:
             Y = self.data
             scores = None
-            states, states_var = self.smoothed_state(self.data,parameters)
+            states, states_var = self.smoothed_state(self.data,z)
             theta = states[0][:-1]
             X_names = None  
         elif self.model_type in ['GPNARX','GPR','GP']:
             Y = self.data*self._norm_std + self._norm_mean
             scores = None
-            theta = self.expected_values(parameters)*self._norm_std + self._norm_mean
+            theta = self.expected_values(z)*self._norm_std + self._norm_mean
             X_names = None  
             states = None   
             states_var = None
         else:
-            theta, Y = self._model(parameters)
+            theta, Y = self._model(z)
             scores = None
             states = None
             states_var = None
@@ -108,47 +108,50 @@ class TSM(object):
         BBVIResults object
         """
 
-        # Starting parameters
-        phi = self.parameters.get_parameter_starting_values()
+        # Starting values
+        phi = self.latent_variables.get_z_starting_values()
         phi = kwargs.get('start',phi).copy() # If user supplied
         batch_size = kwargs.get('batch_size',12) # If user supplied
-        p = optimize.minimize(posterior,phi,method='L-BFGS-B') # PML starting values
-        start_loc = 0.8*p.x + 0.2*phi
+        if self.model_type not in ['GPNARX','GPR','GP']:
+            p = optimize.minimize(posterior,phi,method='L-BFGS-B') # PML starting values
+            start_loc = 0.8*p.x + 0.2*phi
+        else:
+            start_loc = phi
         start_ses = None
 
         # Starting values for approximate distribution
-        for i in range(len(self.parameters.parameter_list)):
-            approx_dist = self.parameters.parameter_list[i].q
+        for i in range(len(self.latent_variables.z_list)):
+            approx_dist = self.latent_variables.z_list[i].q
             if isinstance(approx_dist, q_Normal):
                 if start_ses is None:
-                    self.parameters.parameter_list[i].q.loc = start_loc[i]
-                    self.parameters.parameter_list[i].q.scale = -3.0
+                    self.latent_variables.z_list[i].q.loc = start_loc[i]
+                    self.latent_variables.z_list[i].q.scale = -3.0
                 else:
-                    self.parameters.parameter_list[i].q.loc = start_loc[i]
-                    self.parameters.parameter_list[i].q.scale = start_ses[i]
+                    self.latent_variables.z_list[i].q.loc = start_loc[i]
+                    self.latent_variables.z_list[i].q.scale = start_ses[i]
 
-        q_list = [k.q for k in self.parameters.parameter_list]
+        q_list = [k.q for k in self.latent_variables.z_list]
         
         bbvi_obj = BBVI(posterior,q_list,batch_size,optimizer,iterations)
-        q, q_params, q_ses = bbvi_obj.run()
-        self.parameters.set_parameter_values(q_params,'BBVI',np.exp(q_ses),None)
+        q, q_z, q_ses = bbvi_obj.run()
+        self.latent_variables.set_z_values(q_z,'BBVI',np.exp(q_ses),None)
 
-        for k in range(len(self.parameters.parameter_list)):
-            self.parameters.parameter_list[k].q = q[k]
+        for k in range(len(self.latent_variables.z_list)):
+            self.latent_variables.z_list[k].q = q[k]
 
-        theta, Y, scores, states, states_var, X_names = self._categorize_model_output(q_params)
+        theta, Y, scores, states, states_var, X_names = self._categorize_model_output(q_z)
 
         # Change this in future
         try:
-            parameter_store = self.parameters.copy()
+            latent_variables_store = self.latent_variables.copy()
         except:
-            parameter_store = self.parameters
+            latent_variables_store = self.latent_variables
 
         return BBVIResults(data_name=self.data_name,X_names=X_names,model_name=self.model_name,
-            model_type=self.model_type, parameters=parameter_store,data=Y, index=self.index,
+            model_type=self.model_type, latent_variables=latent_variables_store,data=Y, index=self.index,
             multivariate_model=self.multivariate_model,objective_object=posterior, 
             method='BBVI',ses=q_ses,signal=theta,scores=scores,
-            param_hide=self._param_hide,max_lag=self.max_lag,states=states,states_var=states_var)
+            z_hide=self._z_hide,max_lag=self.max_lag,states=states,states_var=states_var)
 
     def _laplace_fit(self,obj_type):
         """ Performs a Laplace approximation to the posterior
@@ -170,19 +173,19 @@ class TSM(object):
             raise Exception("No Hessian information - Laplace approximation cannot be performed")
         else:
 
-            theta, Y, scores, states, states_var, X_names = self._categorize_model_output(y.parameters.get_parameter_values())
+            theta, Y, scores, states, states_var, X_names = self._categorize_model_output(self.latent_variables.get_z_values())
 
             # Change this in future
             try:
-                parameter_store = y.parameters.copy()
+                latent_variables_store = self.latent_variables.copy()
             except:
-                parameter_store = y.parameters
+                latent_variables_store = self.latent_variables
 
             return LaplaceResults(data_name=self.data_name,X_names=X_names,model_name=self.model_name,
-                model_type=self.model_type, parameters=parameter_store,data=Y,index=self.index,
+                model_type=self.model_type, latent_variables=latent_variables_store,data=Y,index=self.index,
                 multivariate_model=self.multivariate_model,objective_object=obj_type, 
                 method='Laplace',ihessian=y.ihessian,signal=theta,scores=scores,
-                param_hide=self._param_hide,max_lag=self.max_lag,states=states,states_var=states_var)
+                z_hide=self._z_hide,max_lag=self.max_lag,states=states,states_var=states_var)
 
     def _mcmc_fit(self,scale=1.0,nsims=10000,printer=True,method="M-H",cov_matrix=None,**kwargs):
         """ Performs MCMC 
@@ -203,49 +206,49 @@ class TSM(object):
 
         cov_matrix: None or np.array
             Can optionally provide a covariance matrix for M-H.
-
-        Returns
-        ----------
-        None (plots posteriors, stores parameters)
         """
-        scale = 2.38/np.sqrt(self.param_no)
+        scale = 2.38/np.sqrt(self.z_no)
         # Get Mode and Inverse Hessian information
-        y = self.fit(method='PML',printer=False)
-        try:
-            ses = np.abs(np.diag(y.ihessian))
-            cov_matrix = np.zeros((len(ses), len(ses)))
-            np.fill_diagonal(cov_matrix, ses)
-        except:
-            pass
+        if self.model_type not in ['GPNARX','GPR','GP']:
+            y = self.fit(method='PML',printer=False)
+            starting_values = y.z.get_z_values()
+            try:
+                ses = np.abs(np.diag(y.ihessian))
+                cov_matrix = np.zeros((len(ses), len(ses)))
+                np.fill_diagonal(cov_matrix, ses)
+            except:
+                pass
+        else:
+            starting_values = self.latent_variables.get_z_starting_values()
 
         if method == "M-H":
-            sampler = MetropolisHastings(self.neg_logposterior,scale,nsims,y.parameters.get_parameter_values(),cov_matrix=cov_matrix,model_object=None)
+            sampler = MetropolisHastings(self.neg_logposterior,scale,nsims,starting_values,cov_matrix=cov_matrix,model_object=None)
             chain, mean_est, median_est, upper_95_est, lower_95_est = sampler.sample()
         else:
             raise Exception("Method not recognized!")
 
         for k in range(len(chain)):
-            chain[k] = self.parameters.parameter_list[k].prior.transform(chain[k])
-            mean_est[k] = self.parameters.parameter_list[k].prior.transform(mean_est[k])
-            median_est[k] = self.parameters.parameter_list[k].prior.transform(median_est[k])
-            upper_95_est[k] = self.parameters.parameter_list[k].prior.transform(upper_95_est[k])
-            lower_95_est[k] = self.parameters.parameter_list[k].prior.transform(lower_95_est[k])        
+            chain[k] = self.latent_variables.z_list[k].prior.transform(chain[k])
+            mean_est[k] = self.latent_variables.z_list[k].prior.transform(mean_est[k])
+            median_est[k] = self.latent_variables.z_list[k].prior.transform(median_est[k])
+            upper_95_est[k] = self.latent_variables.z_list[k].prior.transform(upper_95_est[k])
+            lower_95_est[k] = self.latent_variables.z_list[k].prior.transform(lower_95_est[k])        
 
-        self.parameters.set_parameter_values(mean_est,'M-H',None,chain)
+        self.latent_variables.set_z_values(mean_est,'M-H',None,chain)
 
         theta, Y, scores, states, states_var, X_names = self._categorize_model_output(mean_est)
     
         # Change this in future
         try:
-            parameter_store = self.parameters.copy()
+            latent_variables_store = self.latent_variables.copy()
         except:
-            parameter_store = self.parameters
+            latent_variables_store = self.latent_variables
 
         return MCMCResults(data_name=self.data_name,X_names=X_names,model_name=self.model_name,
-            model_type=self.model_type, parameters=parameter_store,data=Y,index=self.index,
+            model_type=self.model_type, latent_variables=latent_variables_store,data=Y,index=self.index,
             multivariate_model=self.multivariate_model,objective_object=self.neg_logposterior, 
             method='Metropolis Hastings',samples=chain,mean_est=mean_est,median_est=median_est,lower_95_est=lower_95_est,
-            upper_95_est=upper_95_est,signal=theta,scores=scores, param_hide=self._param_hide,max_lag=self.max_lag,
+            upper_95_est=upper_95_est,signal=theta,scores=scores, z_hide=self._z_hide,max_lag=self.max_lag,
             states=states,states_var=states_var)
 
     def _ols_fit(self):
@@ -253,7 +256,7 @@ class TSM(object):
 
         Returns
         ----------
-        None (stores parameters)
+        None (stores latent variables)
         """
 
         # TO DO - A lot of things are VAR specific here; might need to refactor in future, or just move to VAR script
@@ -261,34 +264,34 @@ class TSM(object):
         method = 'OLS'
         self.use_ols_covariance = True
         
-        res_params = self._create_B_direct().flatten()
-        params = res_params.copy()
+        res_z = self._create_B_direct().flatten()
+        z = res_z.copy()
         cov = self.ols_covariance()
 
         # Inelegant - needs refactoring
         for i in range(self.ylen):
             for k in range(self.ylen):
                 if i == k or i > k:
-                    params = np.append(params,self.parameters.parameter_list[-1].prior.itransform(cov[i,k]))
+                    z = np.append(z,self.latent_variables.z_list[-1].prior.itransform(cov[i,k]))
 
         ihessian = self.estimator_cov('OLS')
         res_ses = np.power(np.abs(np.diag(ihessian)),0.5)
-        ses = np.append(res_ses,np.ones([params.shape[0]-res_params.shape[0]]))
-        self.parameters.set_parameter_values(params,method,ses,None)
+        ses = np.append(res_ses,np.ones([z.shape[0]-res_z.shape[0]]))
+        self.latent_variables.set_z_values(z,method,ses,None)
 
-        theta, Y, scores, states, states_var, X_names = self._categorize_model_output(params)
+        theta, Y, scores, states, states_var, X_names = self._categorize_model_output(z)
 
         # Change this in future
         try:
-            parameter_store = self.parameters.copy()
+            latent_variables_store = self.latent_variables.copy()
         except:
-            parameter_store = self.parameters
+            latent_variables_store = self.latent_variables
 
         return MLEResults(data_name=self.data_name,X_names=X_names,model_name=self.model_name,
-            model_type=self.model_type, parameters=parameter_store,results=None,data=Y, index=self.index,
+            model_type=self.model_type, latent_variables=latent_variables_store,results=None,data=Y, index=self.index,
             multivariate_model=self.multivariate_model,objective_object=self.neg_loglik, 
             method=method,ihessian=ihessian,signal=theta,scores=scores,
-            param_hide=self._param_hide,max_lag=self.max_lag,states=states,states_var=states_var)
+            z_hide=self._z_hide,max_lag=self.max_lag,states=states,states_var=states_var)
 
     def _optimize_fit(self,obj_type=None,**kwargs):
 
@@ -297,8 +300,8 @@ class TSM(object):
         else:
             method = 'PML'
 
-        # Starting parameters
-        phi = self.parameters.get_parameter_starting_values()
+        # Starting values
+        phi = self.latent_variables.get_z_starting_values()
         phi = kwargs.get('start',phi).copy() # If user supplied
 
         # Optimize using L-BFGS-B
@@ -310,32 +313,32 @@ class TSM(object):
         try:
             ihessian = np.linalg.inv(nd.Hessian(obj_type)(p.x))
             ses = np.power(np.abs(np.diag(ihessian)),0.5)
-            self.parameters.set_parameter_values(p.x,method,ses,None)
+            self.latent_variables.set_z_values(p.x,method,ses,None)
             # Change this in future
             try:
-                parameter_store = self.parameters.copy()
+                latent_variables_store = self.latent_variables.copy()
             except:
-                parameter_store = self.parameters
+                latent_variables_store = self.latent_variables
 
             return MLEResults(data_name=self.data_name,X_names=X_names,model_name=self.model_name,
-                model_type=self.model_type, parameters=parameter_store,results=p,data=Y, index=self.index,
+                model_type=self.model_type, latent_variables=latent_variables_store,results=p,data=Y, index=self.index,
                 multivariate_model=self.multivariate_model,objective_object=obj_type, 
                 method=method,ihessian=ihessian,signal=theta,scores=scores,
-                param_hide=self._param_hide,max_lag=self.max_lag,states=states,states_var=states_var)
+                z_hide=self._z_hide,max_lag=self.max_lag,states=states,states_var=states_var)
         except:
-            self.parameters.set_parameter_values(p.x,method,None,None)
+            self.latent_variables.set_z_values(p.x,method,None,None)
  
             # Change this in future
             try:
-                parameter_store = self.parameters.copy()
+                latent_variables_store = self.latent_variables.copy()
             except:
-                parameter_store = self.parameters
+                latent_variables_store = self.latent_variables
 
             return MLEResults(data_name=self.data_name,X_names=X_names,model_name=self.model_name,
-                model_type=self.model_type,parameters=parameter_store,results=p,data=Y, index=self.index,
+                model_type=self.model_type,latent_variables=latent_variables_store,results=p,data=Y, index=self.index,
                 multivariate_model=self.multivariate_model,objective_object=obj_type, 
                 method=method,ihessian=None,signal=theta,scores=scores,
-                param_hide=self._param_hide,max_lag=self.max_lag,states=states,states_var=states_var)
+                z_hide=self._z_hide,max_lag=self.max_lag,states=states,states_var=states_var)
 
     def fit(self,method=None,**kwargs):
         """ Fits a model
@@ -380,7 +383,7 @@ class TSM(object):
         Parameters
         ----------
         beta : np.array
-            Contains untransformed starting values for parameters
+            Contains untransformed starting values for latent variables
 
         Returns
         ----------
@@ -388,8 +391,8 @@ class TSM(object):
         """
 
         post = self.neg_loglik(beta)
-        for k in range(0,self.param_no):
-            post += -self.parameters.parameter_list[k].prior.logpdf(beta[k])
+        for k in range(0,self.z_no):
+            post += -self.latent_variables.z_list[k].prior.logpdf(beta[k])
         return post
 
     def multivariate_neg_logposterior(self,beta):
@@ -398,7 +401,7 @@ class TSM(object):
         Parameters
         ----------
         beta : np.array
-            Contains untransformed starting values for parameters
+            Contains untransformed starting values for latent_variables
 
         Returns
         ----------
@@ -406,12 +409,12 @@ class TSM(object):
         """
 
         post = self.neg_loglik(beta)
-        for k in range(0,self.param_no):
-            if self.parameters.parameter_list[k].prior.covariance_prior is True:
-                post += -self.parameters.parameter_list[k].prior.logpdf(self.custom_covariance(beta))
+        for k in range(0,self.z_no):
+            if self.latent_variables.z_list[k].prior.covariance_prior is True:
+                post += -self.latent_variables.z_list[k].prior.logpdf(self.custom_covariance(beta))
                 break
             else:
-                post += -self.parameters.parameter_list[k].prior.logpdf(beta[k])
+                post += -self.latent_variables.z_list[k].prior.logpdf(beta[k])
         return post
 
     def shift_dates(self,h):
@@ -425,7 +428,7 @@ class TSM(object):
         Returns
         ----------
         A transformed date_index object
-        """     
+        """
 
         date_index = copy.deepcopy(self.index)
         date_index = date_index[self.max_lag:len(date_index)]
@@ -451,39 +454,55 @@ class TSM(object):
 
         return date_index   
 
-    def transform_parameters(self):
-        """ Transforms parameters to actual scale by applying link function
+    def transform_z(self):
+        """ Transforms latent variables to actual scale by applying link function
 
         Returns
         ----------
-        Transformed parameters 
-        """     
-        return self.parameters.get_parameter_values(transformed=True)
+        Transformed latent variables 
+        """
+        return self.latent_variables.get_z_values(transformed=True)
+
+    def transform_parameters(self):
+        """ Frequentist notation for transform_latent_variables (maybe remove in future)
+
+        Returns
+        ----------
+        Transformed latent variables 
+        """
+        return self.transformed_latent_variables()
+
+    def plot_z(self,indices=None,figsize=(15,5),**kwargs):
+        """ Plots latent variables by calling latent parameters object
+
+        Returns
+        ----------
+        Pretty plot 
+        """
+        self.latent_variables.plot_z(indices=indices,figsize=figsize,**kwargs)
 
     def plot_parameters(self,indices=None,figsize=(15,5),**kwargs):
-        """ Plots parameters by calling parameter object
+        """ Frequentist notation for plot_z (maybe remove in future)
 
         Returns
         ----------
         Pretty plot
-        """     
-
-        self.parameters.plot_parameters(indices=indices,figsize=figsize,**kwargs)
+        """
+        self.plot_z(indices,figsize,**kwargs)
 
     def adjust_prior(self,index,prior):
-        """ Adjusts priors for the parameters
+        """ Adjusts priors for the latent variables
 
         Parameters
         ----------
         index : int or list[int]
-            Which parameter index/indices to be altered
+            Which latent variable index/indices to be altered
 
         prior : Prior object
             Which prior distribution? E.g. Normal(0,1)
 
         Returns
         ----------
-        None (changes priors in Parameters object)
+        None (changes priors in LatentVariables object)
         """
-
-        self.parameters.adjust_prior(index=index,prior=prior)
+        self.latent_variables.adjust_prior(index=index,prior=prior)

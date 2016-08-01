@@ -39,11 +39,11 @@ class LLEV(tsm.TSM):
         # Initialize TSM object
         super(LLEV,self).__init__('LLEV')
 
-        # Parameters
+        # Latent Variables
         self.integ = integ
         self.param_no = 2
         self.max_lag = 0
-        self._param_hide = 0 # Whether to cutoff variance parameters from results
+        self._z_hide = 0 # Whether to cutoff variance latent variables from results
         self.supported_methods = ["MLE","PML","Laplace","M-H","BBVI"]
         self.default_method = "MLE"
         self.model_name = "LLEV"
@@ -51,6 +51,7 @@ class LLEV(tsm.TSM):
 
         # Format the data
         self.data, self.data_name, self.is_pandas, self.index = dc.data_check(data,target)
+        self.data = self.data.astype(np.float)
         self.data_original = self.data
 
         # Difference data
@@ -58,18 +59,18 @@ class LLEV(tsm.TSM):
             self.data = np.diff(self.data)
             self.data_name = "Differenced " + self.data_name
 
-        self._create_parameters()
+        self._create_latent_variables()
 
-    def _create_parameters(self):
-        """ Creates model parameters
+    def _create_latent_variables(self):
+        """ Creates model latent variables
 
         Returns
         ----------
         None (changes model attributes)
         """
 
-        self.parameters.add_parameter('Sigma^2 irregular',ifr.Uniform(transform='exp'),dst.q_Normal(0,3))
-        self.parameters.add_parameter('Sigma^2 level',ifr.Uniform(transform='exp'),dst.q_Normal(0,3))
+        self.latent_variables.add_z('Sigma^2 irregular',ifr.Uniform(transform='exp'),dst.q_Normal(0,3))
+        self.latent_variables.add_z('Sigma^2 level',ifr.Uniform(transform='exp'),dst.q_Normal(0,3))
 
     def _forecast_model(self,beta,h):
         """ Creates forecasted states and variances
@@ -77,7 +78,7 @@ class LLEV(tsm.TSM):
         Parameters
         ----------
         beta : np.ndarray
-            Contains untransformed starting values for parameters
+            Contains untransformed starting values for latent variables
 
         Returns
         ----------
@@ -100,7 +101,7 @@ class LLEV(tsm.TSM):
             Contains the time series
 
         beta : np.array
-            Contains untransformed starting values for parameters
+            Contains untransformed starting values for latent variables
 
         Returns
         ----------
@@ -117,7 +118,7 @@ class LLEV(tsm.TSM):
         Parameters
         ----------
         beta : np.array
-            Contains untransformed starting values for parameters
+            Contains untransformed starting values for latent_variables
 
         Returns
         ----------
@@ -128,8 +129,8 @@ class LLEV(tsm.TSM):
         T = np.identity(1)
         R = np.identity(1)
         Z = np.identity(1)
-        H = np.identity(1)*self.parameters.parameter_list[0].prior.transform(beta[0])
-        Q = np.identity(1)*self.parameters.parameter_list[1].prior.transform(beta[1])
+        H = np.identity(1)*self.latent_variables.z_list[0].prior.transform(beta[0])
+        Q = np.identity(1)*self.latent_variables.z_list[1].prior.transform(beta[1])
 
         return T, Z, R, Q, H
 
@@ -139,7 +140,7 @@ class LLEV(tsm.TSM):
         Parameters
         ----------
         beta : np.array
-            Contains untransformed starting values for parameters
+            Contains untransformed starting values for latent variables
 
         Returns
         ----------
@@ -172,17 +173,17 @@ class LLEV(tsm.TSM):
 
         figsize = kwargs.get('figsize',(10,7))
 
-        if self.parameters.estimated is False:
-            raise Exception("No parameters estimated!")
+        if self.latent_variables.estimated is False:
+            raise Exception("No latent variables estimated!")
         else:
-            # Retrieve data, dates and (transformed) parameters         
-            a, P = self._forecast_model(self.parameters.get_parameter_values(),h)
+            # Retrieve data, dates and (transformed) latent variables         
+            a, P = self._forecast_model(self.latent_variables.get_z_values(),h)
             date_index = self.shift_dates(h)
             plot_values = a[0][-h-past_values:]
             forecasted_values = a[0][-h:]
 
-            lower = forecasted_values - 1.98*np.power(P[0][0][-h:] + self.parameters.parameter_list[0].prior.transform(self.parameters.get_parameter_values()[0]),0.5)
-            upper = forecasted_values + 1.98*np.power(P[0][0][-h:] + self.parameters.parameter_list[0].prior.transform(self.parameters.get_parameter_values()[0]),0.5)
+            lower = forecasted_values - 1.98*np.power(P[0][0][-h:] + self.latent_variables.z_list[0].prior.transform(self.latent_variables.get_z_values()[0]),0.5)
+            upper = forecasted_values + 1.98*np.power(P[0][0][-h:] + self.latent_variables.z_list[0].prior.transform(self.latent_variables.get_z_values()[0]),0.5)
             lower = np.append(plot_values[-h-1],lower)
             upper = np.append(plot_values[-h-1],upper)
 
@@ -214,18 +215,18 @@ class LLEV(tsm.TSM):
         figsize = kwargs.get('figsize',(10,7))
         series_type = kwargs.get('series_type','Smoothed')
 
-        if self.parameters.estimated is False:
-            raise Exception("No parameters estimated!")
+        if self.latent_variables.estimated is False:
+            raise Exception("No latent variables estimated!")
         else:
             date_index = copy.deepcopy(self.index)
             date_index = date_index[self.integ:self.data_original.shape[0]+1]
 
             if series_type == 'Smoothed':
-                mu, V = self.smoothed_state(self.data,self.parameters.get_parameter_values())
+                mu, V = self.smoothed_state(self.data,self.latent_variables.get_z_values())
             elif series_type == 'Filtered':
-                mu, V, _, _, _ = self._model(self.data,self.parameters.get_parameter_values())
+                mu, V, _, _, _ = self._model(self.data,self.latent_variables.get_z_values())
             else:
-                mu, V = self.smoothed_state(self.data,self.parameters.get_parameter_values())
+                mu, V = self.smoothed_state(self.data,self.latent_variables.get_z_values())
 
             mu = mu[0][:-1]
             V = V.ravel()
@@ -237,7 +238,7 @@ class LLEV(tsm.TSM):
 
             if intervals == True:
                 alpha =[0.15*i/float(100) for i in range(50,12,-2)]
-                plt.fill_between(date_index[5:], mu[5:] + 1.98*np.sqrt(V[:-1][5:]), mu[5:] - 1.98*np.sqrt(V[:-1][5:]), alpha=0.15,label='95% C.I.') 
+                plt.fill_between(date_index[2:], mu[2:] + 1.98*np.sqrt(V[:-1][2:]), mu[2:] - 1.98*np.sqrt(V[:-1][2:]), alpha=0.15,label='95% C.I.') 
 
             plt.plot(date_index,self.data,label='Data')
             plt.plot(date_index,mu,label=series_type,c='black')
@@ -248,7 +249,7 @@ class LLEV(tsm.TSM):
 
             if intervals == True:
                 alpha =[0.15*i/float(100) for i in range(50,12,-2)]
-                plt.fill_between(date_index[5:], mu[5:] + 1.98*np.sqrt(V[:-1][5:]), mu[5:] - 1.98*np.sqrt(V[:-1][5:]), alpha=0.15,label='95% C.I.') 
+                plt.fill_between(date_index[2:], mu[2:] + 1.98*np.sqrt(V[:-1][2:]), mu[2:] - 1.98*np.sqrt(V[:-1][2:]), alpha=0.15,label='95% C.I.') 
 
             plt.plot(date_index,mu,label='Local Level')
             plt.legend(loc=2)
@@ -270,11 +271,11 @@ class LLEV(tsm.TSM):
         - pd.DataFrame with predictions
         """     
 
-        if self.parameters.estimated is False:
-            raise Exception("No parameters estimated!")
+        if self.latent_variables.estimated is False:
+            raise Exception("No latent variables estimated!")
         else:
-            # Retrieve data, dates and (transformed) parameters         
-            a, P = self._forecast_model(self.parameters.get_parameter_values(),h)
+            # Retrieve data, dates and (transformed) latent variables         
+            a, P = self._forecast_model(self.latent_variables.get_z_values(),h)
             date_index = self.shift_dates(h)
             forecasted_values = a[0][-h:]
 
@@ -339,13 +340,13 @@ class LLEV(tsm.TSM):
 
     def simulation_smoother(self,beta):
         """ Koopman's simulation smoother - simulates from states given
-        model parameters and observations
+        model latent variables and observations
 
         Parameters
         ----------
 
         beta : np.array
-            Contains untransformed starting values for parameters
+            Contains untransformed starting values for latent variables
 
         Returns
         ----------
@@ -389,7 +390,7 @@ class LLEV(tsm.TSM):
             Data to be smoothed
 
         beta : np.array
-            Contains untransformed starting values for parameters
+            Contains untransformed starting values for latent variables
 
         Returns
         ----------

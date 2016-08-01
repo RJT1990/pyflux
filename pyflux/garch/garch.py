@@ -15,6 +15,8 @@ from .. import tests as tst
 from .. import tsm as tsm
 from .. import data_check as dc
 
+from .garch_recursions import garch_recursion
+
 class GARCH(tsm.TSM):
     """ Inherits time series methods from TSM class.
 
@@ -41,43 +43,47 @@ class GARCH(tsm.TSM):
         # Initialize TSM object
         super(GARCH,self).__init__('GARCH')
 
-        # Parameters
+        # Latent Variables
         self.p = p
         self.q = q
-        self.param_no = self.p + self.q + 2
+        self.z_no = self.p + self.q + 2
         self.max_lag = max(self.p,self.q)
         self.model_name = "GARCH(" + str(self.p) + "," + str(self.q) + ")"
-        self._param_hide = 0 # Whether to cutoff variance parameters from results
+        self._z_hide = 0 # Whether to cutoff variance latent variables from results
         self.supported_methods = ["MLE","PML","Laplace","M-H","BBVI"]
         self.default_method = "MLE"
         self.multivariate_model = False
 
         # Format the data
         self.data, self.data_name, self.is_pandas, self.index = dc.data_check(data,target)
-        self._create_parameters()
+        self._create_latent_variables()
         
-    def _create_parameters(self):
-        """ Creates model parameters
+    def _create_latent_variables(self):
+        """ Creates model latent variables
 
         Returns
         ----------
         None (changes model attributes)
         """
 
-        self.parameters.add_parameter('Vol Constant',ifr.Normal(0,3,transform='exp'),dst.q_Normal(0,3))
-
+        self.latent_variables.add_z('Vol Constant',ifr.Normal(0,3,transform='exp'),dst.q_Normal(0,3))
+        self.latent_variables.z_list[0].start = -7.00
+        
         for q_term in range(self.q):
-            self.parameters.add_parameter('q(' + str(q_term+1) + ')',ifr.Normal(0,0.5,transform=None),dst.q_Normal(0,3))
+            self.latent_variables.add_z('q(' + str(q_term+1) + ')',ifr.Normal(0,0.5,transform=None),dst.q_Normal(0,3))
+            if q_term == 0:
+                self.latent_variables.z_list[-1].start = 0.10
+            else:
+                self.latent_variables.z_list[-1].start = 0.00
 
         for p_term in range(self.p):
-            self.parameters.add_parameter('p(' + str(p_term+1) + ')',ifr.Normal(0,0.5,transform=None),dst.q_Normal(0,3))
+            self.latent_variables.add_z('p(' + str(p_term+1) + ')',ifr.Normal(0,0.5,transform=None),dst.q_Normal(0,3))
+            if p_term == 0:
+                self.latent_variables.z_list[-1].start = 0.80
+            else:
+                self.latent_variables.z_list[-1].start = 0.00
         
-        self.parameters.add_parameter('Returns Constant',ifr.Normal(0,3,transform=None),dst.q_Normal(0,3))
-
-        self.parameters.parameter_list[0].start = self.parameters.parameter_list[0].prior.itransform(np.mean(np.power(self.data-np.mean(self.data),2)))
-        
-        for k in range(1,len(self.parameters.parameter_list)-1):
-            self.parameters.parameter_list[k].start = 0.00001
+        self.latent_variables.add_z('Returns Constant',ifr.Normal(0,3,transform=None),dst.q_Normal(0,3))
 
     def _model(self,beta):
         """ Creates the structure of the model
@@ -85,7 +91,7 @@ class GARCH(tsm.TSM):
         Parameters
         ----------
         beta : np.array
-            Contains untransformed starting values for parameters
+            Contains untransformed starting values for latent variables
 
         Returns
         ----------
@@ -99,8 +105,8 @@ class GARCH(tsm.TSM):
             Contains the squared residuals (ARCH terms) for the time series
         """
 
-        # Transform parameters
-        parm = np.array([self.parameters.parameter_list[k].prior.transform(beta[k]) for k in range(beta.shape[0])])
+        # Transform latent variables
+        parm = np.array([self.latent_variables.z_list[k].prior.transform(beta[k]) for k in range(beta.shape[0])])
 
         xeps = np.power(self.data-parm[-1],2)
         Y = np.array(self.data[self.max_lag:])
@@ -115,14 +121,7 @@ class GARCH(tsm.TSM):
         else:
             sigma2 = np.transpose(X*parm[0])
 
-        # GARCH terms
-        if self.p != 0:
-            for t in range(0,Y.shape[0]):
-                if t < self.max_lag:
-                    sigma2[t] = parm[0]/(1-np.sum(parm[(self.q+1):(self.q+self.p+1)]))
-                elif t >= self.max_lag:
-                    for k in range(0,self.p):
-                        sigma2[t] += parm[1+self.q+k]*(sigma2[t-1-k])
+        sigma2 = garch_recursion(parm, sigma2, self.q, self.p, Y.shape[0], self.max_lag)
 
         return sigma2, Y, eps
 
@@ -144,7 +143,7 @@ class GARCH(tsm.TSM):
             How many steps ahead for the prediction
 
         t_params : np.array
-            A vector of (transformed) parameters
+            A vector of (transformed) latent variables
 
         Returns
         ----------
@@ -192,7 +191,7 @@ class GARCH(tsm.TSM):
             How many steps ahead for the prediction
 
         t_params : np.array
-            A vector of (transformed) parameters
+            A vector of (transformed) latent variables
 
         simulations : int
             How many simulations to perform
@@ -264,7 +263,7 @@ class GARCH(tsm.TSM):
         Parameters
         ----------
         beta : np.array
-            Contains untransformed starting values for parameters
+            Contains untransformed starting values for latent variables
 
         Returns
         ----------
@@ -272,7 +271,7 @@ class GARCH(tsm.TSM):
         """     
 
         sigma2, Y, __ = self._model(beta)
-        parm = np.array([self.parameters.parameter_list[k].prior.transform(beta[k]) for k in range(beta.shape[0])])
+        parm = np.array([self.latent_variables.z_list[k].prior.transform(beta[k]) for k in range(beta.shape[0])])
         return -np.sum(ss.norm.logpdf(Y,loc=parm[-1]*np.ones(sigma2.shape[0]),scale=np.sqrt(sigma2)))
 
     def plot_fit(self,**kwargs):
@@ -285,13 +284,13 @@ class GARCH(tsm.TSM):
 
         figsize = kwargs.get('figsize',(10,7))
 
-        if self.parameters.estimated is False:
-            raise Exception("No parameters estimated!")
+        if self.latent_variables.estimated is False:
+            raise Exception("No latent variables estimated!")
         else:
             plt.figure(figsize=figsize)
             date_index = self.index[max(self.p,self.q):]
-            t_params = self.transform_parameters()
-            sigma2, Y, ___ = self._model(self.parameters.get_parameter_values())
+            t_params = self.transform_z()
+            sigma2, Y, ___ = self._model(self.latent_variables.get_z_values())
             plt.plot(date_index,np.abs(Y-t_params[-1]),label=self.data_name + ' Absolute Demeaned Values')
             plt.plot(date_index,np.power(sigma2,0.5),label='GARCH(' + str(self.p) + ',' + str(self.q) + ') Conditional Volatility',c='black')
             plt.title(self.data_name + " Volatility Plot")  
@@ -319,14 +318,14 @@ class GARCH(tsm.TSM):
 
         figsize = kwargs.get('figsize',(10,7))
 
-        if self.parameters.estimated is False:
-            raise Exception("No parameters estimated!")
+        if self.latent_variables.estimated is False:
+            raise Exception("No latent variables estimated!")
         else:
 
-            # Retrieve data, dates and (transformed) parameters
-            sigma2, Y, scores = self._model(self.parameters.get_parameter_values())         
+            # Retrieve data, dates and (transformed) latent variables
+            sigma2, Y, scores = self._model(self.latent_variables.get_z_values())         
             date_index = self.shift_dates(h)
-            t_params = self.transform_parameters()
+            t_params = self.transform_z()
 
             # Get mean prediction and simulations (for errors)
             mean_values = self._mean_prediction(sigma2,Y,scores,h,t_params)
@@ -412,13 +411,13 @@ class GARCH(tsm.TSM):
         - pd.DataFrame with predicted values
         """     
 
-        if self.parameters.estimated is False:
-            raise Exception("No parameters estimated!")
+        if self.latent_variables.estimated is False:
+            raise Exception("No latent variables estimated!")
         else:
 
-            sigma2, Y, scores = self._model(self.parameters.get_parameter_values())         
+            sigma2, Y, scores = self._model(self.latent_variables.get_z_values())         
             date_index = self.shift_dates(h)
-            t_params = self.transform_parameters()
+            t_params = self.transform_z()
 
             mean_values = self._mean_prediction(sigma2,Y,scores,h,t_params)
             forecasted_values = mean_values[-h:]
