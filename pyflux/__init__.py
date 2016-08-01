@@ -1,4 +1,4 @@
-__version__ = "3.3"
+__version__ = "0.3.5"
 
 from . import __check_build
 

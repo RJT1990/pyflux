@@ -10,22 +10,28 @@ See some examples and documentation at [PyFlux.com](http://www.pyflux.com/). Or 
 
 ## Models
 
-- [ARIMAX models](http://www.pyflux.com/notebooks/ARIMA.html)
-- [GARCH models](http://www.pyflux.com/notebooks/GARCH.html)
-- [GAS models](http://www.pyflux.com/notebooks/GAS.html)
-- [GAS State Space models](http://www.pyflux.com/notebooks/GASStateSpace.html)
-- [GP-NARX models](http://www.pyflux.com/notebooks/GPNARX.html)
-- [Gaussian State Space models](http://www.pyflux.com/notebooks/GaussianStateSpace.html)
-- [Non-Gaussian State Space models](http://www.pyflux.com/notebooks/NonGaussianStateSpace.html)
-- [VAR models](http://www.pyflux.com/notebooks/VAR.html)
- - [Bayesian VAR models](http://www.pyflux.com/notebooks/BayesianVAR.html)
+- [ARIMA models](http://www.pyflux.com/arima-models)
+ - [ARIMAX models](http://www.pyflux.com/arimax-models)
+- [GARCH models](http://www.pyflux.com/garch-models)
+ - [Beta-t-EGARCH models](http://www.pyflux.com/beta-t-egarch)
+ - [EGARCH-in-mean models](http://www.pyflux.com/egarch-in-mean)
+ - [EGARCH-in-mean regression models](http://www.pyflux.com/egarch-m-regression)
+ - [Skew-t-EGARCH models](http://www.pyflux.com/skew-t-egarch/)
+ - [Skew-t-EGARCH-in-mean models](http://www.pyflux.com/skew-t-egarch-in-mean/)
+- [GAS models](http://www.pyflux.com/gas-models/)
+- [GAS State Space models](http://www.pyflux.com/gas-state-space-models/)
+- [GP-NARX models](http://www.pyflux.com/gp-narx/)
+- [Gaussian State Space models](http://www.pyflux.com/gaussian-state-space-models/)
+- [Non-Gaussian State Space models](http://www.pyflux.com/non-gaussian-state-space-models/)
+- [VAR models](http://www.pyflux.com/vector-autoregression)
+ - [Bayesian VAR models](http://www.pyflux.com/bayesian-vector-autoregression)
 
 ## Inference
 
-- [Black Box Variational Inference](http://www.pyflux.com/notebooks/BBVI.html)
-- [Laplace Approximation](http://www.pyflux.com/notebooks/Laplace.html)
-- [Maximum Likelihood](http://www.pyflux.com/notebooks/MLE.html) and [Penalized Maximum Likelihood](http://www.pyflux.com/notebooks/PML.html)
-- [Metropolis-Hastings](http://www.pyflux.com/notebooks/MetropolisHastings.html)
+- [Black Box Variational Inference](http://www.pyflux.com/black-box-variational-inference/)
+- [Laplace Approximation](http://www.pyflux.com/laplace-approximation/)
+- [Maximum Likelihood](http://www.pyflux.com/maximum-likelihood/) and [Penalized Maximum Likelihood](http://www.pyflux.com/penalized-maximum-likelihood/)
+- [Metropolis-Hastings](http://www.pyflux.com/metropolis-hastings)
 
 ## Installing PyFlux
 
