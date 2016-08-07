@@ -12,7 +12,7 @@ def gas_recursion(double[:] parameters, double[:] theta, double[:] model_scores,
 
     for t in range(0,Y_len):
         if t < max_lag:
-            theta[t] = parameters[0]/(1-np.sum(parameters[1:(ar_terms+1)]))
+            theta[t] = parameters[0]/(1.0-np.sum(parameters[1:(ar_terms+1)]))
         else:
             theta[t] += np.dot(parameters[1:1+ar_terms],theta[(t-ar_terms):t][::-1]) + np.dot(parameters[1+ar_terms:1+ar_terms+sc_terms],model_scores[(t-sc_terms):t][::-1])
 

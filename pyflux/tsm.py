@@ -43,6 +43,11 @@ class TSM(object):
             states = None
             states_var = None
             X_names = None
+        elif self.model_type in ['GASRank']:
+            theta, Y, states = self._model(z)
+            scores = None
+            states_var = None
+            X_names = None           
         elif self.model_type in ['GASLLT']:
             theta, mu_t, Y, scores = self._model(z)
             states = np.array([theta, mu_t])
@@ -112,7 +117,7 @@ class TSM(object):
         phi = self.latent_variables.get_z_starting_values()
         phi = kwargs.get('start',phi).copy() # If user supplied
         batch_size = kwargs.get('batch_size',12) # If user supplied
-        if self.model_type not in ['GPNARX','GPR','GP']:
+        if self.model_type not in ['GPNARX','GPR','GP','GASRank']:
             p = optimize.minimize(posterior,phi,method='L-BFGS-B') # PML starting values
             start_loc = 0.8*p.x + 0.2*phi
         else:
@@ -187,7 +192,8 @@ class TSM(object):
                 method='Laplace',ihessian=y.ihessian,signal=theta,scores=scores,
                 z_hide=self._z_hide,max_lag=self.max_lag,states=states,states_var=states_var)
 
-    def _mcmc_fit(self,scale=1.0,nsims=10000,printer=True,method="M-H",cov_matrix=None,**kwargs):
+    def _mcmc_fit(self,scale=1.0,nsims=10000,printer=True,method="M-H",cov_matrix=None,
+        map_start=True, **kwargs):
         """ Performs MCMC 
 
         Parameters
@@ -209,7 +215,7 @@ class TSM(object):
         """
         scale = 2.38/np.sqrt(self.z_no)
         # Get Mode and Inverse Hessian information
-        if self.model_type not in ['GPNARX','GPR','GP']:
+        if self.model_type in ['GPNARX','GPR','GP'] or map_start is True:
             y = self.fit(method='PML',printer=False)
             starting_values = y.z.get_z_values()
             try:
@@ -229,12 +235,14 @@ class TSM(object):
 
         for k in range(len(chain)):
             chain[k] = self.latent_variables.z_list[k].prior.transform(chain[k])
+
+        self.latent_variables.set_z_values(mean_est,'M-H',None,chain)
+
+        for k in range(len(chain)):
             mean_est[k] = self.latent_variables.z_list[k].prior.transform(mean_est[k])
             median_est[k] = self.latent_variables.z_list[k].prior.transform(median_est[k])
             upper_95_est[k] = self.latent_variables.z_list[k].prior.transform(upper_95_est[k])
             lower_95_est[k] = self.latent_variables.z_list[k].prior.transform(lower_95_est[k])        
-
-        self.latent_variables.set_z_values(mean_est,'M-H',None,chain)
 
         theta, Y, scores, states, states_var, X_names = self._categorize_model_output(mean_est)
     
@@ -340,7 +348,7 @@ class TSM(object):
                 method=method,ihessian=None,signal=theta,scores=scores,
                 z_hide=self._z_hide,max_lag=self.max_lag,states=states,states_var=states_var)
 
-    def fit(self,method=None,**kwargs):
+    def fit(self, method=None, **kwargs):
         """ Fits a model
 
         Parameters
@@ -358,6 +366,7 @@ class TSM(object):
         nsims = kwargs.get('nsims',10000)
         optimizer = kwargs.get('optimizer','RMSProp')
         batch_size = kwargs.get('batch_size',12)
+        map_start = kwargs.get('map_start',True)
 
         if method is None:
             method = self.default_method
@@ -369,7 +378,8 @@ class TSM(object):
         elif method == 'PML':
             return self._optimize_fit(self.neg_logposterior,**kwargs)   
         elif method == 'M-H':
-            return self._mcmc_fit(nsims=nsims,method=method,cov_matrix=cov_matrix)
+            return self._mcmc_fit(nsims=nsims,method=method,cov_matrix=cov_matrix,
+                map_start=map_start)
         elif method == "Laplace":
             return self._laplace_fit(self.neg_logposterior) 
         elif method == "BBVI":

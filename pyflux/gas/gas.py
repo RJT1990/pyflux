@@ -50,7 +50,8 @@ class GAS(tsm.TSM):
         to construct the modified score.
     """
 
-    def __init__(self,data,ar,sc,family,integ=0,target=None,gradient_only=False):
+    def __init__(self,data,ar,sc,family,integ=0,target=None, 
+        gradient_only=False):
 
         # Initialize TSM object     
         super(GAS,self).__init__('GAS')
@@ -172,7 +173,6 @@ class GAS(tsm.TSM):
         # Loop over time series
         theta, self.model_scores = gas_recursion(parm, theta, self.model_scores, self.model_Y, self.ar, self.sc, self.model_Y.shape[0], self.family.score_function, 
             self.link, model_scale, model_shape, model_skewness, self.max_lag)
-
         return theta, self.model_Y, self.model_scores
 
     def _mean_prediction(self,theta,Y,scores,h,t_params):
@@ -315,7 +315,7 @@ class GAS(tsm.TSM):
 
         error_bars = []
         for pre in range(5,100,5):
-            error_bars.append(np.insert([np.percentile(i,pre) for i in sim_vector] - mean_values[(mean_values.shape[0]-h):(mean_values.shape[0])],0,0))
+            error_bars.append(np.insert([np.percentile(i,pre) for i in sim_vector],0,mean_values[-h-1]))
         forecasted_values = mean_values[-h-1:]
         plot_values = mean_values[-h-past_values:]
         plot_index = date_index[-h-past_values:]
@@ -413,8 +413,8 @@ class GAS(tsm.TSM):
 
             if intervals == True:
                 alpha =[0.15*i/float(100) for i in range(50,12,-2)]
-                for count, pre in enumerate(error_bars):
-                    plt.fill_between(date_index[-h-1:], forecasted_values-pre, forecasted_values+pre,
+                for count in range(9):
+                    plt.fill_between(date_index[-h-1:], error_bars[count], error_bars[-count],
                         alpha=alpha[count])         
             
             plt.plot(plot_index,plot_values)
@@ -439,7 +439,8 @@ class GAS(tsm.TSM):
         predictions = []
 
         for t in range(0,h):
-            x = GAS(ar=self.ar,sc=self.sc,integ=self.integ,family=self.family,data=self.data_original[:-h+t],gradient_only=self.gradient_only)
+            x = GAS(ar=self.ar,sc=self.sc,integ=self.integ,family=self.family,data=self.data_original[:-h+t],
+                gradient_only=self.gradient_only)
             x.fit(printer=False)
             if t == 0:
                 predictions = x.predict(1)
