@@ -401,7 +401,7 @@ class ARIMAX(tsm.TSM):
         for t in range(0, h):
             data1 = self.data_original.iloc[:-(h+t),:]
             data2 = self.data_original.iloc[-h+t:,:]
-            x = ARIMAX(ar=self.ar,ma=self.ma,integ=self.integ,formula=self.formula,data=self.data_original[:(-h+t)])
+            x = ARIMAX(ar=self.ar,ma=self.ma,integ=self.integ,formula=self.formula,data=data1)
             x.fit(printer=False)
             if t == 0:
                 predictions = x.predict(1,oos_data=data2)
