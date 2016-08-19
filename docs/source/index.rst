@@ -6,7 +6,7 @@
 PyFlux: time-series for Python
 ==================================
 
-PyFlux is an open source time series library for the Python programming language. PyFlux allows for easy application of a vast array of time series methods and inference capabilities.
+PyFlux is an open source time series library for the Python programming language. PyFlux allows for easy application of a vast array of time series methods and inference capabilities. 
 
 Models
 ==================

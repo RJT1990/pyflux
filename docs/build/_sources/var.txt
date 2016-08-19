@@ -55,9 +55,13 @@ Here is example usage for :py:func:`adjust_prior`:
    model.list_priors()
    model.adjust_prior(2,pf.Normal(0,1))
 
+.. py:function:: construct_wishart(v, cov_matrix)
+   
+   Constructs a Wishart prior for the covariance matrix. Arguments include **v** - the degrees of freedom for the Wishart prior, and cov_matrix, which is the prior covariance matrix.
+
 .. py:function:: fit(method,**kwargs)
    
-   Estimates parameters for the model. Returns a Results object. **method** is an inference/estimation option; see Bayesian Inference and Classical Inference sections for options. If no **method** is provided then a default will be used.
+   Estimates latent variables for the model. Returns a Results object. **method** is an inference/estimation option; see Bayesian Inference and Classical Inference sections for options. If no **method** is provided then a default will be used.
 
    Optional arguments are specific to the **method** you choose - see the documentation for these methods for more detail.
 
@@ -71,19 +75,15 @@ Here is example usage for :py:func:`fit`:
    # model = ... (specify a model)
    model.fit("M-H",nsims=20000)
 
-.. py:function:: irf(h,shock_index,shock_value,shock_dir,intervals,cumulative)
-   
-   Plots impulse response function graphs. **h** is how many time steps to look ahead for the effects of the shock, **shock_index** is which variable index to apply the initial shock to, **shock_value** applies a custom shock, but if it is None (default setting) then a 1 standard deviation shock will be applied, **shock_dir** is one of 'positive' or 'negative' and is the direction of the shock, **intervals** specifies whether to plot prediction intervals or not, and **cumulative** is a boolean which specifies whether to plot cumulative effects or not.
-
 .. py:function:: plot_fit(**kwargs)
    
    Graphs the fit of the model.
 
    Optional arguments include **figsize** - the dimensions of the figure to plot.
 
-.. py:function:: plot_parameters(indices, figsize)
+.. py:function:: plot_z(indices, figsize)
 
-   Returns a plot of the parameters and their associated uncertainty. **indices** is a list referring to the parameter indices that you want ot plot. Figsize specifies how big the plot will be.
+   Returns a plot of the latent variables and their associated uncertainty. **indices** is a list referring to the latent variable indices that you want to plot. Figsize specifies how big the plot will be.
 
 .. py:function:: plot_predict(h,past_values,intervals,**kwargs)
    

@@ -61,8 +61,8 @@ class VAR(tsm.TSM):
         self.use_ols_covariance = use_ols_covariance
 
         # Format the data
+        self.data_original = data.copy()
         self.data, self.data_name, self.is_pandas, self.index = dc.mv_data_check(data,target)
-        self.data_original = self.data.copy()
 
         # Difference data
         X = np.transpose(self.data)
@@ -521,11 +521,7 @@ class VAR(tsm.TSM):
         predictions = []
 
         for t in range(0,h):
-            new_data = []
-            for variable in range(0,self.ylen):
-                temp_data = self.data_original.transpose()
-                new_data.append(temp_data[variable][0:(temp_data[0].shape[0]-h+t)])
-            new_data = np.transpose(np.array(new_data))
+            new_data = self.data_original.iloc[::-h]
             x = VAR(lags=self.lags,integ=self.integ,data=new_data)
             x.fit()
             if t == 0:

@@ -93,6 +93,7 @@
 <li class="toctree-l1"><a class="reference internal" href="segarchm.html">Skew-t EGARCH in-mean models</a></li>
 <li class="toctree-l1"><a class="reference internal" href="gas.html">GAS models</a></li>
 <li class="toctree-l1"><a class="reference internal" href="gasreg.html">GAS Regression models</a></li>
+<li class="toctree-l1"><a class="reference internal" href="gasx.html">GASX models</a></li>
 <li class="toctree-l1"><a class="reference internal" href="gpnar.html">GP-NARX models</a></li>
 <li class="toctree-l1"><a class="reference internal" href="ssm.html">Gaussian State Space models</a></li>
 <li class="toctree-l1"><a class="reference internal" href="ngssm.html">Non-Gaussian State Space models</a></li>
@@ -225,9 +226,15 @@
 </pre></div>
 </td></tr></table></div>
 <dl class="function">
+<dt id="construct_wishart">
+<code class="descname">construct_wishart</code><span class="sig-paren">(</span><em>v</em>, <em>cov_matrix</em><span class="sig-paren">)</span><a class="headerlink" href="#construct_wishart" title="Permalink to this definition">¶</a></dt>
+<dd><p>Constructs a Wishart prior for the covariance matrix. Arguments include <strong>v</strong> - the degrees of freedom for the Wishart prior, and cov_matrix, which is the prior covariance matrix.</p>
+</dd></dl>
+
+<dl class="function">
 <dt id="fit">
 <code class="descname">fit</code><span class="sig-paren">(</span><em>method</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="headerlink" href="#fit" title="Permalink to this definition">¶</a></dt>
-<dd><p>Estimates parameters for the model. Returns a Results object. <strong>method</strong> is an inference/estimation option; see Bayesian Inference and Classical Inference sections for options. If no <strong>method</strong> is provided then a default will be used.</p>
+<dd><p>Estimates latent variables for the model. Returns a Results object. <strong>method</strong> is an inference/estimation option; see Bayesian Inference and Classical Inference sections for options. If no <strong>method</strong> is provided then a default will be used.</p>
 <p>Optional arguments are specific to the <strong>method</strong> you choose - see the documentation for these methods for more detail.</p>
 </dd></dl>
 
@@ -242,12 +249,6 @@
 </pre></div>
 </td></tr></table></div>
 <dl class="function">
-<dt id="irf">
-<code class="descname">irf</code><span class="sig-paren">(</span><em>h</em>, <em>shock_index</em>, <em>shock_value</em>, <em>shock_dir</em>, <em>intervals</em>, <em>cumulative</em><span class="sig-paren">)</span><a class="headerlink" href="#irf" title="Permalink to this definition">¶</a></dt>
-<dd><p>Plots impulse response function graphs. <strong>h</strong> is how many time steps to look ahead for the effects of the shock, <strong>shock_index</strong> is which variable index to apply the initial shock to, <strong>shock_value</strong> applies a custom shock, but if it is None (default setting) then a 1 standard deviation shock will be applied, <strong>shock_dir</strong> is one of &#8216;positive&#8217; or &#8216;negative&#8217; and is the direction of the shock, <strong>intervals</strong> specifies whether to plot prediction intervals or not, and <strong>cumulative</strong> is a boolean which specifies whether to plot cumulative effects or not.</p>
-</dd></dl>
-
-<dl class="function">
 <dt id="plot_fit">
 <code class="descname">plot_fit</code><span class="sig-paren">(</span><em>**kwargs</em><span class="sig-paren">)</span><a class="headerlink" href="#plot_fit" title="Permalink to this definition">¶</a></dt>
 <dd><p>Graphs the fit of the model.</p>
@@ -255,9 +256,9 @@
 </dd></dl>
 
 <dl class="function">
-<dt id="plot_parameters">
-<code class="descname">plot_parameters</code><span class="sig-paren">(</span><em>indices</em>, <em>figsize</em><span class="sig-paren">)</span><a class="headerlink" href="#plot_parameters" title="Permalink to this definition">¶</a></dt>
-<dd><p>Returns a plot of the parameters and their associated uncertainty. <strong>indices</strong> is a list referring to the parameter indices that you want ot plot. Figsize specifies how big the plot will be.</p>
+<dt id="plot_z">
+<code class="descname">plot_z</code><span class="sig-paren">(</span><em>indices</em>, <em>figsize</em><span class="sig-paren">)</span><a class="headerlink" href="#plot_z" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns a plot of the latent variables and their associated uncertainty. <strong>indices</strong> is a list referring to the latent variable indices that you want to plot. Figsize specifies how big the plot will be.</p>
 </dd></dl>
 
 <dl class="function">
