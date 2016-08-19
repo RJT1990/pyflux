@@ -8,7 +8,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>EGARCH models &mdash; PyFlux 0.2.7 documentation</title>
+  <title>Beta-t-EGARCH models &mdash; PyFlux 0.3.7 documentation</title>
   
 
   
@@ -30,8 +30,8 @@
   
 
   
-    <link rel="top" title="PyFlux 0.2.7 documentation" href="index.html"/>
-        <link rel="next" title="GARCH models" href="garch.html"/>
+    <link rel="top" title="PyFlux 0.3.7 documentation" href="index.html"/>
+        <link rel="next" title="Beta-t-EGARCH in-mean models" href="egarchm.html"/>
         <link rel="prev" title="ARIMAX models" href="arimax.html"/> 
 
   
@@ -60,7 +60,7 @@
             
             
               <div class="version">
-                0.2
+                0.3
               </div>
             
           
@@ -84,13 +84,18 @@
                 <ul class="current">
 <li class="toctree-l1"><a class="reference internal" href="arima.html">ARIMA models</a></li>
 <li class="toctree-l1"><a class="reference internal" href="arimax.html">ARIMAX models</a></li>
-<li class="toctree-l1 current"><a class="current reference internal" href="">EGARCH models</a><ul>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Beta-t-EGARCH models</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="#example">Example</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#class-arguments">Class Arguments</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#class-methods">Class Methods</a></li>
 </ul>
 </li>
+<li class="toctree-l1"><a class="reference internal" href="egarchm.html">Beta-t-EGARCH in-mean models</a></li>
+<li class="toctree-l1"><a class="reference internal" href="egarchmreg.html">Beta-t-EGARCH-in-mean regression models</a></li>
+<li class="toctree-l1"><a class="reference internal" href="lmegarch.html">Beta-t-EGARCH Long Memory models</a></li>
 <li class="toctree-l1"><a class="reference internal" href="garch.html">GARCH models</a></li>
+<li class="toctree-l1"><a class="reference internal" href="segarch.html">Skew-t EGARCH models</a></li>
+<li class="toctree-l1"><a class="reference internal" href="segarchm.html">Skew-t EGARCH in-mean models</a></li>
 <li class="toctree-l1"><a class="reference internal" href="gas.html">GAS models</a></li>
 <li class="toctree-l1"><a class="reference internal" href="gasreg.html">GAS Regression models</a></li>
 <li class="toctree-l1"><a class="reference internal" href="gpnar.html">GP-NARX models</a></li>
@@ -123,7 +128,7 @@
         <div class="rst-content">
           
 
-
+ 
 
 
 
@@ -131,7 +136,7 @@
   <ul class="wy-breadcrumbs">
     <li><a href="index.html">Docs</a> &raquo;</li>
       
-    <li>EGARCH models</li>
+    <li>Beta-t-EGARCH models</li>
       <li class="wy-breadcrumbs-aside">
         
           
@@ -145,8 +150,8 @@
           <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
            <div itemprop="articleBody">
             
-  <div class="section" id="egarch-models">
-<h1>EGARCH models<a class="headerlink" href="#egarch-models" title="Permalink to this headline">¶</a></h1>
+  <div class="section" id="beta-t-egarch-models">
+<h1>Beta-t-EGARCH models<a class="headerlink" href="#beta-t-egarch-models" title="Permalink to this headline">¶</a></h1>
 <div class="section" id="example">
 <h2>Example<a class="headerlink" href="#example" title="Permalink to this headline">¶</a></h2>
 <div class="highlight-python"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre>1
@@ -163,7 +168,7 @@
 
 <span class="n">ibm</span> <span class="o">=</span> <span class="n">DataReader</span><span class="p">(</span><span class="s1">&#39;IBM&#39;</span><span class="p">,</span>  <span class="s1">&#39;yahoo&#39;</span><span class="p">,</span> <span class="n">datetime</span><span class="p">(</span><span class="mi">2000</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">),</span> <span class="n">datetime</span><span class="p">(</span><span class="mi">2016</span><span class="p">,</span><span class="mi">3</span><span class="p">,</span><span class="mi">10</span><span class="p">))</span>
 <span class="n">ibm</span><span class="p">[</span><span class="s1">&#39;Logged Open&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="n">ibm</span><span class="p">[</span><span class="s1">&#39;Open&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">values</span><span class="p">)</span>
-<span class="n">model</span> <span class="o">=</span> <span class="n">pf</span><span class="o">.</span><span class="n">EGARCH</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">diff</span><span class="p">(</span><span class="n">ibm</span><span class="p">[</span><span class="s1">&#39;Logged Open&#39;</span><span class="p">]),</span><span class="n">p</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span><span class="n">q</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+<span class="n">model</span> <span class="o">=</span> <span class="n">pf</span><span class="o">.</span><span class="n">EGARCH</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">diff</span><span class="p">(</span><span class="n">ibm</span><span class="p">[</span><span class="s1">&#39;Logged Open&#39;</span><span class="p">]),</span> <span class="n">p</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">q</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
 </pre></div>
 </td></tr></table></div>
 </div>
@@ -204,7 +209,7 @@
 <dl class="function">
 <dt id="add_leverage">
 <code class="descname">add_leverage</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#add_leverage" title="Permalink to this definition">¶</a></dt>
-<dd><p>Adds a leverage term to the model to account for the asymmetric effect of news.</p>
+<dd><p>Adds a leverage term to the model to account for the asymmetric effect of new information.</p>
 </dd></dl>
 
 <dl class="function">
@@ -222,13 +227,13 @@
 
 <span class="c1"># model = ... (specify a model)</span>
 <span class="n">model</span><span class="o">.</span><span class="n">list_priors</span><span class="p">()</span>
-<span class="n">model</span><span class="o">.</span><span class="n">adjust_prior</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span><span class="n">pf</span><span class="o">.</span><span class="n">Normal</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">))</span>
+<span class="n">model</span><span class="o">.</span><span class="n">adjust_prior</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="n">pf</span><span class="o">.</span><span class="n">Normal</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">))</span>
 </pre></div>
 </td></tr></table></div>
 <dl class="function">
 <dt id="fit">
 <code class="descname">fit</code><span class="sig-paren">(</span><em>method</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="headerlink" href="#fit" title="Permalink to this definition">¶</a></dt>
-<dd><p>Estimates parameters for the model. Returns a Results object. <strong>method</strong> is an inference/estimation option; see Bayesian Inference and Classical Inference sections for options. If no <strong>method</strong> is provided then a default will be used.</p>
+<dd><p>Estimates latent variables for the model. Returns a Results object. <strong>method</strong> is an inference/estimation option; see Bayesian Inference and Classical Inference sections for options. If no <strong>method</strong> is provided then a default will be used.</p>
 <p>Optional arguments are specific to the <strong>method</strong> you choose - see the documentation for these methods for more detail.</p>
 </dd></dl>
 
@@ -239,7 +244,7 @@
 4</pre></div></td><td class="code"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">pyflux</span> <span class="kn">as</span> <span class="nn">pf</span>
 
 <span class="c1"># model = ... (specify a model)</span>
-<span class="n">model</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="s2">&quot;M-H&quot;</span><span class="p">,</span><span class="n">nsims</span><span class="o">=</span><span class="mi">20000</span><span class="p">)</span>
+<span class="n">model</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="s2">&quot;M-H&quot;</span><span class="p">,</span> <span class="n">nsims</span><span class="o">=</span><span class="mi">20000</span><span class="p">)</span>
 </pre></div>
 </td></tr></table></div>
 <dl class="function">
@@ -250,9 +255,9 @@
 </dd></dl>
 
 <dl class="function">
-<dt id="plot_parameters">
-<code class="descname">plot_parameters</code><span class="sig-paren">(</span><em>indices</em>, <em>figsize</em><span class="sig-paren">)</span><a class="headerlink" href="#plot_parameters" title="Permalink to this definition">¶</a></dt>
-<dd><p>Returns a plot of the parameters and their associated uncertainty. <strong>indices</strong> is a list referring to the parameter indices that you want ot plot. Figsize specifies how big the plot will be.</p>
+<dt id="plot_z">
+<code class="descname">plot_z</code><span class="sig-paren">(</span><em>indices</em>, <em>figsize</em><span class="sig-paren">)</span><a class="headerlink" href="#plot_z" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns a plot of the latent variables and their associated uncertainty. <strong>indices</strong> is a list referring to the parameter indices that you want to plot. Figsize specifies how big the plot will be.</p>
 </dd></dl>
 
 <dl class="function">
@@ -291,7 +296,7 @@
   
     <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
       
-        <a href="garch.html" class="btn btn-neutral float-right" title="GARCH models" accesskey="n">Next <span class="fa fa-arrow-circle-right"></span></a>
+        <a href="egarchm.html" class="btn btn-neutral float-right" title="Beta-t-EGARCH in-mean models" accesskey="n">Next <span class="fa fa-arrow-circle-right"></span></a>
       
       
         <a href="arimax.html" class="btn btn-neutral" title="ARIMAX models" accesskey="p"><span class="fa fa-arrow-circle-left"></span> Previous</a>
@@ -325,7 +330,7 @@
     <script type="text/javascript">
         var DOCUMENTATION_OPTIONS = {
             URL_ROOT:'./',
-            VERSION:'0.2.7',
+            VERSION:'0.3.7',
             COLLAPSE_INDEX:false,
             FILE_SUFFIX:'.html',
             HAS_SOURCE:  true

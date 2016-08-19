@@ -8,7 +8,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>ARIMAX models &mdash; PyFlux 0.2.7 documentation</title>
+  <title>ARIMAX models &mdash; PyFlux 0.3.7 documentation</title>
   
 
   
@@ -30,8 +30,8 @@
   
 
   
-    <link rel="top" title="PyFlux 0.2.7 documentation" href="index.html"/>
-        <link rel="next" title="EGARCH models" href="egarch.html"/>
+    <link rel="top" title="PyFlux 0.3.7 documentation" href="index.html"/>
+        <link rel="next" title="Beta-t-EGARCH models" href="egarch.html"/>
         <link rel="prev" title="ARIMA models" href="arima.html"/> 
 
   
@@ -60,7 +60,7 @@
             
             
               <div class="version">
-                0.2
+                0.3
               </div>
             
           
@@ -83,14 +83,19 @@
             
                 <ul class="current">
 <li class="toctree-l1"><a class="reference internal" href="arima.html">ARIMA models</a></li>
-<li class="toctree-l1 current"><a class="current reference internal" href="">ARIMAX models</a><ul>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">ARIMAX models</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="#example">Example</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#class-arguments">Class Arguments</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#class-methods">Class Methods</a></li>
 </ul>
 </li>
-<li class="toctree-l1"><a class="reference internal" href="egarch.html">EGARCH models</a></li>
+<li class="toctree-l1"><a class="reference internal" href="egarch.html">Beta-t-EGARCH models</a></li>
+<li class="toctree-l1"><a class="reference internal" href="egarchm.html">Beta-t-EGARCH in-mean models</a></li>
+<li class="toctree-l1"><a class="reference internal" href="egarchmreg.html">Beta-t-EGARCH-in-mean regression models</a></li>
+<li class="toctree-l1"><a class="reference internal" href="lmegarch.html">Beta-t-EGARCH Long Memory models</a></li>
 <li class="toctree-l1"><a class="reference internal" href="garch.html">GARCH models</a></li>
+<li class="toctree-l1"><a class="reference internal" href="segarch.html">Skew-t EGARCH models</a></li>
+<li class="toctree-l1"><a class="reference internal" href="segarchm.html">Skew-t EGARCH in-mean models</a></li>
 <li class="toctree-l1"><a class="reference internal" href="gas.html">GAS models</a></li>
 <li class="toctree-l1"><a class="reference internal" href="gasreg.html">GAS Regression models</a></li>
 <li class="toctree-l1"><a class="reference internal" href="gpnar.html">GP-NARX models</a></li>
@@ -123,7 +128,7 @@
         <div class="rst-content">
           
 
-
+ 
 
 
 
@@ -165,7 +170,7 @@
 
 <span class="n">accident_data</span> <span class="o">=</span> <span class="c1"># some made-up data (needs to be a DataFrame)</span>
 
-<span class="n">model</span> <span class="o">=</span> <span class="n">pf</span><span class="o">.</span><span class="n">ARIMAX</span><span class="p">(</span><span class="n">data</span><span class="o">=</span><span class="n">my_data</span><span class="p">,</span><span class="n">ar</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span><span class="n">ma</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span><span class="n">formula</span><span class="o">=</span><span class="s1">&#39;CarAccidents ~ 1 + Friday&#39;</span><span class="p">)</span>
+<span class="n">model</span> <span class="o">=</span> <span class="n">pf</span><span class="o">.</span><span class="n">ARIMAX</span><span class="p">(</span><span class="n">data</span><span class="o">=</span><span class="n">my_data</span><span class="p">,</span> <span class="n">formula</span><span class="o">=</span><span class="s1">&#39;CarAccidents ~ 1 + Friday&#39;</span><span class="p">,</span> <span class="n">ar</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">ma</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
 </pre></div>
 </td></tr></table></div>
 </div>
@@ -177,7 +182,7 @@
 <dd><dl class="attribute">
 <dt id="ARIMAX.data">
 <code class="descname">data</code><a class="headerlink" href="#ARIMAX.data" title="Permalink to this definition">¶</a></dt>
-<dd><p>pd.DataFrame or array-like : the time-series data</p>
+<dd><p>pd.DataFrame : the time-series data</p>
 </dd></dl>
 
 <dl class="attribute">
@@ -215,7 +220,7 @@
 <dd><p>Adjusts the priors of the model. <strong>index</strong> can be an int or a list. <strong>prior</strong> is a prior object, such as Normal(0,3).</p>
 </dd></dl>
 
-<p>Here is example usage for <a class="reference internal" href="#adjust_prior" title="adjust_prior"><code class="xref py py-func docutils literal"><span class="pre">adjust_prior()</span></code></a>:</p>
+<p>Here is example usage for <a class="reference internal" href="var.html#adjust_prior" title="adjust_prior"><code class="xref py py-func docutils literal"><span class="pre">adjust_prior()</span></code></a>:</p>
 <div class="highlight-python"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre>1
 2
 3
@@ -224,24 +229,24 @@
 
 <span class="c1"># model = ... (specify a model)</span>
 <span class="n">model</span><span class="o">.</span><span class="n">list_priors</span><span class="p">()</span>
-<span class="n">model</span><span class="o">.</span><span class="n">adjust_prior</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span><span class="n">pf</span><span class="o">.</span><span class="n">Normal</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">))</span>
+<span class="n">model</span><span class="o">.</span><span class="n">adjust_prior</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="n">pf</span><span class="o">.</span><span class="n">Normal</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">))</span>
 </pre></div>
 </td></tr></table></div>
 <dl class="function">
 <dt id="fit">
 <code class="descname">fit</code><span class="sig-paren">(</span><em>method</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="headerlink" href="#fit" title="Permalink to this definition">¶</a></dt>
-<dd><p>Estimates latent variables for the model. Returns a Results object. <strong>method</strong> is an inference/estimation option; see Bayesian Inference and Classical Inference sections for options. If no <strong>method</strong> is provided then a default will be used.</p>
-<p>Optional arguments are specific to the <strong>method</strong> you choose - see the documentation for these methods for more detail.</p>
+<dd><p>Estimates latent variables for the model. Returns a Results object. <strong>method</strong> is an inference/estimation option; see Bayesian Inference and Classical Inference sections for a list of options. If no <strong>method</strong> is provided then a default will be used.</p>
+<p>Optional arguments are specific to the <strong>method</strong> you choose, see the documentation on these methods for more detail.</p>
 </dd></dl>
 
-<p>Here is example usage for <a class="reference internal" href="#fit" title="fit"><code class="xref py py-func docutils literal"><span class="pre">fit()</span></code></a>:</p>
+<p>Here is example usage for <a class="reference internal" href="var.html#fit" title="fit"><code class="xref py py-func docutils literal"><span class="pre">fit()</span></code></a>:</p>
 <div class="highlight-python"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre>1
 2
 3
 4</pre></div></td><td class="code"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">pyflux</span> <span class="kn">as</span> <span class="nn">pf</span>
 
 <span class="c1"># model = ... (specify a model)</span>
-<span class="n">model</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="s2">&quot;M-H&quot;</span><span class="p">,</span><span class="n">nsims</span><span class="o">=</span><span class="mi">20000</span><span class="p">)</span>
+<span class="n">model</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="s2">&quot;M-H&quot;</span><span class="p">,</span> <span class="n">nsims</span><span class="o">=</span><span class="mi">20000</span><span class="p">)</span>
 </pre></div>
 </td></tr></table></div>
 <dl class="function">
@@ -254,7 +259,7 @@
 <dl class="function">
 <dt id="plot_predict">
 <code class="descname">plot_predict</code><span class="sig-paren">(</span><em>h</em>, <em>past_values</em>, <em>intervals</em>, <em>oos_data</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="headerlink" href="#plot_predict" title="Permalink to this definition">¶</a></dt>
-<dd><p>Plots predictions of the model. <strong>h</strong> is an int of how many steps ahead to predict. <strong>past_values</strong> is an int of how many past values of the series to plot. <strong>intervals</strong> is a bool on whether to include confidence/credibility intervals or not. <strong>oos_data</strong> is a DataFrame in the same format as the original DataFrame and has data for the explanatory variables to be used for prediction.</p>
+<dd><p>Plots predictions of the model. <strong>h</strong> is an int of how many steps ahead to predict. <strong>past_values</strong> is an int of how many past values of the series to plot. <strong>intervals</strong> is a boolean on whether to include confidence/credibility intervals or not. <strong>oos_data</strong> is a DataFrame in the same format as the original DataFrame and has data for the explanatory variables to be used for prediction.</p>
 <p>Optional arguments include <strong>figsize</strong> - the dimensions of the figure to plot.</p>
 </dd></dl>
 
@@ -268,7 +273,7 @@
 <dl class="function">
 <dt id="plot_z">
 <code class="descname">plot_z</code><span class="sig-paren">(</span><em>indices</em>, <em>figsize</em><span class="sig-paren">)</span><a class="headerlink" href="#plot_z" title="Permalink to this definition">¶</a></dt>
-<dd><p>Returns a plot of the latent variables and their associated uncertainty. <strong>indices</strong> is a list referring to the latent variable indices that you want ot plot. Figsize specifies how big the plot will be.</p>
+<dd><p>Returns a plot of the latent variables and their associated uncertainty. <strong>indices</strong> is a list referring to the latent variable indices that you want to plot. Figsize specifies how big the plot will be.</p>
 </dd></dl>
 
 <dl class="function">
@@ -293,7 +298,7 @@
   
     <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
       
-        <a href="egarch.html" class="btn btn-neutral float-right" title="EGARCH models" accesskey="n">Next <span class="fa fa-arrow-circle-right"></span></a>
+        <a href="egarch.html" class="btn btn-neutral float-right" title="Beta-t-EGARCH models" accesskey="n">Next <span class="fa fa-arrow-circle-right"></span></a>
       
       
         <a href="arima.html" class="btn btn-neutral" title="ARIMA models" accesskey="p"><span class="fa fa-arrow-circle-left"></span> Previous</a>
@@ -327,7 +332,7 @@
     <script type="text/javascript">
         var DOCUMENTATION_OPTIONS = {
             URL_ROOT:'./',
-            VERSION:'0.2.7',
+            VERSION:'0.3.7',
             COLLAPSE_INDEX:false,
             FILE_SUFFIX:'.html',
             HAS_SOURCE:  true

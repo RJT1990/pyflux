@@ -1,12 +1,12 @@
 Classical Inference
 ==================================
 
-PyFlux supports Classical inference.
+PyFlux supports classical methods of inference. These can be considered as point mass approximations to the full posterior.
 
 Methods
 ----------
 
-There are a number of classical inference options using the :py:func:`fit`: option. These can be chosen with the method option.
+There are a number of classical inference options using the :py:func:`fit`: method. These can be chosen with the method option.
 
 **Maximum Likelihood**
 

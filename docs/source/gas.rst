@@ -19,9 +19,8 @@ Example
 Class Arguments
 ----------
 
-Options include **GASExponential**, **GASLaplace**, **GASNormal**, **GASPoisson**, **GASt**. GAS objects have the following form:
 
-.. py:class:: GAS(data,ar,sc,integ,target,gradient_only)
+.. py:class:: GAS(data,ar,sc,integ,target,family)
 
    .. py:attribute:: data
 
@@ -43,9 +42,9 @@ Options include **GASExponential**, **GASLaplace**, **GASNormal**, **GASPoisson*
 
       string (data is DataFrame) or int (data is np.array) : which column to use as the time series. If None, the first column will be chosen as the data.
 
-   .. py:attribute:: gradient_only
+   .. py:attribute:: family
 
-      boolean : if true, will only use the gradient (the score) rather than an adjusted score with Hessian information; former is more stable.
+      a GAS family object; choices include GASExponential(), GASLaplace(), GASNormal(), GASPoisson(), GASSkewt(), GASt()
 
 Class Methods
 ----------
@@ -67,7 +66,7 @@ Here is example usage for :py:func:`adjust_prior`:
 
 .. py:function:: fit(method,**kwargs)
    
-   Estimates parameters for the model. Returns a Results object. **method** is an inference/estimation option; see Bayesian Inference and Classical Inference sections for options. If no **method** is provided then a default will be used.
+   Estimates latent variables for the model. Returns a Results object. **method** is an inference/estimation option; see Bayesian Inference and Classical Inference sections for options. If no **method** is provided then a default will be used.
 
    Optional arguments are specific to the **method** you choose - see the documentation for these methods for more detail.
 
@@ -87,9 +86,9 @@ Here is example usage for :py:func:`fit`:
 
    Optional arguments include **figsize** - the dimensions of the figure to plot.
 
-.. py:function:: plot_parameters(indices, figsize)
+.. py:function:: plot_z(indices, figsize)
 
-   Returns a plot of the parameters and their associated uncertainty. **indices** is a list referring to the parameter indices that you want ot plot. Figsize specifies how big the plot will be.
+   Returns a plot of the latent variables and their associated uncertainty. **indices** is a list referring to the latent variable indices that you want ot plot. Figsize specifies how big the plot will be.
 
 .. py:function:: plot_predict(h,past_values,intervals,**kwargs)
    

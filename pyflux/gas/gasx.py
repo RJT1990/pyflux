@@ -232,7 +232,6 @@ class GASX(tsm.TSM):
             if self.ar != 0:
                 for j in range(1,self.ar+1):
                     new_value += t_params[j]*theta_exp[-j]
-
             if self.sc != 0:
                 for k in range(1,self.sc+1):
                     new_value += t_params[k+self.ar]*scores_exp[-k]

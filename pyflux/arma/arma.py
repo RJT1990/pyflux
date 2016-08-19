@@ -53,7 +53,7 @@ class ARIMA(tsm.TSM):
         self.model_name = "ARIMA(" + str(self.ar) + "," + str(self.integ) + "," + str(self.ma) + ")"
         self.z_no = self.ar + self.ma + 2
         self.max_lag = max(self.ar,self.ma)
-        self._z_hide = 0 # Whether to cutoff variance latent variables from results
+        self._z_hide = 0 # Whether to cutoff latent variables from results table
         self.supported_methods = ["MLE", "PML", "Laplace", "M-H", "BBVI"]
         self.default_method = "MLE"
         self.multivariate_model = False
@@ -72,7 +72,7 @@ class ARIMA(tsm.TSM):
         self._create_latent_variables()
 
     def _ar_matrix(self):
-        """ Creates Autoregressive Matrix
+        """ Creates Autoregressive matrix
 
         Returns
         ----------
@@ -84,7 +84,7 @@ class ARIMA(tsm.TSM):
         X = np.ones(Y.shape[0])
 
         if self.ar != 0:
-            for i in range(0,self.ar):
+            for i in range(0, self.ar):
                 X = np.vstack((X,self.data[(self.max_lag-i-1):-i-1]))
 
         return X
@@ -97,15 +97,15 @@ class ARIMA(tsm.TSM):
         None (changes model attributes)
         """
 
-        self.latent_variables.add_z('Constant',ifr.Normal(0,3,transform=None),dst.q_Normal(0,3))
+        self.latent_variables.add_z('Constant', ifr.Normal(0,3,transform=None), dst.q_Normal(0,3))
 
         for ar_term in range(self.ar):
-            self.latent_variables.add_z('AR(' + str(ar_term+1) + ')',ifr.Normal(0,0.5,transform=None),dst.q_Normal(0,3))
+            self.latent_variables.add_z('AR(' + str(ar_term+1) + ')', ifr.Normal(0,0.5,transform=None), dst.q_Normal(0,3))
 
         for ma_term in range(self.ma):
-            self.latent_variables.add_z('MA(' + str(ma_term+1) + ')',ifr.Normal(0,0.5,transform=None),dst.q_Normal(0,3))
+            self.latent_variables.add_z('MA(' + str(ma_term+1) + ')', ifr.Normal(0,0.5,transform=None), dst.q_Normal(0,3))
 
-        self.latent_variables.add_z('Sigma',ifr.Uniform(transform='exp'),dst.q_Normal(0,3))
+        self.latent_variables.add_z('Sigma', ifr.Uniform(transform='exp'), dst.q_Normal(0,3))
 
         self.latent_variables.z_list[0].start = np.mean(self.data)
 
@@ -174,15 +174,15 @@ class ARIMA(tsm.TSM):
             new_value = t_z[0]
 
             if self.ar != 0:
-                for j in range(1,self.ar+1):
+                for j in range(1, self.ar+1):
                     new_value += t_z[j]*Y_exp[-j]
 
             if self.ma != 0:
-                for k in range(1,self.ma+1):
+                for k in range(1, self.ma+1):
                     if (k-1) >= t:
                         new_value += t_z[k+self.ar]*(Y_exp[-k]-mu_exp[-k])
 
-            Y_exp = np.append(Y_exp,[new_value])
+            Y_exp = np.append(Y_exp, [new_value])
             mu_exp = np.append(mu_exp,[0]) # For indexing consistency
 
         return Y_exp
@@ -233,14 +233,14 @@ class ARIMA(tsm.TSM):
                         if (k-1) >= t:
                             new_value += t_z[k+self.ar]*(Y_exp[-k]-mu_exp[-k])
 
-                Y_exp = np.append(Y_exp,[new_value])
-                mu_exp = np.append(mu_exp,[0]) # For indexing consistency
+                Y_exp = np.append(Y_exp, [new_value])
+                mu_exp = np.append(mu_exp, [0]) # For indexing consistency
 
                 sim_vector[n] = Y_exp[-h:]
 
         return np.transpose(sim_vector)
 
-    def _summarize_simulations(self,mean_values,sim_vector,date_index,h,past_values):
+    def _summarize_simulations(self, mean_values, sim_vector, date_index, h, past_values):
         """ Produces simulation forecasted values and prediction intervals
 
         Parameters
@@ -249,10 +249,10 @@ class ARIMA(tsm.TSM):
             Mean predictions for h-step ahead forecasts
 
         sim_vector : np.ndarray
-            N simulation predictions for h-step ahead forecasts
+            N simulated predictions for h-step ahead forecasts
 
         date_index : pd.DateIndex or np.ndarray
-            Date index for the simulation
+            Date index for the simulations
 
         h : int
             How many steps ahead are forecast
@@ -290,13 +290,12 @@ class ARIMA(tsm.TSM):
 
     def plot_fit(self, **kwargs):
         """ 
-        Plots the fit of the model
+        Plots the fit of the model against the data
         """
 
         figsize = kwargs.get('figsize',(10,7))
-
         plt.figure(figsize=figsize)
-        date_index = self.index[max(self.ar,self.ma):self.data.shape[0]]
+        date_index = self.index[max(self.ar, self.ma):self.data.shape[0]]
         mu, Y = self._model(self.latent_variables.get_z_values())
         plt.plot(date_index,Y,label='Data')
         plt.plot(date_index,mu,label='Filter',c='black')
@@ -334,9 +333,9 @@ class ARIMA(tsm.TSM):
             t_z = self.transform_z()
 
             # Get mean prediction and simulations (for errors)
-            mean_values = self._mean_prediction(mu,Y,h,t_z)
-            sim_values = self._sim_prediction(mu,Y,h,t_z,15000)
-            error_bars, forecasted_values, plot_values, plot_index = self._summarize_simulations(mean_values,sim_values,date_index,h,past_values)
+            mean_values = self._mean_prediction(mu, Y, h, t_z)
+            sim_values = self._sim_prediction(mu, Y, h, t_z, 15000)
+            error_bars, forecasted_values, plot_values, plot_index = self._summarize_simulations(mean_values, sim_values, date_index, h, past_values)
 
             plt.figure(figsize=figsize)
             if intervals == True:
@@ -350,7 +349,7 @@ class ARIMA(tsm.TSM):
             plt.show()
 
     def predict_is(self, h=5):
-        """ Makes dynamic in-sample predictions with the estimated model
+        """ Makes dynamic out-of-sample predictions with the estimated model on in-sample data
 
         Parameters
         ----------
@@ -364,7 +363,7 @@ class ARIMA(tsm.TSM):
         predictions = []
 
         for t in range(0,h):
-            x = ARIMA(ar=self.ar,ma=self.ma,integ=self.integ,data=self.data_original[:-h+t])
+            x = ARIMA(ar=self.ar, ma=self.ma, integ=self.integ, data=self.data_original[:-h+t])
             x.fit(printer=False)
             if t == 0:
                 predictions = x.predict(1)
@@ -377,8 +376,7 @@ class ARIMA(tsm.TSM):
         return predictions
 
     def plot_predict_is(self, h=5, **kwargs):
-        """ Plots forecasts with the estimated model against data
-            (Simulated prediction with data)
+        """ Plots forecasts with the estimated model against data (Simulated prediction with data)
 
         Parameters
         ----------
@@ -391,18 +389,16 @@ class ARIMA(tsm.TSM):
         """     
 
         figsize = kwargs.get('figsize',(10,7))
-
         plt.figure(figsize=figsize)
         predictions = self.predict_is(h)
         data = self.data[-h:]
-
-        plt.plot(predictions.index,data,label='Data')
-        plt.plot(predictions.index,predictions,label='Predictions',c='black')
+        plt.plot(predictions.index, data, label='Data')
+        plt.plot(predictions.index, predictions, label='Predictions', c='black')
         plt.title(self.data_name)
         plt.legend(loc=2)   
         plt.show()          
 
-    def predict(self,h=5):
+    def predict(self, h=5):
         """ Makes forecast with the estimated model
 
         Parameters
@@ -418,12 +414,10 @@ class ARIMA(tsm.TSM):
         if self.latent_variables.estimated is False:
             raise Exception("No latent variables estimated!")
         else:
-
             mu, Y = self._model(self.latent_variables.get_z_values())         
             date_index = self.shift_dates(h)
             t_z = self.transform_z()
-
-            mean_values = self._mean_prediction(mu,Y,h,t_z)
+            mean_values = self._mean_prediction(mu, Y, h, t_z)
             forecasted_values = mean_values[-h:]
             result = pd.DataFrame(forecasted_values)
             result.rename(columns={0:self.data_name}, inplace=True)

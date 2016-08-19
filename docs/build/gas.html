@@ -8,7 +8,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>GAS models &mdash; PyFlux 0.2.7 documentation</title>
+  <title>GAS models &mdash; PyFlux 0.3.7 documentation</title>
   
 
   
@@ -30,9 +30,9 @@
   
 
   
-    <link rel="top" title="PyFlux 0.2.7 documentation" href="index.html"/>
+    <link rel="top" title="PyFlux 0.3.7 documentation" href="index.html"/>
         <link rel="next" title="GAS Regression models" href="gasreg.html"/>
-        <link rel="prev" title="GARCH models" href="garch.html"/> 
+        <link rel="prev" title="Skew-t EGARCH in-mean models" href="segarchm.html"/> 
 
   
   <script src="_static/js/modernizr.min.js"></script>
@@ -60,7 +60,7 @@
             
             
               <div class="version">
-                0.2
+                0.3
               </div>
             
           
@@ -84,15 +84,21 @@
                 <ul class="current">
 <li class="toctree-l1"><a class="reference internal" href="arima.html">ARIMA models</a></li>
 <li class="toctree-l1"><a class="reference internal" href="arimax.html">ARIMAX models</a></li>
-<li class="toctree-l1"><a class="reference internal" href="egarch.html">EGARCH models</a></li>
+<li class="toctree-l1"><a class="reference internal" href="egarch.html">Beta-t-EGARCH models</a></li>
+<li class="toctree-l1"><a class="reference internal" href="egarchm.html">Beta-t-EGARCH in-mean models</a></li>
+<li class="toctree-l1"><a class="reference internal" href="egarchmreg.html">Beta-t-EGARCH-in-mean regression models</a></li>
+<li class="toctree-l1"><a class="reference internal" href="lmegarch.html">Beta-t-EGARCH Long Memory models</a></li>
 <li class="toctree-l1"><a class="reference internal" href="garch.html">GARCH models</a></li>
-<li class="toctree-l1 current"><a class="current reference internal" href="">GAS models</a><ul>
+<li class="toctree-l1"><a class="reference internal" href="segarch.html">Skew-t EGARCH models</a></li>
+<li class="toctree-l1"><a class="reference internal" href="segarchm.html">Skew-t EGARCH in-mean models</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">GAS models</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="#example">Example</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#class-arguments">Class Arguments</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#class-methods">Class Methods</a></li>
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="gasreg.html">GAS Regression models</a></li>
+<li class="toctree-l1"><a class="reference internal" href="gasx.html">GAS models</a></li>
 <li class="toctree-l1"><a class="reference internal" href="gpnar.html">GP-NARX models</a></li>
 <li class="toctree-l1"><a class="reference internal" href="ssm.html">Gaussian State Space models</a></li>
 <li class="toctree-l1"><a class="reference internal" href="ngssm.html">Non-Gaussian State Space models</a></li>
@@ -123,7 +129,7 @@
         <div class="rst-content">
           
 
-
+ 
 
 
 
@@ -169,10 +175,9 @@
 </div>
 <div class="section" id="class-arguments">
 <h2>Class Arguments<a class="headerlink" href="#class-arguments" title="Permalink to this headline">¶</a></h2>
-<p>Options include <strong>GASExponential</strong>, <strong>GASLaplace</strong>, <strong>GASNormal</strong>, <strong>GASPoisson</strong>, <strong>GASt</strong>. GAS objects have the following form:</p>
 <dl class="class">
 <dt id="GAS">
-<em class="property">class </em><code class="descname">GAS</code><span class="sig-paren">(</span><em>data</em>, <em>ar</em>, <em>sc</em>, <em>integ</em>, <em>target</em>, <em>gradient_only</em><span class="sig-paren">)</span><a class="headerlink" href="#GAS" title="Permalink to this definition">¶</a></dt>
+<em class="property">class </em><code class="descname">GAS</code><span class="sig-paren">(</span><em>data</em>, <em>ar</em>, <em>sc</em>, <em>integ</em>, <em>target</em>, <em>family</em><span class="sig-paren">)</span><a class="headerlink" href="#GAS" title="Permalink to this definition">¶</a></dt>
 <dd><dl class="attribute">
 <dt id="GAS.data">
 <code class="descname">data</code><a class="headerlink" href="#GAS.data" title="Permalink to this definition">¶</a></dt>
@@ -204,9 +209,9 @@
 </dd></dl>
 
 <dl class="attribute">
-<dt id="GAS.gradient_only">
-<code class="descname">gradient_only</code><a class="headerlink" href="#GAS.gradient_only" title="Permalink to this definition">¶</a></dt>
-<dd><p>boolean : if true, will only use the gradient (the score) rather than an adjusted score with Hessian information; former is more stable.</p>
+<dt id="GAS.family">
+<code class="descname">family</code><a class="headerlink" href="#GAS.family" title="Permalink to this definition">¶</a></dt>
+<dd><p>a GAS family object; choices include GASExponential(), GASLaplace(), GASNormal(), GASPoisson(), GASSkewt(), GASt()</p>
 </dd></dl>
 
 </dd></dl>
@@ -220,7 +225,7 @@
 <dd><p>Adjusts the priors of the model. <strong>index</strong> can be an int or a list. <strong>prior</strong> is a prior object, such as Normal(0,3).</p>
 </dd></dl>
 
-<p>Here is example usage for <a class="reference internal" href="var.html#adjust_prior" title="adjust_prior"><code class="xref py py-func docutils literal"><span class="pre">adjust_prior()</span></code></a>:</p>
+<p>Here is example usage for <a class="reference internal" href="gasx.html#adjust_prior" title="adjust_prior"><code class="xref py py-func docutils literal"><span class="pre">adjust_prior()</span></code></a>:</p>
 <div class="highlight-python"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre>1
 2
 3
@@ -235,11 +240,11 @@
 <dl class="function">
 <dt id="fit">
 <code class="descname">fit</code><span class="sig-paren">(</span><em>method</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="headerlink" href="#fit" title="Permalink to this definition">¶</a></dt>
-<dd><p>Estimates parameters for the model. Returns a Results object. <strong>method</strong> is an inference/estimation option; see Bayesian Inference and Classical Inference sections for options. If no <strong>method</strong> is provided then a default will be used.</p>
+<dd><p>Estimates latent variables for the model. Returns a Results object. <strong>method</strong> is an inference/estimation option; see Bayesian Inference and Classical Inference sections for options. If no <strong>method</strong> is provided then a default will be used.</p>
 <p>Optional arguments are specific to the <strong>method</strong> you choose - see the documentation for these methods for more detail.</p>
 </dd></dl>
 
-<p>Here is example usage for <a class="reference internal" href="var.html#fit" title="fit"><code class="xref py py-func docutils literal"><span class="pre">fit()</span></code></a>:</p>
+<p>Here is example usage for <a class="reference internal" href="gasx.html#fit" title="fit"><code class="xref py py-func docutils literal"><span class="pre">fit()</span></code></a>:</p>
 <div class="highlight-python"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre>1
 2
 3
@@ -257,9 +262,9 @@
 </dd></dl>
 
 <dl class="function">
-<dt id="plot_parameters">
-<code class="descname">plot_parameters</code><span class="sig-paren">(</span><em>indices</em>, <em>figsize</em><span class="sig-paren">)</span><a class="headerlink" href="#plot_parameters" title="Permalink to this definition">¶</a></dt>
-<dd><p>Returns a plot of the parameters and their associated uncertainty. <strong>indices</strong> is a list referring to the parameter indices that you want ot plot. Figsize specifies how big the plot will be.</p>
+<dt id="plot_z">
+<code class="descname">plot_z</code><span class="sig-paren">(</span><em>indices</em>, <em>figsize</em><span class="sig-paren">)</span><a class="headerlink" href="#plot_z" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns a plot of the latent variables and their associated uncertainty. <strong>indices</strong> is a list referring to the latent variable indices that you want ot plot. Figsize specifies how big the plot will be.</p>
 </dd></dl>
 
 <dl class="function">
@@ -301,7 +306,7 @@
         <a href="gasreg.html" class="btn btn-neutral float-right" title="GAS Regression models" accesskey="n">Next <span class="fa fa-arrow-circle-right"></span></a>
       
       
-        <a href="garch.html" class="btn btn-neutral" title="GARCH models" accesskey="p"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+        <a href="segarchm.html" class="btn btn-neutral" title="Skew-t EGARCH in-mean models" accesskey="p"><span class="fa fa-arrow-circle-left"></span> Previous</a>
       
     </div>
   
@@ -332,7 +337,7 @@
     <script type="text/javascript">
         var DOCUMENTATION_OPTIONS = {
             URL_ROOT:'./',
-            VERSION:'0.2.7',
+            VERSION:'0.3.7',
             COLLAPSE_INDEX:false,
             FILE_SUFFIX:'.html',
             HAS_SOURCE:  true

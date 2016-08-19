@@ -17,9 +17,15 @@ Models
    arima
    arimax
    egarch
+   egarchm
+   egarchmreg
+   lmegarch
    garch
+   segarch
+   segarchm
    gas
    gasreg
+   gasx
    gpnar
    ssm
    ngssm

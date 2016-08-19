@@ -30,14 +30,14 @@ class EGARCHM(tsm.TSM):
         Field to specify how many GARCH terms the model will have.
 
     q : int
-        Field to specify how many SCORE terms the model will have.
+        Field to specify how many score terms the model will have.
 
     target : str (pd.DataFrame) or int (np.array)
         Specifies which column name or array index to use. By default, first
         column/array will be selected as the dependent variable.
     """
 
-    def __init__(self,data,p,q,target=None):
+    def __init__(self, data, p, q, target=None):
 
         # Initialize TSM object
         super(EGARCHM,self).__init__('EGARCHM')
@@ -49,7 +49,7 @@ class EGARCHM(tsm.TSM):
         self.max_lag = max(self.p,self.q)
         self.leverage = False
         self.model_name = "EGARCHM(" + str(self.p) + "," + str(self.q) + ")"
-        self._z_hide = 0 # Whether to cutoff variance latent variables from results
+        self._z_hide = 0 # Whether to cutoff latent variables from results table
         self.supported_methods = ["MLE","PML","Laplace","M-H","BBVI"]
         self.default_method = "MLE"
         self.multivariate_model = False

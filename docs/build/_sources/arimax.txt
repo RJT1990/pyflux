@@ -15,16 +15,16 @@ Example
 
    accident_data = # some made-up data (needs to be a DataFrame)
 
-   model = pf.ARIMAX(data=my_data,ar=1,ma=1,formula='CarAccidents ~ 1 + Friday')
+   model = pf.ARIMAX(data=my_data, formula='CarAccidents ~ 1 + Friday', ar=1, ma=1)
 
 Class Arguments
 ----------
 
-.. py:class:: ARIMAX(data,formula,ar,ma,integ)
+.. py:class:: ARIMAX(data, formula, ar, ma, integ)
 
    .. py:attribute:: data
 
-      pd.DataFrame or array-like : the time-series data
+      pd.DataFrame : the time-series data
 
    .. py:attribute:: formula
 
@@ -58,13 +58,13 @@ Here is example usage for :py:func:`adjust_prior`:
 
    # model = ... (specify a model)
    model.list_priors()
-   model.adjust_prior(2,pf.Normal(0,1))
+   model.adjust_prior(2, pf.Normal(0,1))
 
-.. py:function:: fit(method,**kwargs)
+.. py:function:: fit(method, **kwargs)
    
-   Estimates latent variables for the model. Returns a Results object. **method** is an inference/estimation option; see Bayesian Inference and Classical Inference sections for options. If no **method** is provided then a default will be used.
+   Estimates latent variables for the model. Returns a Results object. **method** is an inference/estimation option; see Bayesian Inference and Classical Inference sections for a list of options. If no **method** is provided then a default will be used.
 
-   Optional arguments are specific to the **method** you choose - see the documentation for these methods for more detail.
+   Optional arguments are specific to the **method** you choose, see the documentation on these methods for more detail.
 
 Here is example usage for :py:func:`fit`:
 
@@ -74,7 +74,7 @@ Here is example usage for :py:func:`fit`:
    import pyflux as pf
 
    # model = ... (specify a model)
-   model.fit("M-H",nsims=20000)
+   model.fit("M-H", nsims=20000)
 
 .. py:function:: plot_fit(**kwargs)
    
@@ -84,11 +84,11 @@ Here is example usage for :py:func:`fit`:
 
 .. py:function:: plot_predict(h,past_values,intervals,oos_data,**kwargs)
    
-   Plots predictions of the model. **h** is an int of how many steps ahead to predict. **past_values** is an int of how many past values of the series to plot. **intervals** is a bool on whether to include confidence/credibility intervals or not. **oos_data** is a DataFrame in the same format as the original DataFrame and has data for the explanatory variables to be used for prediction.
+   Plots predictions of the model. **h** is an int of how many steps ahead to predict. **past_values** is an int of how many past values of the series to plot. **intervals** is a boolean on whether to include confidence/credibility intervals or not. **oos_data** is a DataFrame in the same format as the original DataFrame and has data for the explanatory variables to be used for prediction.
 
    Optional arguments include **figsize** - the dimensions of the figure to plot.
 
-.. py:function:: plot_predict_is(h,past_values,intervals,**kwargs)
+.. py:function:: plot_predict_is(h, past_values, intervals, **kwargs)
    
    Plots in-sample rolling predictions for the model. **h** is an int of how many previous steps to simulate performance on. **past_values** is an int of how many past values of the series to plot. **intervals** is a bool on whether to include confidence/credibility intervals or not.
 
@@ -96,7 +96,7 @@ Here is example usage for :py:func:`fit`:
 
 .. py:function:: plot_z(indices, figsize)
 
-   Returns a plot of the latent variables and their associated uncertainty. **indices** is a list referring to the latent variable indices that you want ot plot. Figsize specifies how big the plot will be.
+   Returns a plot of the latent variables and their associated uncertainty. **indices** is a list referring to the latent variable indices that you want to plot. Figsize specifies how big the plot will be.
 
 .. py:function:: predict(h, oos_data)
    

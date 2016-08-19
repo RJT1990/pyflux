@@ -1,12 +1,12 @@
 Bayesian Inference
 ==================================
 
-PyFlux supports Bayesian inference for most of its models.
+PyFlux supports Bayesian inference for all the model types on offer.
 
 Interface
 ----------
 
-To view the current priors, you should print the model's parameter object. For example:
+To view the current priors, you should print the model's latent variable object. For example:
 
 .. code-block:: python
    :linenos:
@@ -14,9 +14,9 @@ To view the current priors, you should print the model's parameter object. For e
    import pyflux as pf
 
    # model = ... (specify a model)
-   print(model.parameters)
+   print(model.z)
 
-This will outline the current prior assumptions for each parameter, as well as the variational approximate distribution that is assumed (if you are conducting variational inference). To adjust priors, simply use the following method on your model object:
+This will outline the current prior assumptions for each latent variable, as well as the variational approximate distribution that is assumed (if you are performing variational inference). To adjust priors, simply use the following method on your model object:
 
 .. py:function:: adjust_prior(index, prior)
 
@@ -31,29 +31,29 @@ Here is example usage for :py:func:`adjust_prior`:
 
    # model = ... (specify a model)
    model.list_priors()
-   model.adjust_prior(2,pf.Normal(0,1))
+   model.adjust_prior(2, pf.Normal(0,1))
 
 
 Methods
 ----------
 
-There are a number of Bayesian inference options using the :py:func:`fit`: option. These can be chosen with the method option.
+There are a number of Bayesian inference options using the :py:func:`fit`: method. These can be chosen with the method argument.
 
 **Black-Box Variational Inference**
 
-Performs Black Box Variational Inference. Currently the fixed assumptions are mean-field variational inference with normal approximate distributions.
+Performs Black Box Variational Inference. Currently the fixed assumption is mean-field variational inference with normal approximate distributions.
 
 .. code-block:: python
    :linenos:
 
-   model.fit(method='BBVI',iterations='10000',optimizer='ADAM')
+   model.fit(method='BBVI', iterations='10000', optimizer='ADAM')
 
-* *iterations* : (default : 30000) number of iterations to run
-* *optimizer* : (default: RMSProp) RMSProp or ADAM
+* *iterations* : (default : 3000) number of iterations to run
+* *optimizer* : (default: RMSProp) RMSProp or ADAM (stochastic optimizers)
 
 **Laplace Approximation**
 
-Performs Laplace Approximation of the posterior.
+Performs a Laplace approximation on the posterior.
 
 .. code-block:: python
    :linenos:
@@ -73,7 +73,7 @@ Performs Metropolis-Hastings MCMC. Currently uses 'one long chain'.
 
 **Penalized Maximum Likelihood**
 
-Provides a Maximum a posteriori (MAP) point estimate. This estimate is dubiously Bayesian as it is based on a 0/1 loss rather than a squared or absolute loss. We therefore abide by the naming convention of 'Penalized Maximum Likelihood'.
+Provides a Maximum a posteriori (MAP) estimate. This estimate is not completely Bayesian as it is based on a 0/1 loss rather than a squared or absolute loss. It can be considered a form of moadl approximation, when taken together with the Inverse Hessian matrix.
 
 .. code-block:: python
    :linenos:
@@ -84,9 +84,9 @@ Provides a Maximum a posteriori (MAP) point estimate. This estimate is dubiously
 Priors
 ----------
 
-Priors are contained as classes in the the inference module. The following priors are supported:
+Priors are contained as classes in the inference module. The following priors are supported:
 
-.. py:class:: InverseGamma(alpha,beta,transform)
+.. py:class:: InverseGamma(alpha, beta, transform)
 
    .. py:attribute:: alpha
 
@@ -98,10 +98,10 @@ Priors are contained as classes in the the inference module. The following prior
 
    .. py:attribute:: transform
 
-      (default: None) one of ['exp','tanh'] - changes the support of the parameter.
+      (default: None) one of ['exp','logit',tanh'] - changes the support of the latent variable.
 
 
-.. py:class:: Normal(mu0,sigma0,transform)
+.. py:class:: Normal(mu0, sigma0, transform)
 
    .. py:attribute:: mu0
 
@@ -113,13 +113,13 @@ Priors are contained as classes in the the inference module. The following prior
 
    .. py:attribute:: transform
 
-      (default: None) one of ['exp','tanh'] - changes the support of the parameter.
+      (default: None) one of ['exp', 'logit', 'tanh'] - changes the support of the latent variable.
 
 
 .. py:class:: Uniform(transform)
 
    .. py:attribute:: transform
 
-      (default: None) one of ['exp','tanh'] - changes the support of the parameter.
+      (default: None) one of ['exp', 'logit, 'tanh'] - changes the support of the latent variable.
 
-*transform* has implications beyond the prior. For example, if you set an AR(1) prior to a 'tanh' transformation, then the tanh transformation will also carry across to the likelihood, so the parameter that is optimized/estimated is tanh(x) instead of x.
+*transform* has implications beyond the prior. For example, if you set an AR(1) prior to a 'tanh' transformation, then the tanh transformation will also carry across to the likelihood, so the parameter that is optimized/estimated is tanh(x) instead of x. This therefore affects models that use Maximum Likelihood (although the prior parameters themselves won't affect the Maximum Likelihood estimate).

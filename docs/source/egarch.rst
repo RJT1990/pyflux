@@ -1,4 +1,4 @@
-EGARCH models
+Beta-t-EGARCH models
 ==================================
 
 Example
@@ -14,12 +14,12 @@ Example
 
    ibm = DataReader('IBM',  'yahoo', datetime(2000,1,1), datetime(2016,3,10))
    ibm['Logged Open'] = np.log(ibm['Open'].values)
-   model = pf.EGARCH(np.diff(ibm['Logged Open']),p=1,q=1)
+   model = pf.EGARCH(np.diff(ibm['Logged Open']), p=1, q=1)
 
 Class Arguments
 ----------
 
-.. py:class:: EGARCH(data,p,q,target)
+.. py:class:: EGARCH(data, p, q, target)
 
    .. py:attribute:: data
 
@@ -42,7 +42,7 @@ Class Methods
 
 .. py:function:: add_leverage()
 
-   Adds a leverage term to the model to account for the asymmetric effect of news.
+   Adds a leverage term to the model to account for the asymmetric effect of new information.
 
 .. py:function:: adjust_prior(index, prior)
 
@@ -57,11 +57,11 @@ Here is example usage for :py:func:`adjust_prior`:
 
    # model = ... (specify a model)
    model.list_priors()
-   model.adjust_prior(2,pf.Normal(0,1))
+   model.adjust_prior(2, pf.Normal(0,1))
 
 .. py:function:: fit(method,**kwargs)
    
-   Estimates parameters for the model. Returns a Results object. **method** is an inference/estimation option; see Bayesian Inference and Classical Inference sections for options. If no **method** is provided then a default will be used.
+   Estimates latent variables for the model. Returns a Results object. **method** is an inference/estimation option; see Bayesian Inference and Classical Inference sections for options. If no **method** is provided then a default will be used.
 
    Optional arguments are specific to the **method** you choose - see the documentation for these methods for more detail.
 
@@ -73,7 +73,7 @@ Here is example usage for :py:func:`fit`:
    import pyflux as pf
 
    # model = ... (specify a model)
-   model.fit("M-H",nsims=20000)
+   model.fit("M-H", nsims=20000)
 
 .. py:function:: plot_fit(**kwargs)
    
@@ -81,17 +81,17 @@ Here is example usage for :py:func:`fit`:
 
    Optional arguments include **figsize** - the dimensions of the figure to plot.
 
-.. py:function:: plot_parameters(indices, figsize)
+.. py:function:: plot_z(indices, figsize)
 
-   Returns a plot of the parameters and their associated uncertainty. **indices** is a list referring to the parameter indices that you want ot plot. Figsize specifies how big the plot will be.
+   Returns a plot of the latent variables and their associated uncertainty. **indices** is a list referring to the parameter indices that you want to plot. Figsize specifies how big the plot will be.
 
-.. py:function:: plot_predict(h,past_values,intervals,**kwargs)
+.. py:function:: plot_predict(h, past_values, intervals, **kwargs)
    
    Plots predictions of the model. **h** is an int of how many steps ahead to predict. **past_values** is an int of how many past values of the series to plot. **intervals** is a bool on whether to include confidence/credibility intervals or not.
 
    Optional arguments include **figsize** - the dimensions of the figure to plot.
 
-.. py:function:: plot_predict_is(h,past_values,intervals,**kwargs)
+.. py:function:: plot_predict_is(h, past_values, intervals, **kwargs)
    
    Plots in-sample rolling predictions for the model. **h** is an int of how many previous steps to simulate performance on. **past_values** is an int of how many past values of the series to plot. **intervals** is a bool on whether to include confidence/credibility intervals or not.
 

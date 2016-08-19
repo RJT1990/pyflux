@@ -16,12 +16,12 @@ Example
    ibm = DataReader('IBM',  'yahoo', datetime(2000,1,1), datetime(2016,3,10))
    ibm['Logged Open'] = np.log(ibm['Open'].values)
 
-   model = pf.ARIMA(data=ibm,ar=1,ma=1,integ=1,target='Logged Open')
+   model = pf.ARIMA(data=ibm, ar=1, ma=1, integ=1, target='Logged Open')
 
 Class Arguments
 ----------
 
-.. py:class:: ARIMA(data,ar,ma,integ,target)
+.. py:class:: ARIMA(data, ar, ma, integ, target)
 
    .. py:attribute:: data
 
@@ -61,7 +61,7 @@ Here is example usage for :py:func:`adjust_prior`:
    model.list_priors()
    model.adjust_prior(2,pf.Normal(0,1))
 
-.. py:function:: fit(method,**kwargs)
+.. py:function:: fit(method, **kwargs)
    
    Estimates latent variables for the model. Returns a Results object. **method** is an inference/estimation option; see Bayesian Inference and Classical Inference sections for options. If no **method** is provided then a default will be used.
 
@@ -75,7 +75,7 @@ Here is example usage for :py:func:`fit`:
    import pyflux as pf
 
    # model = ... (specify a model)
-   model.fit("M-H",nsims=20000)
+   model.fit("M-H", nsims=20000)
 
 .. py:function:: plot_fit(**kwargs)
    
@@ -83,13 +83,13 @@ Here is example usage for :py:func:`fit`:
 
    Optional arguments include **figsize** - the dimensions of the figure to plot.
 
-.. py:function:: plot_predict(h,past_values,intervals,**kwargs)
+.. py:function:: plot_predict(h, past_values, intervals, **kwargs)
    
    Plots predictions of the model. **h** is an int of how many steps ahead to predict. **past_values** is an int of how many past values of the series to plot. **intervals** is a bool on whether to include confidence/credibility intervals or not.
 
    Optional arguments include **figsize** - the dimensions of the figure to plot.
 
-.. py:function:: plot_predict_is(h,past_values,intervals,**kwargs)
+.. py:function:: plot_predict_is(h, past_values, intervals, **kwargs)
    
    Plots in-sample rolling predictions for the model. **h** is an int of how many previous steps to simulate performance on. **past_values** is an int of how many past values of the series to plot. **intervals** is a bool on whether to include confidence/credibility intervals or not.
 

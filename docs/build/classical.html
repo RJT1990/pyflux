@@ -8,7 +8,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>Classical Inference &mdash; PyFlux 0.2.7 documentation</title>
+  <title>Classical Inference &mdash; PyFlux 0.3.7 documentation</title>
   
 
   
@@ -30,7 +30,7 @@
   
 
   
-    <link rel="top" title="PyFlux 0.2.7 documentation" href="index.html"/>
+    <link rel="top" title="PyFlux 0.3.7 documentation" href="index.html"/>
         <link rel="prev" title="Bayesian Inference" href="bayes.html"/> 
 
   
@@ -59,7 +59,7 @@
             
             
               <div class="version">
-                0.2
+                0.3
               </div>
             
           
@@ -83,8 +83,13 @@
                 <ul>
 <li class="toctree-l1"><a class="reference internal" href="arima.html">ARIMA models</a></li>
 <li class="toctree-l1"><a class="reference internal" href="arimax.html">ARIMAX models</a></li>
-<li class="toctree-l1"><a class="reference internal" href="egarch.html">EGARCH models</a></li>
+<li class="toctree-l1"><a class="reference internal" href="egarch.html">Beta-t-EGARCH models</a></li>
+<li class="toctree-l1"><a class="reference internal" href="egarchm.html">Beta-t-EGARCH in-mean models</a></li>
+<li class="toctree-l1"><a class="reference internal" href="egarchmreg.html">Beta-t-EGARCH-in-mean regression models</a></li>
+<li class="toctree-l1"><a class="reference internal" href="lmegarch.html">Beta-t-EGARCH Long Memory models</a></li>
 <li class="toctree-l1"><a class="reference internal" href="garch.html">GARCH models</a></li>
+<li class="toctree-l1"><a class="reference internal" href="segarch.html">Skew-t EGARCH models</a></li>
+<li class="toctree-l1"><a class="reference internal" href="segarchm.html">Skew-t EGARCH in-mean models</a></li>
 <li class="toctree-l1"><a class="reference internal" href="gas.html">GAS models</a></li>
 <li class="toctree-l1"><a class="reference internal" href="gasreg.html">GAS Regression models</a></li>
 <li class="toctree-l1"><a class="reference internal" href="gpnar.html">GP-NARX models</a></li>
@@ -94,7 +99,7 @@
 </ul>
 <ul class="current">
 <li class="toctree-l1"><a class="reference internal" href="bayes.html">Bayesian Inference</a></li>
-<li class="toctree-l1 current"><a class="current reference internal" href="">Classical Inference</a><ul>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Classical Inference</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="#methods">Methods</a></li>
 </ul>
 </li>
@@ -120,7 +125,7 @@
         <div class="rst-content">
           
 
-
+ 
 
 
 
@@ -144,10 +149,10 @@
             
   <div class="section" id="classical-inference">
 <h1>Classical Inference<a class="headerlink" href="#classical-inference" title="Permalink to this headline">¶</a></h1>
-<p>PyFlux supports Classical inference.</p>
+<p>PyFlux supports classical methods of inference. These can be considered as point mass approximations to the full posterior.</p>
 <div class="section" id="methods">
 <h2>Methods<a class="headerlink" href="#methods" title="Permalink to this headline">¶</a></h2>
-<p>There are a number of classical inference options using the <a class="reference internal" href="var.html#fit" title="fit"><code class="xref py py-func docutils literal"><span class="pre">fit()</span></code></a>: option. These can be chosen with the method option.</p>
+<p>There are a number of classical inference options using the <a class="reference internal" href="var.html#fit" title="fit"><code class="xref py py-func docutils literal"><span class="pre">fit()</span></code></a>: method. These can be chosen with the method option.</p>
 <p><strong>Maximum Likelihood</strong></p>
 <p>Performs Maximum Likelihood estimation.</p>
 <div class="highlight-python"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre>1</pre></div></td><td class="code"><div class="highlight"><pre><span></span><span class="n">model</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">method</span><span class="o">=</span><span class="s1">&#39;MLE&#39;</span><span class="p">)</span>
@@ -205,7 +210,7 @@
     <script type="text/javascript">
         var DOCUMENTATION_OPTIONS = {
             URL_ROOT:'./',
-            VERSION:'0.2.7',
+            VERSION:'0.3.7',
             COLLAPSE_INDEX:false,
             FILE_SUFFIX:'.html',
             HAS_SOURCE:  true

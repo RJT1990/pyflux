@@ -103,7 +103,7 @@ class GASReg(tsm.TSM):
 
         for parm in range(self.z_no):
             self.latent_variables.add_z('Scale ' + self.X_names[parm],ifr.Uniform(transform='exp'),dst.q_Normal(0,3))
-            self.latent_variables.z_list[parm].start = -7.0
+            self.latent_variables.z_list[parm].start = -5.0
         self.z_no = len(self.latent_variables.z_list)
 
     def _get_scale_and_shape(self,parm):

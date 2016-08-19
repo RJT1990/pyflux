@@ -52,8 +52,8 @@ class ARIMAX(tsm.TSM):
         self.integ = integ
         self.model_name = "ARIMAX(" + str(self.ar) + "," + str(self.integ) + "," + str(self.ma) + ")"
         self.z_no = self.ar + self.ma + 2
-        self.max_lag = max(self.ar,self.ma)
-        self._z_hide = 0 # Whether to cutoff variance latent variables from results
+        self.max_lag = max(self.ar, self.ma)
+        self._z_hide = 0 # Whether to cutoff latent variables from results table
         self.supported_methods = ["MLE", "PML", "Laplace", "M-H", "BBVI"]
         self.default_method = "MLE"
         self.multivariate_model = False
@@ -75,7 +75,7 @@ class ARIMAX(tsm.TSM):
         self.index = data.index
 
         # Difference data
-        for order in range(0,self.integ):
+        for order in range(0, self.integ):
             self.y = np.diff(self.y)
             self.data = np.diff(self.data)
             self.data_name = "Differenced " + self.data_name
@@ -84,25 +84,24 @@ class ARIMAX(tsm.TSM):
         self._create_latent_variables()
 
     def _ar_matrix(self):
-        """ Creates the autoregressive Matrix
+        """ Creates the Autoregressive matrix
 
         Returns
         ----------
         X : np.ndarray
             Autoregressive Matrix
-
         """
 
         if self.ar != 0:
             X = self.data[(self.max_lag-1):-1]
-            for i in range(1,self.ar):
+            for i in range(1, self.ar):
                 X = np.vstack((X,self.data[(self.max_lag-i-1):-i-1]))
             return X
         else:
             return np.zeros(self.data.shape[0]-self.max_lag)
 
     def _create_latent_variables(self):
-        """ Creates model latent variables
+        """ Creates the model's latent variables
 
         Returns
         ----------
@@ -110,15 +109,15 @@ class ARIMAX(tsm.TSM):
         """
 
         for ar_term in range(self.ar):
-            self.latent_variables.add_z('AR(' + str(ar_term+1) + ')',ifr.Normal(0,0.5,transform=None),dst.q_Normal(0,3))
+            self.latent_variables.add_z('AR(' + str(ar_term+1) + ')', ifr.Normal(0,0.5,transform=None), dst.q_Normal(0,3))
 
         for ma_term in range(self.ma):
-            self.latent_variables.add_z('MA(' + str(ma_term+1) + ')',ifr.Normal(0,0.5,transform=None),dst.q_Normal(0,3))
+            self.latent_variables.add_z('MA(' + str(ma_term+1) + ')', ifr.Normal(0,0.5,transform=None), dst.q_Normal(0,3))
 
         for z in range(len(self.X_names)):
-            self.latent_variables.add_z('Beta ' + self.X_names[z],ifr.Normal(0,3,transform=None),dst.q_Normal(0,3))
+            self.latent_variables.add_z('Beta ' + self.X_names[z], ifr.Normal(0,3,transform=None), dst.q_Normal(0,3))
 
-        self.latent_variables.add_z('Sigma',ifr.Uniform(transform='exp'),dst.q_Normal(0,3))
+        self.latent_variables.add_z('Sigma', ifr.Uniform(transform='exp'), dst.q_Normal(0,3))
         self.z_no = len(self.latent_variables.z_list)
 
     def _model(self, beta):
@@ -127,7 +126,7 @@ class ARIMAX(tsm.TSM):
         Parameters
         ----------
         beta : np.ndarray
-            Contains untransformed starting values for latent variables
+            Contains untransformed starting values for the latent variables
 
         Returns
         ----------
@@ -193,11 +192,11 @@ class ARIMAX(tsm.TSM):
         for t in range(0,h):
             new_value = 0
             if self.ar != 0:
-                for j in range(0,self.ar):
+                for j in range(0, self.ar):
                     new_value += t_z[j]*Y_exp[-j-1]
 
             if self.ma != 0:
-                for k in range(0,self.ma):
+                for k in range(0, self.ma):
                     if k >= t:
                         new_value += t_z[k+self.ar]*(Y_exp[-k-1]-mu_exp[-k-1])
 
@@ -209,7 +208,7 @@ class ARIMAX(tsm.TSM):
         return Y_exp
 
     def _sim_prediction(self, mu, Y, h, t_z, X_oos, simulations):
-        """ Simulates a h-step ahead mean prediction
+        """ Simulates a h-step ahead mean prediction (with randomly drawn disturbances)
 
         Parameters
         ----------
@@ -314,23 +313,22 @@ class ARIMAX(tsm.TSM):
         mu, Y = self._model(beta)
         return -np.sum(ss.norm.logpdf(Y, loc=mu, scale=self.latent_variables.z_list[-1].prior.transform(beta[-1])))
 
-    def plot_fit(self,**kwargs):
+    def plot_fit(self, **kwargs):
         """ 
-        Plots the fit of the model
+        Plots the fit of the model against the data
         """
 
         figsize = kwargs.get('figsize',(10,7))
-
         plt.figure(figsize=figsize)
-        date_index = self.index[max(self.ar,self.ma):self.data.shape[0]]
+        date_index = self.index[max(self.ar, self.ma):self.data.shape[0]]
         mu, Y = self._model(self.latent_variables.get_z_values())
-        plt.plot(date_index,Y,label='Data')
-        plt.plot(date_index,mu,label='Filter',c='black')
+        plt.plot(date_index, Y, label='Data')
+        plt.plot(date_index, mu, label='Filter', c='black')
         plt.title(self.data_name)
         plt.legend(loc=2)   
         plt.show()          
 
-    def plot_predict(self,h=5,past_values=20,intervals=True,oos_data=None,**kwargs):
+    def plot_predict(self, h=5, past_values=20, intervals=True, oos_data=None, **kwargs):
         """ Plots forecasts with the estimated model
 
         Parameters
@@ -339,7 +337,7 @@ class ARIMAX(tsm.TSM):
             How many steps ahead would you like to forecast?
 
         past_values : int (default : 20)
-            How many past observations to show on the forecast graph?
+            How many past observations to show on the forecast plot?
 
         intervals : Boolean
             Would you like to show prediction intervals for the forecast?
@@ -368,9 +366,9 @@ class ARIMAX(tsm.TSM):
             t_z = self.transform_z()
 
             # Get mean prediction and simulations (for errors)
-            mean_values = self._mean_prediction(mu,Y,h,t_z,X_pred)
-            sim_values = self._sim_prediction(mu,Y,h,t_z,X_pred,15000)
-            error_bars, forecasted_values, plot_values, plot_index = self._summarize_simulations(mean_values,sim_values,date_index,h,past_values)
+            mean_values = self._mean_prediction(mu, Y, h, t_z, X_pred)
+            sim_values = self._sim_prediction(mu, Y, h, t_z, X_pred, 15000)
+            error_bars, forecasted_values, plot_values, plot_index = self._summarize_simulations(mean_values, sim_values, date_index, h, past_values)
 
             plt.figure(figsize=figsize)
             if intervals == True:
@@ -384,7 +382,7 @@ class ARIMAX(tsm.TSM):
             plt.show()
 
     def predict_is(self, h=5):
-        """ Makes dynamic in-sample predictions with the estimated model
+        """ Makes dynamic out-of-sample predictions on in-sample data with the estimated model
 
         Parameters
         ----------
@@ -401,12 +399,12 @@ class ARIMAX(tsm.TSM):
         for t in range(0, h):
             data1 = self.data_original.iloc[:-(h+t),:]
             data2 = self.data_original.iloc[-h+t:,:]
-            x = ARIMAX(ar=self.ar,ma=self.ma,integ=self.integ,formula=self.formula,data=data1)
+            x = ARIMAX(ar=self.ar, ma=self.ma, integ=self.integ, formula=self.formula, data=data1)
             x.fit(printer=False)
             if t == 0:
-                predictions = x.predict(1,oos_data=data2)
+                predictions = x.predict(1, oos_data=data2)
             else:
-                predictions = pd.concat([predictions,x.predict(h=1,oos_data=data2)])
+                predictions = pd.concat([predictions,x.predict(h=1, oos_data=data2)])
         
         predictions.rename(columns={0:self.y_name}, inplace=True)
         predictions.index = self.index[-h:]
@@ -414,8 +412,7 @@ class ARIMAX(tsm.TSM):
         return predictions
 
     def plot_predict_is(self, h=5, **kwargs):
-        """ Plots forecasts with the estimated model against data
-            (Simulated prediction with data)
+        """ Plots dynamic in-sample forecasts with the estimated model against the data 
 
         Parameters
         ----------
@@ -433,8 +430,8 @@ class ARIMAX(tsm.TSM):
         predictions = self.predict_is(h)
         data = self.data[-h:]
 
-        plt.plot(predictions.index,data,label='Data')
-        plt.plot(predictions.index,predictions,label='Predictions',c='black')
+        plt.plot(predictions.index, data,label='Data')
+        plt.plot(predictions.index, predictions,label='Predictions',c='black')
         plt.title(self.data_name)
         plt.legend(loc=2)   
         plt.show()          
@@ -466,7 +463,7 @@ class ARIMAX(tsm.TSM):
             date_index = self.shift_dates(h)
             t_z = self.transform_z()
 
-            mean_values = self._mean_prediction(mu,Y,h,t_z,X_pred)
+            mean_values = self._mean_prediction(mu, Y, h, t_z, X_pred)
             forecasted_values = mean_values[-h:]
             result = pd.DataFrame(forecasted_values)
             result.rename(columns={0:self.data_name}, inplace=True)

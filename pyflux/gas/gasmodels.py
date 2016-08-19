@@ -211,7 +211,7 @@ class GASt(GASDistribution):
     @staticmethod
     def build_latent_variables():
         lvs_to_build = []
-        lvs_to_build.append(['t Scale',ifr.Uniform(transform='exp'),dst.q_Normal(0,3),0.0])
+        lvs_to_build.append(['t Scale',ifr.Uniform(transform='exp'),dst.q_Normal(0,3),0.01])
         lvs_to_build.append(['v',ifr.Uniform(transform='exp'),dst.q_Normal(0,3),2.0])
         return lvs_to_build
 
@@ -258,7 +258,7 @@ class GASSkewt(GASDistribution):
     def build_latent_variables():
         lvs_to_build = []
         lvs_to_build.append(['Skewness',ifr.Uniform(transform='exp'),dst.q_Normal(0,3),0.0])
-        lvs_to_build.append(['Skewt Scale',ifr.Uniform(transform='exp'),dst.q_Normal(0,3),0.0])
+        lvs_to_build.append(['Skewt Scale',ifr.Uniform(transform='exp'),dst.q_Normal(0,3),0.01])
         lvs_to_build.append(['v',ifr.Uniform(transform='exp'),dst.q_Normal(0,3),2.0])
         return lvs_to_build
 

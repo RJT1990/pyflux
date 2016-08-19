@@ -7,6 +7,9 @@ cimport cython
 @cython.cdivision(True)
 def arima_recursion(double[:] parameters, double[:] mu, double[:] Y, 
 	int max_lag, int Y_len, int ar_terms, int ma_terms):
+	"""
+	Cythonized moving average recursion for ARIMA model class
+	"""
 	cdef Py_ssize_t t, k
 
 	for t in range(max_lag, Y_len):
@@ -20,6 +23,9 @@ def arima_recursion(double[:] parameters, double[:] mu, double[:] Y,
 @cython.cdivision(True)
 def arimax_recursion(double[:] parameters, double[:] mu, double[:] Y, 
 	int max_lag, int Y_len, int ar_terms, int ma_terms):
+	"""
+	Cythonized moving average recursion for ARIMAX model class
+	"""
 	cdef Py_ssize_t t, k
 
 	for t in range(max_lag, Y_len):

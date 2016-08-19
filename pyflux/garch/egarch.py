@@ -37,7 +37,7 @@ class EGARCH(tsm.TSM):
         column/array will be selected as the dependent variable.
     """
 
-    def __init__(self,data,p,q,target=None):
+    def __init__(self, data, p, q, target=None):
 
         # Initialize TSM object
         super(EGARCH,self).__init__('EGARCH')
@@ -46,10 +46,10 @@ class EGARCH(tsm.TSM):
         self.p = p
         self.q = q
         self.z_no = self.p + self.q + 3
-        self.max_lag = max(self.p,self.q)
+        self.max_lag = max(self.p, self.q)
         self.leverage = False
         self.model_name = "EGARCH(" + str(self.p) + "," + str(self.q) + ")"
-        self._z_hide = 0 # Whether to cutoff variance latent variables from results
+        self._z_hide = 0 # Whether to cutoff latent variables from the results table
         self.supported_methods = ["MLE","PML","Laplace","M-H","BBVI"]
         self.default_method = "MLE"
         self.multivariate_model = False
@@ -59,39 +59,40 @@ class EGARCH(tsm.TSM):
         self._create_latent_variables()
 
     def _create_latent_variables(self):
-        """ Creates model latent variables
+        """ Creates latent variables for the model
 
         Returns
         ----------
         None (changes model attributes)
         """
 
-        self.latent_variables.add_z('Vol Constant',ifr.Normal(0,3,transform=None),dst.q_Normal(0,3))
+        self.latent_variables.add_z('Vol Constant', ifr.Normal(0,3,transform=None), dst.q_Normal(0,3))
 
         for p_term in range(self.p):
-            self.latent_variables.add_z('p(' + str(p_term+1) + ')',ifr.Normal(0,0.5,transform='logit'),dst.q_Normal(0,3))
+            self.latent_variables.add_z('p(' + str(p_term+1) + ')', ifr.Normal(0,0.5,transform='logit'), dst.q_Normal(0,3))
             if p_term == 0:
                 self.latent_variables.z_list[-1].start = 3.00
             else:
                 self.latent_variables.z_list[-1].start = -4.00
 
         for q_term in range(self.q):
-            self.latent_variables.add_z('q(' + str(q_term+1) + ')',ifr.Normal(0,0.5,transform='logit'),dst.q_Normal(0,3))
+            self.latent_variables.add_z('q(' + str(q_term+1) + ')', ifr.Normal(0,0.5,transform='logit'), dst.q_Normal(0,3))
             if q_term == 0:
                 self.latent_variables.z_list[-1].start = -1.50  
             else: 
                 self.latent_variables.z_list[-1].start = -4.00  
-        self.latent_variables.add_z('v',ifr.Uniform(transform='exp'),dst.q_Normal(0,3))
-        self.latent_variables.add_z('Returns Constant',ifr.Normal(0,3,transform=None),dst.q_Normal(0,3))
+
+        self.latent_variables.add_z('v', ifr.Uniform(transform='exp'), dst.q_Normal(0,3))
+        self.latent_variables.add_z('Returns Constant', ifr.Normal(0,3,transform=None), dst.q_Normal(0,3))
         self.latent_variables.z_list[-2].start = 2.0
 
-    def _model(self,beta):
-        """ Creates the structure of the model
+    def _model(self, beta):
+        """ Creates the structure of the model (model matrices, etc)
 
         Parameters
         ----------
         beta : np.array
-            Contains untransformed starting values for latent variables
+            Contains untransformed starting values for thelatent variables
 
         Returns
         ----------
@@ -114,7 +115,7 @@ class EGARCH(tsm.TSM):
         lmda = np.ones(Y.shape[0])*parm[0]
 
         # Loop over time series
-        for t in range(0,Y.shape[0]):
+        for t in range(0, Y.shape[0]):
 
             if t < self.max_lag:
 
@@ -123,22 +124,22 @@ class EGARCH(tsm.TSM):
             else:
 
                 # Loop over GARCH terms
-                for p_term in range(0,self.p):
+                for p_term in range(0, self.p):
                     lmda[t] += parm[1+p_term]*lmda[t-p_term-1]
 
                 # Loop over Score terms
-                for q_term in range(0,self.q):
+                for q_term in range(0, self.q):
                     lmda[t] += parm[1+self.p+q_term]*scores[t-q_term-1]
 
                 if self.leverage is True:
                     lmda[t] += parm[-3]*np.sign(-(Y[t-1]-parm[-1]))*(scores[t-1]+1)
 
-            scores[t] = gas.BetatScore.mu_adj_score(Y[t],parm[-1],lmda[t],parm[-2])
+            scores[t] = gas.BetatScore.mu_adj_score(Y[t], parm[-1], lmda[t], parm[-2])
 
         return lmda, Y, scores
 
-    def _mean_prediction(self,lmda,Y,scores,h,t_params):
-        """ Creates a h-step ahead mean prediction
+    def _mean_prediction(self, lmda, Y, scores, h, t_params):
+        """ Creates an h-step ahead mean prediction
 
         Parameters
         ----------
@@ -168,28 +169,28 @@ class EGARCH(tsm.TSM):
         Y_exp = Y.copy()
 
         # Loop over h time periods          
-        for t in range(0,h):
+        for t in range(0, h):
             new_value = t_params[0]
 
             if self.p != 0:
-                for j in range(1,self.p+1):
+                for j in range(1, self.p+1):
                     new_value += t_params[j]*lmda_exp[-j]
 
             if self.q != 0:
-                for k in range(1,self.q+1):
+                for k in range(1, self.q+1):
                     new_value += t_params[k+self.p]*scores_exp[-k]
 
             if self.leverage is True:
                 new_value += t_params[1+self.p+self.q]*np.sign(-(Y_exp[-1]-t_params[-1]))*(scores_exp[-1]+1)
 
-            lmda_exp = np.append(lmda_exp,[new_value]) # For indexing consistency
-            scores_exp = np.append(scores_exp,[0]) # expectation of score is zero
-            Y_exp = np.append(Y_exp,[t_params[-1]])
+            lmda_exp = np.append(lmda_exp, [new_value]) # For indexing consistency
+            scores_exp = np.append(scores_exp, [0]) # expectation of score is zero
+            Y_exp = np.append(Y_exp, [t_params[-1]])
 
         return lmda_exp
 
-    def _sim_prediction(self,lmda,Y,scores,h,t_params,simulations):
-        """ Simulates a h-step ahead mean prediction
+    def _sim_prediction(self, lmda, Y, scores, h, t_params, simulations):
+        """ Simulates a h-step ahead predictions with randomly drawn variables
 
         Parameters
         ----------
@@ -218,28 +219,28 @@ class EGARCH(tsm.TSM):
 
         sim_vector = np.zeros([simulations,h])
 
-        for n in range(0,simulations):
+        for n in range(0, simulations):
             # Create arrays to iteratre over        
             lmda_exp = lmda.copy()
             scores_exp = scores.copy()
             Y_exp = Y.copy()
 
             # Loop over h time periods          
-            for t in range(0,h):
+            for t in range(0, h):
                 new_value = t_params[0]
 
                 if self.p != 0:
-                    for j in range(1,self.p+1):
+                    for j in range(1, self.p+1):
                         new_value += t_params[j]*lmda_exp[-j]
 
                 if self.q != 0:
-                    for k in range(1,self.q+1):
+                    for k in range(1, self.q+1):
                         new_value += t_params[k+self.p]*scores_exp[-k]
 
                 if self.leverage is True:
                     new_value += t_params[1+self.p+self.q]*np.sign(-(Y_exp[-1]-t_params[-1]))*(scores_exp[-1]+1)
 
-                lmda_exp = np.append(lmda_exp,[new_value]) # For indexing consistency
+                lmda_exp = np.append(lmda_exp, [new_value]) # For indexing consistency
                 scores_exp = np.append(scores_exp,scores[np.random.randint(scores.shape[0])]) # expectation of score is zero
                 Y_exp = np.append(Y_exp,Y[np.random.randint(Y.shape[0])]) # bootstrap returns
 
@@ -247,7 +248,7 @@ class EGARCH(tsm.TSM):
 
         return np.transpose(sim_vector)
 
-    def _summarize_simulations(self,mean_values,sim_vector,date_index,h,past_values):
+    def _summarize_simulations(self, mean_values, sim_vector, date_index, h, past_values):
         """ Summarizes a simulation vector and a mean vector of predictions
 
         Parameters
@@ -280,7 +281,7 @@ class EGARCH(tsm.TSM):
         return error_bars, forecasted_values, plot_values, plot_index
 
     def add_leverage(self):
-        """ Adds leverage term to the model
+        """ Adds a leverage term to the model to account for the asymmetric effect of new information on volatility
 
         Returns
         ----------
@@ -294,12 +295,12 @@ class EGARCH(tsm.TSM):
             self.z_no += 1
             self.latent_variables.z_list.pop()
             self.latent_variables.z_list.pop()
-            self.latent_variables.add_z('Leverage Term',ifr.Uniform(transform=None),dst.q_Normal(0,3))
-            self.latent_variables.add_z('v',ifr.Uniform(transform='exp'),dst.q_Normal(0,3))
-            self.latent_variables.add_z('Returns Constant',ifr.Normal(0,3,transform=None),dst.q_Normal(0,3))
+            self.latent_variables.add_z('Leverage Term', ifr.Uniform(transform=None), dst.q_Normal(0,3))
+            self.latent_variables.add_z('v', ifr.Uniform(transform='exp'), dst.q_Normal(0,3))
+            self.latent_variables.add_z('Returns Constant', ifr.Normal(0,3,transform=None), dst.q_Normal(0,3))
             self.latent_variables.z_list[-2].start = 2.0
 
-    def neg_loglik(self,beta):
+    def neg_loglik(self, beta):
         """ Creates the negative log-likelihood of the model
 
         Parameters
@@ -313,11 +314,10 @@ class EGARCH(tsm.TSM):
         """     
 
         lmda, Y, ___ = self._model(beta)
-        return -np.sum(ss.t.logpdf(x=Y,
-            df=self.latent_variables.z_list[-2].prior.transform(beta[-2]),
-            loc=np.ones(lmda.shape[0])*self.latent_variables.z_list[-1].prior.transform(beta[-1]),scale=np.exp(lmda/2.0)))
+        return -np.sum(ss.t.logpdf(x=Y, df=self.latent_variables.z_list[-2].prior.transform(beta[-2]),
+            loc=np.ones(lmda.shape[0])*self.latent_variables.z_list[-1].prior.transform(beta[-1]), scale=np.exp(lmda/2.0)))
     
-    def plot_fit(self,**kwargs):
+    def plot_fit(self, **kwargs):
         """ Plots the fit of the model
 
         Returns
@@ -334,15 +334,15 @@ class EGARCH(tsm.TSM):
             plt.figure(figsize=figsize)
             date_index = self.index[max(self.p,self.q):]
             sigma2, Y, ___ = self._model(self.latent_variables.get_z_values())
-            plt.plot(date_index,np.abs(Y-t_params[-1]),label=self.data_name + ' Absolute Demeaned Values')
-            plt.plot(date_index,np.exp(sigma2/2.0),label='EGARCH(' + str(self.p) + ',' + str(self.q) + ') Conditional Volatility',c='black')                   
+            plt.plot(date_index,np.abs(Y-t_params[-1]), label=self.data_name + ' Absolute Demeaned Values')
+            plt.plot(date_index,np.exp(sigma2/2.0), label='EGARCH(' + str(self.p) + ',' + str(self.q) + ') Conditional Volatility', c='black')                   
             plt.title(self.data_name + " Volatility Plot")  
             plt.legend(loc=2)   
             plt.show()              
 
-    def plot_predict(self,h=5,past_values=20,intervals=True,**kwargs):
+    def plot_predict(self, h=5, past_values=20, intervals=True, **kwargs):
 
-        """ Plots forecast with the estimated model
+        """ Plots predictions with the estimated model
 
         Parameters
         ----------
@@ -372,15 +372,15 @@ class EGARCH(tsm.TSM):
             t_params = self.transform_z()
 
             # Get mean prediction and simulations (for errors)
-            mean_values = self._mean_prediction(lmda,Y,scores,h,t_params)
-            sim_values = self._sim_prediction(lmda,Y,scores,h,t_params,15000)
-            error_bars, forecasted_values, plot_values, plot_index = self._summarize_simulations(mean_values,sim_values,date_index,h,past_values)
+            mean_values = self._mean_prediction(lmda, Y, scores, h, t_params)
+            sim_values = self._sim_prediction(lmda, Y, scores, h, t_params, 15000)
+            error_bars, forecasted_values, plot_values, plot_index = self._summarize_simulations(mean_values, sim_values, date_index, h, past_values)
 
             plt.figure(figsize=figsize)
             if intervals == True:
                 alpha =[0.15*i/float(100) for i in range(50,12,-2)]
                 for count, pre in enumerate(error_bars):
-                    plt.fill_between(date_index[-h-1:], np.exp((forecasted_values-pre)/2), np.exp((forecasted_values+pre)/2),alpha=alpha[count])            
+                    plt.fill_between(date_index[-h-1:], np.exp((forecasted_values-pre)/2), np.exp((forecasted_values+pre)/2), alpha=alpha[count])            
             
             plt.plot(plot_index,np.exp(plot_values/2.0))
             plt.title("Forecast for " + self.data_name + " Conditional Volatility")
@@ -388,8 +388,8 @@ class EGARCH(tsm.TSM):
             plt.ylabel(self.data_name + " Conditional Volatility")
             plt.show()
 
-    def predict_is(self,h=5):
-        """ Makes dynamic in-sample predictions with the estimated model
+    def predict_is(self, h=5):
+        """ Makes dynamic out-of-sample predictions with the model on in-sample data
 
         Parameters
         ----------
@@ -403,8 +403,8 @@ class EGARCH(tsm.TSM):
 
         predictions = []
 
-        for t in range(0,h):
-            x = EGARCH(p=self.p,q=self.q,data=self.data[:-h+t])
+        for t in range(0, h):
+            x = EGARCH(p=self.p, q=self.q, data=self.data[:-h+t])
             x.fit(printer=False)
             if t == 0:
                 predictions = x.predict(1)
@@ -416,9 +416,8 @@ class EGARCH(tsm.TSM):
 
         return predictions
 
-    def plot_predict_is(self,h=5,**kwargs):
-        """ Plots forecasts with the estimated model against data
-            (Simulated prediction with data)
+    def plot_predict_is(self, h=5, **kwargs):
+        """ Plots forecasts with the estimated model against data (Simulated prediction with data)
 
         Parameters
         ----------
@@ -439,8 +438,8 @@ class EGARCH(tsm.TSM):
 
         t_params = self.transform_z()
 
-        plt.plot(date_index,np.abs(data-t_params[-1]),label='Data')
-        plt.plot(date_index,predictions,label='Predictions',c='black')
+        plt.plot(date_index, np.abs(data-t_params[-1]), label='Data')
+        plt.plot(date_index, predictions, label='Predictions', c='black')
         plt.title(self.data_name)
         plt.legend(loc=2)   
         plt.show()          
@@ -466,7 +465,7 @@ class EGARCH(tsm.TSM):
             date_index = self.shift_dates(h)
             t_params = self.transform_z()
 
-            mean_values = self._mean_prediction(sigma2,Y,scores,h,t_params)
+            mean_values = self._mean_prediction(sigma2, Y, scores, h, t_params)
             forecasted_values = mean_values[-h:]
             result = pd.DataFrame(np.exp(forecasted_values/2.0))
             result.rename(columns={0:self.data_name}, inplace=True)
