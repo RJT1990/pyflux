@@ -6,7 +6,7 @@
 
 __PyFlux__ is an open source time series library for the Python programming language. Built upon the NumPy/SciPy/Pandas libraries, PyFlux allows for easy application of a vast array of time series methods and inference capabilities.
 
-See some examples and documentation at [PyFlux.com](http://www.pyflux.com/). PyFlux is still only alpha software and can become much better with your contributions! - see [here](https://github.com/RJT1990/pyflux/wiki/Contribution-Guidelines) for guidelines.
+See some examples and documentation at [PyFlux.com](http://www.pyflux.com/). PyFlux is still only alpha software and can become much better with your contributions! - see [here](https://github.com/RJT1990/pyflux/wiki/Contribution-Guidelines) for guidelines on how you can get involved.
 
 ## Models
 
@@ -46,7 +46,7 @@ Supported on Python 2.7 and 3.5.
 
 ## Talks
 
-- [PyData San Francisco 2016](https://github.com/RJT1990/PyData2016-SanFrancisco) - August 2016 - an overview of the GAS side of the library, with a fun application to NFL prediction
+- [PyData San Francisco 2016](https://github.com/RJT1990/PyData2016-SanFrancisco) - August 2016 -  a tour of time series (and predicting NFL games)
 - [PyData London Meetup](https://github.com/RJT1990/talks/blob/master/PyDataTimeSeriesTalk.ipynb) - June 2016 - an introduction to the library in its early stages
 
 Or see worked-through examples in this [talk](https://github.com/RJT1990/talks/blob/master/PyDataTimeSeriesTalk.ipynb) given to the PyData London Meetup in June 2016.
