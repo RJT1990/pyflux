@@ -4,9 +4,9 @@
 [![Join the chat at https://gitter.im/RJT1990/pyflux](https://badges.gitter.im/RJT1990/pyflux.svg)](https://gitter.im/RJT1990/pyflux?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
 [![PyPI version](https://badge.fury.io/py/pyflux.svg)](https://badge.fury.io/py/pyflux)
 
-__PyFlux__ is an open source time series library for the Python programming language. Built upon the NumPy/SciPy/Pandas libraries, PyFlux allows for easy application of a vast array of time series methods and inference capabilities.
+__PyFlux__ is an open source time series modelling library for the Python programming language. The library hands you a vast array of modern time series methods to attack data problems with. PyFlux also takes a flexible approach to inference, allowing you to apply both frequentist and Bayesian inference to the same class of model. This allows for a fully probabilistic approach to time series that joins together breadth of models with breadth of infernece.
 
-See some examples and documentation at [PyFlux.com](http://www.pyflux.com/). PyFlux is still only alpha software and can become much better with your contributions! - see [here](https://github.com/RJT1990/pyflux/wiki/Contribution-Guidelines) for guidelines on how you can get involved.
+See some examples, model explanations and documentation at [PyFlux.com](http://www.pyflux.com/). PyFlux is still only alpha software and can become much better and faster with your contributions! - see [here](https://github.com/RJT1990/pyflux/wiki/Contribution-Guidelines) for guidelines on how you can get involved.
 
 ## Models
 
@@ -20,7 +20,7 @@ See some examples and documentation at [PyFlux.com](http://www.pyflux.com/). PyF
  - [Skew-t-EGARCH-in-mean models](http://www.pyflux.com/skew-t-egarch-in-mean/)
 - [GAS models](http://www.pyflux.com/gas-models/)
 - [GAS State Space models](http://www.pyflux.com/gas-state-space-models/)
-- [GP-NARX models](http://www.pyflux.com/gp-narx/)
+- [GP-NARX models](http://www.pyflux.com/gp-narx/) (currently being rewritten)
 - [Gaussian State Space models](http://www.pyflux.com/gaussian-state-space-models/)
 - [Non-Gaussian State Space models](http://www.pyflux.com/non-gaussian-state-space-models/)
 - [VAR models](http://www.pyflux.com/vector-autoregression)
