@@ -201,6 +201,38 @@ class GASLLEV(tsm.TSM):
             scores_exp = np.append(scores_exp,[0]) # expectation of score is zero
         return Y_exp
 
+    def _preoptimize_model(self, initials, method):
+        """ Preoptimizes the model by estimating a static model, then a quick search of good AR/SC parameters
+
+        Parameters
+        ----------
+        initials : np.array
+            A vector of inital values
+
+        method : str
+            One of 'MLE' or 'PML' (the optimization options)
+
+        Returns
+        ----------
+        Y_exp : np.array
+            Vector of past values and predictions 
+        """
+
+        random_starts = np.random.normal(0.1, 0.1, [1, 1000])
+
+        best_start = self.latent_variables.get_z_starting_values()
+        best_lik = self.neg_loglik(self.latent_variables.get_z_starting_values())
+        proposal_start = best_start.copy()
+
+        for start in range(random_starts.shape[1]):
+            proposal_start[0] = random_starts[:,start]
+            proposal_likelihood = self.neg_loglik(proposal_start)
+            if proposal_likelihood < best_lik:
+                best_lik = proposal_likelihood
+                best_start = proposal_start.copy()
+
+        return best_start
+
     def _sim_prediction(self,theta,Y,scores,h,t_params,simulations):
         """ Simulates a h-step ahead mean prediction
 

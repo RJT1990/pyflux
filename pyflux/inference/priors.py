@@ -9,6 +9,9 @@ def logit(x):
     return np.log(x) - np.log(1 - x)
 
 def transform_define(transform):
+    """
+    This function links the user's choice of transformation with the associated numpy function
+    """
     if transform == 'tanh':
         return np.tanh
     elif transform == 'exp':
@@ -21,6 +24,9 @@ def transform_define(transform):
         return None
 
 def itransform_define(transform):
+    """
+    This function links the user's choice of transformation with its inverse
+    """
     if transform == 'tanh':
         return np.arctanh
     elif transform == 'exp':
@@ -32,15 +38,30 @@ def itransform_define(transform):
     else:
         return None
 
+def itransform_name_define(transform):
+    """
+    This function is used for model results table, displaying any transformations performed
+    """
+    if transform == 'tanh':
+        return 'arctanh'
+    elif transform == 'exp':
+        return 'log'
+    elif transform == 'logit':
+        return 'ilogit'
+    elif transform is None:
+        return ''
+    else:
+        return None
 
 class Normal(object):
 
-    def __init__(self,mu0,sigma0,transform=None):
+    def __init__(self, mu0, sigma0, transform=None):
         self.mu0 = mu0
         self.sigma0 = sigma0
         self.transform_name = transform     
         self.transform = transform_define(transform)
         self.itransform = itransform_define(transform)
+        self.itransform_name = itransform_name_define(transform)
         self.covariance_prior = False
 
     def logpdf(self,mu):
@@ -53,13 +74,13 @@ class Normal(object):
             mu = self.transform(mu)             
         return (1/float(self.sigma0))*exp(-(0.5*(mu-self.mu0)**2)/float(self.sigma0**2))
 
-
 class Uniform(object):
 
-    def __init__(self,transform=None):
+    def __init__(self, transform=None):
         self.transform_name = transform     
         self.transform = transform_define(transform)
         self.itransform = itransform_define(transform)
+        self.itransform_name = itransform_name_define(transform)
         self.covariance_prior = False
 
     def logpdf(self,mu):
@@ -68,12 +89,13 @@ class Uniform(object):
 
 class InverseGamma(object):
 
-    def __init__(self,alpha,beta,transform=np.exp):
+    def __init__(self, alpha, beta, transform=np.exp):
         self.alpha = alpha
         self.beta = beta
         self.transform_name = transform
         self.transform = transform_define(transform)
         self.itransform = itransform_define(transform)
+        self.itransform_name = itransform_name_define(transform)
         self.covariance_prior = False
 
     def logpdf(self,x):
@@ -96,6 +118,7 @@ class InverseWishart(object):
         self.transform_name = None     
         self.transform = transform_define(None)
         self.itransform = itransform_define(None)
+        self.itransform_name = itransform_name_define(None)
 
     def logpdf(self,X):
         return invwishart.logpdf(X, df=self.v, scale=self.Psi)

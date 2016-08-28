@@ -72,7 +72,7 @@ class TSM(object):
             theta, Y, scores, states = self._model(z)
             states_var = None
             X_names = self.X_names
-        elif self.model_type in ['LLEV','LLT','DynReg']:
+        elif self.model_type in ['LLEV','LLT','DynReg','DAR']:
             Y = self.data
             scores = None
             states, states_var = self.smoothed_state(self.data,z)
@@ -94,7 +94,7 @@ class TSM(object):
 
         return theta, Y, scores, states, states_var, X_names
 
-    def _bbvi_fit(self,posterior,optimizer='RMSProp',iterations=1000,**kwargs):
+    def _bbvi_fit(self, posterior, optimizer='RMSProp', iterations=1000, map_start=True, **kwargs):
         """ Performs Black Box Variational Inference
 
         Parameters
@@ -108,6 +108,9 @@ class TSM(object):
         iterations: int
             How many iterations for BBVI
 
+        map_start : boolean
+            Whether to start values from a MAP estimate (if False, uses default starting values)
+
         Returns
         ----------
         BBVIResults object
@@ -117,7 +120,7 @@ class TSM(object):
         phi = self.latent_variables.get_z_starting_values()
         phi = kwargs.get('start',phi).copy() # If user supplied
         batch_size = kwargs.get('batch_size',12) # If user supplied
-        if self.model_type not in ['GPNARX','GPR','GP','GASRank']:
+        if self.model_type not in ['GPNARX','GPR','GP','GASRank'] and map_start is True:
             p = optimize.minimize(posterior,phi,method='L-BFGS-B') # PML starting values
             start_loc = 0.8*p.x + 0.2*phi
         else:
@@ -301,19 +304,38 @@ class TSM(object):
             method=method,ihessian=ihessian,signal=theta,scores=scores,
             z_hide=self._z_hide,max_lag=self.max_lag,states=states,states_var=states_var)
 
-    def _optimize_fit(self,obj_type=None,**kwargs):
+    def _optimize_fit(self, obj_type=None, **kwargs):
+        """
+        This function fits models using Maximum Likelihood or Penalized Maximum Likelihood
+        """
+
+        preopt_search = kwargs.get('preopt_search', True) # If user supplied
 
         if obj_type == self.neg_loglik:
             method = 'MLE'
         else:
             method = 'PML'
 
-        # Starting values
-        phi = self.latent_variables.get_z_starting_values()
+        # Starting values - check to see if model has preoptimize method, if not, simply use default starting values
+        if preopt_search is True:
+            try:
+                phi = self._preoptimize_model(self.latent_variables.get_z_starting_values(), method)
+                preoptimized = True
+            except:
+                phi = self.latent_variables.get_z_starting_values()
+                preoptimized = False
+        else:
+            preoptimized = False
+            phi = self.latent_variables.get_z_starting_values()
+
         phi = kwargs.get('start',phi).copy() # If user supplied
 
         # Optimize using L-BFGS-B
-        p = optimize.minimize(obj_type,phi,method='L-BFGS-B')
+        p = optimize.minimize(obj_type, phi, method='L-BFGS-B')
+        if preoptimized is True:
+            p2 = optimize.minimize(obj_type, self.latent_variables.get_z_starting_values(), method='L-BFGS-B')
+            if self.neg_loglik(p2.x) < self.neg_loglik(p.x):
+                p = p2
 
         theta, Y, scores, states, states_var, X_names = self._categorize_model_output(p.x)
 
@@ -361,12 +383,12 @@ class TSM(object):
         None (stores fit information)
         """
 
-        cov_matrix = kwargs.get('cov_matrix',None)
-        iterations = kwargs.get('iterations',1000)
-        nsims = kwargs.get('nsims',10000)
-        optimizer = kwargs.get('optimizer','RMSProp')
-        batch_size = kwargs.get('batch_size',12)
-        map_start = kwargs.get('map_start',True)
+        cov_matrix = kwargs.get('cov_matrix', None)
+        iterations = kwargs.get('iterations', 1000)
+        nsims = kwargs.get('nsims', 10000)
+        optimizer = kwargs.get('optimizer', 'RMSProp')
+        batch_size = kwargs.get('batch_size', 12)
+        map_start = kwargs.get('map_start', True)
 
         if method is None:
             method = self.default_method
@@ -374,16 +396,17 @@ class TSM(object):
             raise ValueError("Method not supported!")
 
         if method == 'MLE':
-            return self._optimize_fit(self.neg_loglik,**kwargs)
+            return self._optimize_fit(self.neg_loglik, **kwargs)
         elif method == 'PML':
-            return self._optimize_fit(self.neg_logposterior,**kwargs)   
+            return self._optimize_fit(self.neg_logposterior, **kwargs)   
         elif method == 'M-H':
-            return self._mcmc_fit(nsims=nsims,method=method,cov_matrix=cov_matrix,
+            return self._mcmc_fit(nsims=nsims, method=method, cov_matrix=cov_matrix,
                 map_start=map_start)
         elif method == "Laplace":
             return self._laplace_fit(self.neg_logposterior) 
         elif method == "BBVI":
-            return self._bbvi_fit(self.neg_logposterior,optimizer=optimizer,iterations=iterations,batch_size=batch_size)
+            return self._bbvi_fit(self.neg_logposterior, optimizer=optimizer, iterations=iterations,
+                batch_size=batch_size, map_start=map_start)
         elif method == "OLS":
             return self._ols_fit()          
 
@@ -447,9 +470,15 @@ class TSM(object):
 
             if isinstance(date_index,pd.tseries.index.DatetimeIndex):
 
-                # Only configured for days - need to support smaller time intervals!
-                for t in range(h):
-                    date_index += pd.DateOffset((date_index[len(date_index)-1] - date_index[len(date_index)-2]).days)
+                if pd.infer_freq(date_index) == 'H' or pd.infer_freq(date_index) == 'M' or pd.infer_freq(date_index) == 'S':
+
+                    for t in range(h):
+                        date_index += pd.DateOffset((date_index[len(date_index)-1] - date_index[len(date_index)-2]).seconds)
+
+                else: # Assume higher frequency (configured for days)
+
+                    for t in range(h):
+                        date_index += pd.DateOffset((date_index[len(date_index)-1] - date_index[len(date_index)-2]).days)
 
             elif isinstance(date_index,pd.core.index.Int64Index):
 
@@ -480,7 +509,7 @@ class TSM(object):
         ----------
         Transformed latent variables 
         """
-        return self.transformed_latent_variables()
+        return self.transformed_z()
 
     def plot_z(self,indices=None,figsize=(15,5),**kwargs):
         """ Plots latent variables by calling latent parameters object

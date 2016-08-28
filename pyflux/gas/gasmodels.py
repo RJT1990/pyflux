@@ -212,7 +212,7 @@ class GASt(GASDistribution):
     def build_latent_variables():
         lvs_to_build = []
         lvs_to_build.append(['t Scale',ifr.Uniform(transform='exp'),dst.q_Normal(0,3),0.01])
-        lvs_to_build.append(['v',ifr.Uniform(transform='exp'),dst.q_Normal(0,3),2.0])
+        lvs_to_build.append(['v',ifr.Uniform(transform='exp'),dst.q_Normal(0,3),2.5])
         return lvs_to_build
 
     @staticmethod
@@ -238,7 +238,7 @@ class GASt(GASDistribution):
 
 class GASSkewt(GASDistribution):
 
-    def __init__(self,gradient_only=True):
+    def __init__(self, gradient_only=True):
         if gradient_only is True:
             self.score_function = self.first_order_score
         else:
@@ -257,17 +257,17 @@ class GASSkewt(GASDistribution):
     @staticmethod
     def build_latent_variables():
         lvs_to_build = []
-        lvs_to_build.append(['Skewness',ifr.Uniform(transform='exp'),dst.q_Normal(0,3),0.0])
-        lvs_to_build.append(['Skewt Scale',ifr.Uniform(transform='exp'),dst.q_Normal(0,3),0.01])
-        lvs_to_build.append(['v',ifr.Uniform(transform='exp'),dst.q_Normal(0,3),2.0])
+        lvs_to_build.append(['Skewness', ifr.Uniform(transform='exp'), dst.q_Normal(0,3), 0.0])
+        lvs_to_build.append(['Skewt Scale', ifr.Uniform(transform='exp'), dst.q_Normal(0,3), 0.01])
+        lvs_to_build.append(['v', ifr.Uniform(transform='exp'), dst.q_Normal(0,3), 2.5])
         return lvs_to_build
 
     @staticmethod
-    def draw_variable(loc,scale,shape,skewness,nsims):
-        return loc + scale*dst.skewt.rvs(shape,skewness,nsims)
+    def draw_variable(loc, scale, shape, skewness, nsims):
+        return loc + scale*dst.skewt.rvs(shape, skewness, nsims)
 
     @staticmethod
-    def first_order_score(y,mean,scale,shape,skewness):
+    def first_order_score(y, mean, scale, shape, skewness):
         m1 = (np.sqrt(shape)*sp.gamma((shape-1.0)/2.0))/(np.sqrt(np.pi)*sp.gamma(shape/2.0))
         mean = mean + (skewness - (1.0/skewness))*scale*m1
         if (y-mean)>=0:
@@ -276,7 +276,7 @@ class GASSkewt(GASDistribution):
             return ((shape+1)/shape)*(y-mean)/(np.power(scale,2) + (np.power(skewness*(y-mean),2)/shape))
 
     @staticmethod
-    def neg_loglikelihood(y,mean,scale,shape,skewness):
+    def neg_loglikelihood(y, mean, scale, shape, skewness):
         m1 = (np.sqrt(shape)*sp.gamma((shape-1.0)/2.0))/(np.sqrt(np.pi)*sp.gamma(shape/2.0))
         mean = mean + (skewness - (1.0/skewness))*scale*m1
         return -np.sum(dst.skewt.logpdf(x=y,df=shape,loc=mean,gamma=skewness,scale=scale))

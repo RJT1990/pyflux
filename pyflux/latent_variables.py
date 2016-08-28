@@ -150,7 +150,7 @@ class LatentVariables(object):
                 values[i] = self.z_list[i].start
         return values
 
-    def get_z_values(self,transformed=False):
+    def get_z_values(self, transformed=False):
         transforms = self.get_z_transforms()
 
         if self.estimated is True:

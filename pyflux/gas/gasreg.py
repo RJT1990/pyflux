@@ -167,6 +167,43 @@ class GASReg(tsm.TSM):
 
         return theta[:-1], self.model_Y, self.model_scores[:-1], coefficients
 
+    def _preoptimize_model(self, initials, method):
+        """ Preoptimizes the model by estimating a static model, then a quick search of good dynamic parameters
+
+        Parameters
+        ----------
+        initials : np.array
+            A vector of inital values
+
+        method : str
+            One of 'MLE' or 'PML' (the optimization options)
+
+        Returns
+        ----------
+        Y_exp : np.array
+            Vector of past values and predictions 
+        """
+        
+        # Random search for good starting values
+        start_values = []
+        start_values.append(np.ones(len(self.X_names))*-2.0)
+        start_values.append(np.ones(len(self.X_names))*-3.0)
+        start_values.append(np.ones(len(self.X_names))*-4.0)
+        start_values.append(np.ones(len(self.X_names))*-5.0)
+
+        best_start = self.latent_variables.get_z_starting_values()
+        best_lik = self.neg_loglik(self.latent_variables.get_z_starting_values())
+        proposal_start = best_start.copy()
+
+        for start in start_values:
+            proposal_start[:len(self.X_names)] = start
+            proposal_likelihood = self.neg_loglik(proposal_start)
+            if proposal_likelihood < best_lik:
+                best_lik = proposal_likelihood
+                best_start = proposal_start.copy()
+
+        return best_start
+
     def neg_loglik(self,beta):
         theta, Y, scores,_ = self._model(beta)
         parm = np.array([self.latent_variables.z_list[k].prior.transform(beta[k]) for k in range(beta.shape[0])])

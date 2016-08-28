@@ -171,13 +171,14 @@ class BBVI(object):
         means, scale = self.get_means_and_scales_from_q()
         return (ss.norm.logpdf(z,loc=means,scale=scale)).sum(axis=1)
 
-    def print_progress(self,i,current_params):
+    def print_progress(self, i, current_params):
         """
         Prints the current ELBO at every decile of total iterations
         """
         for split in range(1,11):
             if i == (round(self.iterations/10*split)-1):
-                print(str(split) + "0% done : ELBO is " + str(-self.neg_posterior(current_params)-self.create_normal_logq(current_params)))
+                print(str(split) + "0% done : ELBO is " + str(-self.neg_posterior(current_params)-self.create_normal_logq(current_params)) + ", p(y,z) is " + str(-self.neg_posterior(current_params)) 
+                    + ", q(z) is " + str(self.create_normal_logq(current_params)))
 
     def run(self):
         """

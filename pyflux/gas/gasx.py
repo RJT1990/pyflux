@@ -247,7 +247,51 @@ class GASX(tsm.TSM):
 
         return Y_exp
 
-    def _sim_prediction(self,theta,Y,scores,h,t_params,X_oos,simulations):
+    def _preoptimize_model(self, initials, method):
+        """ Preoptimizes the model by estimating a static model, then a quick search of good dynamic parameters
+
+        Parameters
+        ----------
+        initials : np.array
+            A vector of inital values
+
+        method : str
+            One of 'MLE' or 'PML' (the optimization options)
+
+        Returns
+        ----------
+        Y_exp : np.array
+            Vector of past values and predictions 
+        """
+        if not (self.ar==0 and self.sc == 0):
+            toy_model = GASX(formula=self.formula, ar=0, sc=0, integ=self.integ, family=self.family, data=self.data_original, gradient_only=self.gradient_only)
+            toy_model.fit(method)
+            self.latent_variables.z_list[0].start = toy_model.latent_variables.get_z_values(transformed=False)[0]
+            
+            for extra_z in range(len(self.family.build_latent_variables())):
+                self.latent_variables.z_list[self.ar+self.sc+extra_z].start = toy_model.latent_variables.get_z_values(transformed=False)[extra_z]
+            
+            # Random search for good AR/SC starting values
+            random_starts = np.random.normal(0.3, 0.3, [self.ar+self.sc+len(self.X_names), 1000])
+
+            best_start = self.latent_variables.get_z_starting_values()
+            best_lik = self.neg_loglik(self.latent_variables.get_z_starting_values())
+            proposal_start = best_start.copy()
+
+            for start in range(random_starts.shape[1]):
+                proposal_start[:self.ar+self.sc+len(self.X_names)] = random_starts[:,start]
+                proposal_start[0] = proposal_start[0]*(1.0-np.sum(random_starts[0:self.ar,start]))
+                proposal_likelihood = self.neg_loglik(proposal_start)
+                if proposal_likelihood < best_lik:
+                    best_lik = proposal_likelihood
+                    best_start = proposal_start.copy()
+
+            return best_start
+
+        else:
+            return initials
+
+    def _sim_prediction(self, theta, Y, scores, h, t_params, X_oos, simulations):
         """ Simulates a h-step ahead mean prediction
 
         Parameters

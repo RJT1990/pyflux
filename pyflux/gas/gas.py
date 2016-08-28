@@ -1,4 +1,5 @@
 import sys
+
 if sys.version_info < (3,):
     range = xrange
 
@@ -205,7 +206,7 @@ class GAS(tsm.TSM):
         theta_exp = theta.copy()
         scores_exp = scores.copy()
 
-        #(TODO: vectorize the inner construction here)      
+        #TODO: vectorize the inner construction here)      
         for t in range(0,h):
             new_value = t_params[0]
 
@@ -218,15 +219,60 @@ class GAS(tsm.TSM):
                     new_value += t_params[k+self.ar]*scores_exp[-k]
 
             if self.model_name2 == "Exponential GAS":
-                Y_exp = np.append(Y_exp,[1.0/self.link(new_value)])
+                Y_exp = np.append(Y_exp, [1.0/self.link(new_value)])
             else:
-                Y_exp = np.append(Y_exp,[self.link(new_value)])
-            theta_exp = np.append(theta_exp,[new_value]) # For indexing consistency
-            scores_exp = np.append(scores_exp,[0]) # expectation of score is zero
+                Y_exp = np.append(Y_exp, [self.link(new_value)])
+
+            theta_exp = np.append(theta_exp, [new_value]) # For indexing consistency
+            scores_exp = np.append(scores_exp, [0]) # expectation of score is zero
 
         return Y_exp
 
-    def _sim_prediction(self,theta,Y,scores,h,t_params,simulations):
+    def _preoptimize_model(self, initials, method):
+        """ Preoptimizes the model by estimating a static model, then a quick search of good AR/SC parameters
+
+        Parameters
+        ----------
+        initials : np.array
+            A vector of inital values
+
+        method : str
+            One of 'MLE' or 'PML' (the optimization options)
+
+        Returns
+        ----------
+        Y_exp : np.array
+            Vector of past values and predictions 
+        """
+        if not (self.ar==0 and self.sc == 0):
+            toy_model = GAS(ar=0, sc=0, integ=self.integ, family=self.family, data=self.data_original, gradient_only=self.gradient_only)
+            toy_model.fit(method)
+            self.latent_variables.z_list[0].start = toy_model.latent_variables.get_z_values(transformed=False)[0]
+            
+            for extra_z in range(len(self.family.build_latent_variables())):
+                self.latent_variables.z_list[1+self.ar+self.sc+extra_z].start = toy_model.latent_variables.get_z_values(transformed=False)[1+extra_z]
+            
+            # Random search for good AR/SC starting values
+            random_starts = np.random.normal(0.3, 0.3, [self.ar+self.sc, 1000])
+
+            best_start = self.latent_variables.get_z_starting_values()
+            best_lik = self.neg_loglik(self.latent_variables.get_z_starting_values())
+            proposal_start = best_start.copy()
+
+            for start in range(random_starts.shape[1]):
+                proposal_start[1:1+self.ar+self.sc] = random_starts[:,start]
+                proposal_start[0] = proposal_start[0]*(1.0-np.sum(random_starts[0:self.ar,start]))
+                proposal_likelihood = self.neg_loglik(proposal_start)
+                if proposal_likelihood < best_lik:
+                    best_lik = proposal_likelihood
+                    best_start = proposal_start.copy()
+
+            return best_start
+
+        else:
+            return initials
+
+    def _sim_prediction(self, theta, Y,scores, h, t_params, simulations):
         """ Simulates a h-step ahead mean prediction
 
         Parameters
@@ -369,7 +415,7 @@ class GAS(tsm.TSM):
 
             plt.show()              
     
-    def plot_predict(self,h=5,past_values=20,intervals=True,**kwargs):
+    def plot_predict(self, h=5, past_values=20, intervals=True, **kwargs):
         """ Makes forecast with the estimated model
 
         Parameters
@@ -423,13 +469,16 @@ class GAS(tsm.TSM):
             plt.ylabel(self.data_name)
             plt.show()
 
-    def predict_is(self,h=5):
+    def predict_is(self, h=5, fit_once=True):
         """ Makes dynamic in-sample predictions with the estimated model
 
         Parameters
         ----------
         h : int (default : 5)
             How many steps would you like to forecast?
+
+        fit_once : boolean
+            (default: True) Fits only once before the in-sample prediction; if False, fits after every new datapoint
 
         Returns
         ----------
@@ -441,10 +490,16 @@ class GAS(tsm.TSM):
         for t in range(0,h):
             x = GAS(ar=self.ar,sc=self.sc,integ=self.integ,family=self.family,data=self.data_original[:-h+t],
                 gradient_only=self.gradient_only)
-            x.fit(printer=False)
+            if fit_once is False:
+                x.fit(printer=False)
             if t == 0:
+                if fit_once is True:
+                    x.fit(printer=False)
+                    saved_lvs = x.latent_variables
                 predictions = x.predict(1)
             else:
+                if fit_once is True:
+                    x.latent_variables = saved_lvs
                 predictions = pd.concat([predictions,x.predict(1)])
         
         predictions.rename(columns={0:self.data_name}, inplace=True)

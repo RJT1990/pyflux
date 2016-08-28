@@ -97,22 +97,22 @@ class MLEResults(Results):
         print(".summary() : printed results")
         return("")
 
-    def summary(self):
+    def summary(self, transformed=True):
         if self.ihessian is not None:
-            return self.summary_with_hessian()
+            return self.summary_with_hessian(transformed)
         else:
             return self.summary_without_hessian()
 
-    def summary_with_hessian(self):
+    def summary_with_hessian(self, transformed=True):
 
         ses = np.power(np.abs(np.diag(self.ihessian)),0.5)
         t_z = self.z.get_z_values(transformed=True)
         t_p_std = ses.copy() # vector for transformed standard errors
 
         # Create transformed variables
-        for k in range(len(t_z)-self.z_hide):
-            z_temp = (self.z_values[k]/float(ses[k]))
-            t_p_std[k] = t_z[k] / z_temp
+        # for k in range(len(t_z)-self.z_hide):
+        #    z_temp = (self.z_values[k]/float(ses[k]))
+        #    t_p_std[k] = t_z[k] / z_temp
 
         data = []
 
@@ -126,9 +126,18 @@ class MLEResults(Results):
                     'z_p': np.round(find_p_value(t_z[i]/float(t_p_std[i])),self.rounding_points),
                     'ci': "(" + str(np.round(t_z[i] - t_p_std[i]*1.96,self.rounding_points)) + " | " + str(np.round(t_z[i] + t_p_std[i]*1.96,self.rounding_points)) + ")"})
             else:
-                data.append({
-                    'z_name': self.z.z_list[i].name, 
-                    'z_value':np.round(self.z.z_list[i].prior.transform(self.z_values[i]),self.rounding_points)})                     
+                if transformed is True:
+                    data.append({
+                        'z_name': self.z.z_list[i].name, 
+                        'z_value':np.round(self.z.z_list[i].prior.transform(self.z_values[i]),self.rounding_points)})        
+                else:
+                    data.append({
+                        'z_name': self.z.z_list[i].prior.itransform_name + '(' + self.z.z_list[i].name + ')', 
+                        'z_value':np.round(self.z_values[i],self.rounding_points), 
+                        'z_std': np.round(t_p_std[i],self.rounding_points),
+                        'z_z': np.round(t_z[i]/float(t_p_std[i]),self.rounding_points),
+                        'z_p': np.round(find_p_value(t_z[i]/float(t_p_std[i])),self.rounding_points),
+                        'ci': "(" + str(np.round(t_z[i] - t_p_std[i]*1.96,self.rounding_points)) + " | " + str(np.round(t_z[i] + t_p_std[i]*1.96,self.rounding_points)) + ")"})       
         
         fmt = [
             ('Latent Variable',       'z_name',   40),
@@ -165,6 +174,10 @@ class MLEResults(Results):
         print("="*106)
         print( TablePrinter(fmt, ul='=')(data) )
         print("="*106)
+        if 'Skewt' in self.model_name:
+            print("WARNING: Skew t distribution is not well-suited for MLE or MAP inference")
+            print("Workaround 1: Use a t-distribution instead for MLE/MAP")
+            print("Workaround 2: Use M-H or BBVI inference for Skew t distribution")
 
     def summary_without_hessian(self):
 
@@ -209,6 +222,10 @@ class MLEResults(Results):
         print("="*106)
         print( TablePrinter(fmt, ul='=')(data) )
         print("="*106)
+        if 'Skewt' in self.model_name:
+            print("WARNING: Skew t distribution is not well-suited for MLE or MAP inference")
+            print("Workaround 1: Use a t-distribution instead for MLE/MAP")
+            print("Workaround 2: Use M-H or BBVI inference for Skew t distribution")
 
 
 class BBVIResults(Results):

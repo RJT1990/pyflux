@@ -17,6 +17,8 @@ Performs Maximum Likelihood estimation.
 
    model.fit(method='MLE')
 
+* *preopt_search* : (default : True) if True will use a preoptimization stage to find good starting values (if the model type has no available preoptimization method, this argument will be ignored). Turning this off will speed up optimization at the risk of obtaining an inferior solution.
+
 **Ordinary Least Squares**
 
 Performs Ordinary Least Squares estimation.
@@ -34,3 +36,5 @@ From a frequentist perspective, PML can be viewed as a type of regularization on
    :linenos:
 
    model.fit(method='PML')
+
+* *preopt_search* : (default : True) if True will use a preoptimization stage to find good starting values (if the model type has no available preoptimization method, this argument will be ignored). Turning this off will speed up optimization at the risk of obtaining an inferior solution.

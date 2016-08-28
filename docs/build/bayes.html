@@ -84,6 +84,7 @@
                 <ul>
 <li class="toctree-l1"><a class="reference internal" href="arima.html">ARIMA models</a></li>
 <li class="toctree-l1"><a class="reference internal" href="arimax.html">ARIMAX models</a></li>
+<li class="toctree-l1"><a class="reference internal" href="dar.html">DAR models</a></li>
 <li class="toctree-l1"><a class="reference internal" href="egarch.html">Beta-t-EGARCH models</a></li>
 <li class="toctree-l1"><a class="reference internal" href="egarchm.html">Beta-t-EGARCH in-mean models</a></li>
 <li class="toctree-l1"><a class="reference internal" href="egarchmreg.html">Beta-t-EGARCH-in-mean regression models</a></li>
@@ -93,6 +94,7 @@
 <li class="toctree-l1"><a class="reference internal" href="segarchm.html">Skew-t EGARCH in-mean models</a></li>
 <li class="toctree-l1"><a class="reference internal" href="gas.html">GAS models</a></li>
 <li class="toctree-l1"><a class="reference internal" href="gasreg.html">GAS Regression models</a></li>
+<li class="toctree-l1"><a class="reference internal" href="gasx.html">GASX models</a></li>
 <li class="toctree-l1"><a class="reference internal" href="gpnar.html">GP-NARX models</a></li>
 <li class="toctree-l1"><a class="reference internal" href="ssm.html">Gaussian State Space models</a></li>
 <li class="toctree-l1"><a class="reference internal" href="ngssm.html">Non-Gaussian State Space models</a></li>
@@ -172,7 +174,7 @@
 <dd><p>Adjusts the priors of the model. <strong>index</strong> can be an int or a list. <strong>prior</strong> is a prior object, such as <a class="reference internal" href="#Normal" title="Normal"><code class="xref py py-class docutils literal"><span class="pre">Normal</span></code></a>.</p>
 </dd></dl>
 
-<p>Here is example usage for <a class="reference internal" href="var.html#adjust_prior" title="adjust_prior"><code class="xref py py-func docutils literal"><span class="pre">adjust_prior()</span></code></a>:</p>
+<p>Here is example usage for <a class="reference internal" href="#adjust_prior" title="adjust_prior"><code class="xref py py-func docutils literal"><span class="pre">adjust_prior()</span></code></a>:</p>
 <div class="highlight-python"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre>1
 2
 3
@@ -187,15 +189,17 @@
 </div>
 <div class="section" id="methods">
 <h2>Methods<a class="headerlink" href="#methods" title="Permalink to this headline">¶</a></h2>
-<p>There are a number of Bayesian inference options using the <a class="reference internal" href="var.html#fit" title="fit"><code class="xref py py-func docutils literal"><span class="pre">fit()</span></code></a>: method. These can be chosen with the method argument.</p>
+<p>There are a number of Bayesian inference options using the <a class="reference internal" href="dar.html#fit" title="fit"><code class="xref py py-func docutils literal"><span class="pre">fit()</span></code></a>: method. These can be chosen with the method argument.</p>
 <p><strong>Black-Box Variational Inference</strong></p>
-<p>Performs Black Box Variational Inference. Currently the fixed assumption is mean-field variational inference with normal approximate distributions.</p>
+<p>Performs Black Box Variational Inference. Currently the fixed assumption is mean-field variational inference with normal approximate distributions. The gradient used in this implementation is the score function gradient. By default we use 24 samples for the gradient which is quite intense (other implementations use 2-8 samples). For your application, less samples may be as effective and quicker. One of the limitations of the implementation right now is BBVI here does not support using mini-batches of data. It is not clear yet how mini-batches would work with model types that have an underlying sequence of latent states - if it is shown to be effective, then this option will be included in future.</p>
 <div class="highlight-python"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre>1</pre></div></td><td class="code"><div class="highlight"><pre><span></span><span class="n">model</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">method</span><span class="o">=</span><span class="s1">&#39;BBVI&#39;</span><span class="p">,</span> <span class="n">iterations</span><span class="o">=</span><span class="s1">&#39;10000&#39;</span><span class="p">,</span> <span class="n">optimizer</span><span class="o">=</span><span class="s1">&#39;ADAM&#39;</span><span class="p">)</span>
 </pre></div>
 </td></tr></table></div>
 <ul class="simple">
+<li><em>batch_size</em> : (default : 24) number of Monte Carlo samples for the gradient</li>
 <li><em>iterations</em> : (default : 3000) number of iterations to run</li>
 <li><em>optimizer</em> : (default: RMSProp) RMSProp or ADAM (stochastic optimizers)</li>
+<li><em>map_start</em>: (default: True) if True, starts latent variables using a MAP/PML estimate</li>
 </ul>
 <p><strong>Laplace Approximation</strong></p>
 <p>Performs a Laplace approximation on the posterior.</p>
@@ -203,18 +207,22 @@
 </pre></div>
 </td></tr></table></div>
 <p><strong>Metropolis-Hastings</strong></p>
-<p>Performs Metropolis-Hastings MCMC. Currently uses &#8216;one long chain&#8217;.</p>
+<p>Performs Metropolis-Hastings MCMC. Currently uses &#8216;one long chain&#8217; which is not ideal, but works okay for most of the models available.</p>
 <div class="highlight-python"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre>1</pre></div></td><td class="code"><div class="highlight"><pre><span></span><span class="n">model</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">method</span><span class="o">=</span><span class="s1">&#39;M-H&#39;</span><span class="p">)</span>
 </pre></div>
 </td></tr></table></div>
 <ul class="simple">
-<li><em>simulations</em> : number of simulations for the chain</li>
+<li><em>map_start</em> : (default: True) whether to initialize starting values and the covariance matrix using MAP estimates and the Inverse Hessian</li>
+<li><em>nsims</em> : number of simulations for the chain</li>
 </ul>
 <p><strong>Penalized Maximum Likelihood</strong></p>
-<p>Provides a Maximum a posteriori (MAP) estimate. This estimate is not completely Bayesian as it is based on a 0/1 loss rather than a squared or absolute loss. It can be considered a form of moadl approximation, when taken together with the Inverse Hessian matrix.</p>
+<p>Provides a Maximum a posteriori (MAP) estimate. This estimate is not completely Bayesian as it is based on a 0/1 loss rather than a squared or absolute loss. It can be considered a form of modal approximation, when taken together with the Inverse Hessian matrix.</p>
 <div class="highlight-python"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre>1</pre></div></td><td class="code"><div class="highlight"><pre><span></span><span class="n">model</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">method</span><span class="o">=</span><span class="s1">&#39;PML&#39;</span><span class="p">)</span>
 </pre></div>
 </td></tr></table></div>
+<ul class="simple">
+<li><em>preopt_search</em> : (default : True) if True will use a preoptimization stage to find good starting values (if the model type has no available preoptimization method, this argument will be ignored). Turning this off will speed up optimization at the risk of obtaining an inferior solution.</li>
+</ul>
 </div>
 <div class="section" id="priors">
 <h2>Priors<a class="headerlink" href="#priors" title="Permalink to this headline">¶</a></h2>

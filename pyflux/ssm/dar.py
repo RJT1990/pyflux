@@ -17,49 +17,72 @@ from .. import data_check as dc
 
 from .kalman import *
 
-class DynReg(tsm.TSM):
+class DAR(tsm.TSM):
     """ Inherits time series methods from TSM class.
 
-    **** DYNAMIC REGRESSION MODEL ****
+    **** DYNAMIC AUTOREGRESSIVE MODEL ****
 
     Parameters
     ----------
 
-    formula : string
-        patsy string describing the regression
+    ar : int
+        Number of autoregressive lags
 
     data : pd.DataFrame
         Field to specify the data that will be used
     """
 
-    def __init__(self,formula,data):
+    def __init__(self, data, ar, integ=0, target=None):
 
         # Initialize TSM object
-        super(DynReg,self).__init__('DynReg')
+        super(DAR, self).__init__('DAR')
 
-        # Latent variables
-        self.max_lag = 0
-        self._z_hide = 0 # Whether to cutoff variance latent variables from results
-        self.supported_methods = ["MLE","PML","Laplace","M-H","BBVI"]
+        # Latent Variable information
+        self.ar = ar
+        self.integ = integ
+        self.target = target
+        self.model_name = "DAR(" + str(self.ar) + ", integrated=" + str(self.integ) + ")"
+        self.max_lag = self.ar
+        self._z_hide = 0 # Whether to cutoff latent variables from results table
+        self.supported_methods = ["MLE", "PML", "Laplace", "M-H", "BBVI"]
         self.default_method = "MLE"
-        self.model_name = "Dynamic Linear Regression"
         self.multivariate_model = False
 
         # Format the data
-        self.is_pandas = True # This is compulsory for this model type
-        self.data_original = data
-        self.formula = formula
-        self.y, self.X = dmatrices(formula, data)
-        self.z_no = self.X.shape[1] + 1
-        self.y_name = self.y.design_info.describe()
-        self.data_name = self.y_name
-        self.X_names = self.X.design_info.describe().split(" + ")
-        self.y = np.array([self.y]).ravel()
-        self.data = self.y
-        self.X = np.array([self.X])[0]
-        self.index = data.index
+        self.data_original = data.copy()
+        self.data, self.data_name, self.is_pandas, self.index = dc.data_check(data,target)
+        self.data = self.data.astype(np.float) # treat as float for Cython
+        self.data_original_nondf = self.data.copy()
 
+        # Difference data
+        for order in range(0, self.integ):
+            self.data = np.diff(self.data)
+            self.data_name = "Differenced " + self.data_name
+
+        self.X = self._ar_matrix()
+        self.data = self.data[self.max_lag:]
+        self.y = self.data
+        self.y_name = self.data_name
         self._create_latent_variables()
+        self.z_no = len(self.latent_variables.z_list)
+
+    def _ar_matrix(self):
+        """ Creates Autoregressive matrix
+
+        Returns
+        ----------
+        X : np.ndarray
+            Autoregressive Matrix
+
+        """
+        Y = np.array(self.data[self.max_lag:self.data.shape[0]])
+        X = np.ones(Y.shape[0])
+
+        if self.ar != 0:
+            for i in range(0, self.ar):
+                X = np.vstack((X,self.data[(self.max_lag-i-1):-i-1]))
+
+        return X.T
 
     def _create_latent_variables(self):
         """ Creates model latent variables
@@ -71,8 +94,10 @@ class DynReg(tsm.TSM):
 
         self.latent_variables.add_z('Sigma^2 irregular',ifr.Uniform(transform='exp'),dst.q_Normal(0,3))
 
-        for parm in range(self.z_no-1):
-            self.latent_variables.add_z('Sigma^2 ' + self.X_names[parm],ifr.Uniform(transform='exp'),dst.q_Normal(0,3))
+        self.latent_variables.add_z('Constant',ifr.Uniform(transform=None),dst.q_Normal(0,3))
+
+        for parm in range(1,self.ar+1):
+            self.latent_variables.add_z('Sigma^2 AR(' + str(parm) + ')',ifr.Uniform(transform='exp'),dst.q_Normal(0,3))
 
     def _forecast_model(self,beta,Z,h):
         """ Creates forecasted states and variances
@@ -115,7 +140,7 @@ class DynReg(tsm.TSM):
 
         return dl_univariate_kalman(data,Z,H,T,Q,R,0.0)
 
-    def _ss_matrices(self, beta):
+    def _ss_matrices(self,beta):
         """ Creates the state space matrices required
 
         Parameters
@@ -158,7 +183,7 @@ class DynReg(tsm.TSM):
             loglik += np.linalg.slogdet(F[:,:,i])[1] + np.dot(v[i],np.dot(np.linalg.pinv(F[:,:,i]),v[i]))
         return -(-((self.y.shape[0]/2)*np.log(2*np.pi))-0.5*loglik.T[0].sum())
 
-    def plot_predict(self, h=5, past_values=20, intervals=True, oos_data=None, **kwargs):        
+    def plot_predict(self, h=5, past_values=20, intervals=True, **kwargs):        
         """ Makes forecast with the estimated model
 
         Parameters
@@ -172,9 +197,6 @@ class DynReg(tsm.TSM):
         intervals : Boolean
             Would you like to show 95% prediction intervals for the forecast?
 
-        oos_data : pd.DataFrame
-            Data for the variables to be used out of sample (ys can be NaNs)
-
         Returns
         ----------
         - Plot of the forecast
@@ -185,15 +207,20 @@ class DynReg(tsm.TSM):
         if self.latent_variables.estimated is False:
             raise Exception("No latent variables estimated!")
         else:
-            # Sort/manipulate the out-of-sample data
-            _, X_oos = dmatrices(self.formula, oos_data)
-            X_oos = np.array([X_oos])[0]
+            y_holder = self.y.copy() # holds past data and predicted data to create AR matrix
             full_X = self.X.copy()
-            full_X = np.append(full_X,X_oos,axis=0)
+            full_X = np.append(full_X,np.array([np.append(1.0, y_holder[-self.ar:][::-1])]), axis=0)
             Z = full_X
 
-            # Retrieve data, dates and (untransformed) latent variables         
-            a, P = self._forecast_model(self.latent_variables.get_z_values(), Z, h)
+            # Construct Z matrix
+            for step in range(h):
+                a, P = self._forecast_model(self.latent_variables.get_z_values(),Z,step)
+                new_value = np.dot(Z[-1,:],a[:,self.y.shape[0]+step])
+                y_holder = np.append(y_holder, new_value)
+                Z = np.append(Z, np.array([np.append(1.0, y_holder[-self.ar:][::-1])]), axis=0)
+
+            # Retrieve data, dates and (transformed) latent variables         
+            a, P = self._forecast_model(self.latent_variables.get_z_values(),Z,h)
             smoothed_series = np.zeros(self.y.shape[0]+h)
             series_variance = np.zeros(self.y.shape[0]+h)
             for t in range(self.y.shape[0]+h):
@@ -240,7 +267,7 @@ class DynReg(tsm.TSM):
             raise Exception("No latent variables estimated!")
         else:
             date_index = copy.deepcopy(self.index)
-            date_index = date_index[:self.y.shape[0]+1]
+            date_index = date_index[self.integ+self.ar:]
 
             if series_type == 'Smoothed':
                 mu, V = self.smoothed_state(self.data,self.latent_variables.get_z_values())
@@ -260,6 +287,7 @@ class DynReg(tsm.TSM):
             
             plt.subplot(self.z_no+1, 1, 1)
             plt.title(self.y_name + " Raw and " + series_type)  
+
             plt.plot(date_index,self.data,label='Data')
             plt.plot(date_index,smoothed_series,label=series_type,c='black')
             plt.legend(loc=2)
@@ -267,7 +295,7 @@ class DynReg(tsm.TSM):
             for coef in range(0,self.z_no-1):
                 V_coef = V[0][coef][:-1]    
                 plt.subplot(self.z_no+1, 1, 2+coef)
-                plt.title("Beta " + self.X_names[coef]) 
+                plt.title("Beta " + self.latent_variables.z_list[1+coef].name) 
 
                 if intervals == True:
                     alpha =[0.15*i/float(100) for i in range(50,12,-2)]
@@ -282,16 +310,13 @@ class DynReg(tsm.TSM):
 
             plt.show()  
 
-    def predict(self,h=5,oos_data=None):        
+    def predict(self, h=5):        
         """ Makes forecast with the estimated model
 
         Parameters
         ----------
         h : int (default : 5)
             How many steps ahead would you like to forecast?
-
-        oos_data : pd.DataFrame
-            Data for the variables to be used out of sample (ys can be NaNs)
 
         Returns
         ----------
@@ -301,28 +326,26 @@ class DynReg(tsm.TSM):
         if self.latent_variables.estimated is False:
             raise Exception("No latent variables estimated!")
         else:
-            # Sort/manipulate the out-of-sample data
-            _, X_oos = dmatrices(self.formula, oos_data)
-            X_oos = np.array([X_oos])[0]
+            y_holder = self.y.copy() # holds past data and predicted data to create AR matrix
             full_X = self.X.copy()
-            full_X = np.append(full_X,X_oos,axis=0)
+            full_X = np.append(full_X,np.array([np.append(1.0, y_holder[-self.ar:][::-1])]), axis=0)
             Z = full_X
 
-            # Retrieve data, dates and (transformed) parameters         
-            a, P = self._forecast_model(self.latent_variables.get_z_values(),Z,h)
-            smoothed_series = np.zeros(h)
-            for t in range(h):
-                smoothed_series[t] = np.dot(Z[self.y.shape[0]+t],a[:,self.y.shape[0]+t])
+            for step in range(h):
+                a, P = self._forecast_model(self.latent_variables.get_z_values(),Z,step)
+                new_value = np.dot(Z[-1,:],a[:,self.y.shape[0]+step])
+                y_holder = np.append(y_holder, new_value)
+                Z = np.append(Z, np.array([np.append(1.0, y_holder[-self.ar:][::-1])]), axis=0)
 
             date_index = self.shift_dates(h)
 
-            result = pd.DataFrame(smoothed_series)
+            result = pd.DataFrame(y_holder[-h:])
             result.rename(columns={0:self.y_name}, inplace=True)
             result.index = date_index[-h:]
 
             return result
 
-    def predict_is(self,h=5):
+    def predict_is(self, h=5):
         """ Makes dynamic in-sample predictions with the estimated model
 
         Parameters
@@ -338,21 +361,20 @@ class DynReg(tsm.TSM):
         predictions = []
 
         for t in range(0,h):
-            data1 = self.data_original.iloc[0:-h+t,:]
-            data2 = self.data_original.iloc[-h+t:,:]
-            x = DynReg(formula=self.formula,data=data1)
+            data1 = self.data_original_nondf[:-h+t]
+
+            x = DAR(data=data1, ar=self.ar, integ=self.integ)
             x.fit(printer=False)
             if t == 0:
-                predictions = x.predict(1,oos_data=data2)
+                predictions = x.predict(1)
             else:
-                predictions = pd.concat([predictions,x.predict(h=1,oos_data=data2)])
-        
+                predictions = pd.concat([predictions, x.predict(h=1)])
         predictions.rename(columns={0:self.y_name}, inplace=True)
         predictions.index = self.index[-h:]
 
         return predictions
 
-    def plot_predict_is(self,h=5,**kwargs):
+    def plot_predict_is(self, h=5, **kwargs):
         """ Plots forecasts with the estimated model against data
             (Simulated prediction with data)
 
