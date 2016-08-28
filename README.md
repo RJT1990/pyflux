@@ -4,9 +4,9 @@
 [![Join the chat at https://gitter.im/RJT1990/pyflux](https://badges.gitter.im/RJT1990/pyflux.svg)](https://gitter.im/RJT1990/pyflux?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
 [![PyPI version](https://badge.fury.io/py/pyflux.svg)](https://badge.fury.io/py/pyflux)
 
-__PyFlux__ is an open source time series library for the Python programming language. Built upon the NumPy/SciPy/Pandas libraries, PyFlux allows for easy application of a vast array of time series methods and inference capabilities.
+__PyFlux__ is an open source time series library for Python. The library has a vast array of modern time series models, as well as a flexible array of inference options (frequentist and Bayesian) that can be applied to these models. By combining breadth of models with breadth of inference, PyFlux allows for probabilistic time series modelling.
 
-See some examples and documentation at [PyFlux.com](http://www.pyflux.com/). Or see worked-through examples in this [talk](https://github.com/RJT1990/talks/blob/master/PyDataTimeSeriesTalk.ipynb) given to the PyData London Meetup in June 2016.
+See some examples, model explanations and documentation at [PyFlux.com](http://www.pyflux.com/). PyFlux is still only alpha software and can become much better and faster with your contributions! - see [here](https://github.com/RJT1990/pyflux/wiki/Contribution-Guidelines) for guidelines on how you can get involved.
 
 ## Models
 
@@ -20,7 +20,7 @@ See some examples and documentation at [PyFlux.com](http://www.pyflux.com/). Or 
  - [Skew-t-EGARCH-in-mean models](http://www.pyflux.com/skew-t-egarch-in-mean/)
 - [GAS models](http://www.pyflux.com/gas-models/)
 - [GAS State Space models](http://www.pyflux.com/gas-state-space-models/)
-- [GP-NARX models](http://www.pyflux.com/gp-narx/)
+- [GP-NARX models](http://www.pyflux.com/gp-narx/) (currently being rewritten)
 - [Gaussian State Space models](http://www.pyflux.com/gaussian-state-space-models/)
 - [Non-Gaussian State Space models](http://www.pyflux.com/non-gaussian-state-space-models/)
 - [VAR models](http://www.pyflux.com/vector-autoregression)
@@ -42,6 +42,11 @@ pip install pyflux
 ## Python Version
 
 Supported on Python 2.7 and 3.5.
+
+## Talks
+
+- [PyData San Francisco 2016](https://github.com/RJT1990/PyData2016-SanFrancisco) - August 2016 -  a tour of time series (and predicting NFL games)
+- [PyData London Meetup](https://github.com/RJT1990/talks/blob/master/PyDataTimeSeriesTalk.ipynb) - June 2016 - an introduction to the library in its early stages
 
 ## Citation
 
