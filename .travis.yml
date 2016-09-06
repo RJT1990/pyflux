@@ -1,0 +1,12 @@
+language: python
+python:
+        - "2.7"
+        - "3.5"
+install:
+        - pip install .
+        - pip install -r requirements.txt
+before_install:
+            - pip install pytest pytest-cov
+script:
+            - py.test
+
