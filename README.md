@@ -12,10 +12,12 @@ See some examples, model explanations and documentation at [PyFlux.com](http://w
 
 - [ARIMA models](http://www.pyflux.com/arima-models)
  - [ARIMAX models](http://www.pyflux.com/arimax-models)
+ - [Dynamic Autoregression models](http://www.pyflux.com/dynamic-autoregression-models)
 - [GARCH models](http://www.pyflux.com/garch-models)
  - [Beta-t-EGARCH models](http://www.pyflux.com/beta-t-egarch)
  - [EGARCH-in-mean models](http://www.pyflux.com/egarch-in-mean)
  - [EGARCH-in-mean regression models](http://www.pyflux.com/egarch-m-regression)
+ - [Long Memory EGARCH models](http://www.pyflux.com/long-memory-egarch/)
  - [Skew-t-EGARCH models](http://www.pyflux.com/skew-t-egarch/)
  - [Skew-t-EGARCH-in-mean models](http://www.pyflux.com/skew-t-egarch-in-mean/)
 - [GAS models](http://www.pyflux.com/gas-models/)
