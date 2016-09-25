@@ -55,9 +55,9 @@ The local level (**LLEV**) and local linear trend (**LLT**) models are of the fo
 
       string (data is DataFrame) or int (data is np.array) : which column to use as the time series. If None, the first column will be chosen as the data.
 
-The dynamic linear regression (**DynLin**) model is of the form:
+The dynamic linear regression (**DynReg**) model is of the form:
 
-.. py:class:: DynLin(formula,data)
+.. py:class:: DynReg(formula,data)
 
    .. py:attribute:: formula
 

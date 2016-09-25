@@ -15,7 +15,6 @@ from .. import tsm as tsm
 from .. import distributions as dst
 from .. import data_check as dc
 
-from .scores import *
 from .gasmodels import *
 
 from .gas_recursions import gas_recursion
@@ -45,14 +44,9 @@ class GAS(tsm.TSM):
     target : str (pd.DataFrame) or int (np.array)
         Specifies which column name or array index to use. By default, first
         column/array will be selected as the dependent variable.
-
-    gradient_only : Boolean (default: True)
-        If true, will only use gradient rather than second-order terms
-        to construct the modified score.
     """
 
-    def __init__(self,data,ar,sc,family,integ=0,target=None, 
-        gradient_only=False):
+    def __init__(self, data, ar, sc, family, integ=0, target=None):
 
         # Initialize TSM object     
         super(GAS,self).__init__('GAS')
@@ -60,7 +54,6 @@ class GAS(tsm.TSM):
         self.ar = ar
         self.sc = sc
         self.integ = integ
-        self.gradient_only = gradient_only
         self.z_no = self.ar + self.sc + 1
         self.max_lag = max(self.ar,self.sc)
         self._z_hide = 0 # Whether to cutoff variance latent variables from results
@@ -81,13 +74,27 @@ class GAS(tsm.TSM):
 
         self.family = family
         
-        self.model_name2, self.link, self.scale, self.shape, self.skewness, self.mean_transform = self.family.setup()
+        self.model_name2, self.link, self.scale, self.shape, self.skewness, self.mean_transform, self.cythonized = self.family.setup()
+        
+        # Identify whether model has cythonized backend - then choose update type
+        if self.cythonized is True:
+            self._model = self._cythonized_model
+            if self.family.gradient_only is True:
+                self.recursion = self.family.gradient_recursion() # first-order update
+            else:
+                self.recursion = self.family.newton_recursion() # second-order update
+        else:
+            self._model = self._uncythonized_model
+
         self.model_name = self.model_name2 + "(" + str(self.ar) + "," + str(self.integ) + "," + str(self.sc) + ")"
 
+        # Build any remaining latent variables that are specific to the family chosen
         for no, i in enumerate(self.family.build_latent_variables()):
-            self.latent_variables.add_z(i[0],i[1],i[2])
+            self.latent_variables.add_z(i[0], i[1], i[2])
             self.latent_variables.z_list[1+no+self.ar+self.sc].start = i[3]
         self.latent_variables.z_list[0].start = self.mean_transform(np.mean(self.data))
+
+        self.z_no = len(self.latent_variables.z_list)
 
     def _create_model_matrices(self):
         """ Creates model matrices/vectors
@@ -108,13 +115,13 @@ class GAS(tsm.TSM):
         None (changes model attributes)
         """
 
-        self.latent_variables.add_z('Constant',ifr.Normal(0,3,transform=None),dst.q_Normal(0,3))
+        self.latent_variables.add_z('Constant',ifr.Normal(0, 3, transform=None),dst.q_Normal(0, 3))
 
         for ar_term in range(self.ar):
-            self.latent_variables.add_z('AR(' + str(ar_term+1) + ')',ifr.Normal(0,0.5,transform=None),dst.q_Normal(0,3))
+            self.latent_variables.add_z('AR(' + str(ar_term+1) + ')',ifr.Normal(0, 0.5, transform=None),dst.q_Normal(0, 3))
 
         for sc_term in range(self.sc):
-            self.latent_variables.add_z('SC(' + str(sc_term+1) + ')',ifr.Normal(0,0.5,transform=None),dst.q_Normal(0,3))
+            self.latent_variables.add_z('SC(' + str(sc_term+1) + ')',ifr.Normal(0, 0.5, transform=None),dst.q_Normal(0, 3))
 
     def _get_scale_and_shape(self,parm):
         """ Obtains appropriate model scale and shape latent variables
@@ -147,7 +154,35 @@ class GAS(tsm.TSM):
 
         return model_scale, model_shape, model_skewness
 
-    def _model(self,beta):
+    def _cythonized_model(self, beta):
+        """ Creates the structure of the model
+
+        Parameters
+        ----------
+        beta : np.array
+            Contains untransformed starting values for latent variables
+
+        Returns
+        ----------
+        theta : np.array
+            Contains the predicted values for the time series
+
+        Y : np.array
+            Contains the length-adjusted time series (accounting for lags)
+
+        scores : np.array
+            Contains the scores for the time series
+        """
+
+        parm = np.array([self.latent_variables.z_list[k].prior.transform(beta[k]) for k in range(beta.shape[0])])
+        theta = np.ones(self.model_Y.shape[0])*parm[0]
+        model_scale, model_shape, model_skewness = self._get_scale_and_shape(parm)
+
+        # Loop over time series
+        theta, self.model_scores = self.recursion(parm, theta, self.model_scores, self.model_Y, self.ar, self.sc, self.model_Y.shape[0], model_scale, model_shape, model_skewness, self.max_lag)
+        return theta, self.model_Y, self.model_scores
+
+    def _uncythonized_model(self, beta):
         """ Creates the structure of the model
 
         Parameters
@@ -176,7 +211,7 @@ class GAS(tsm.TSM):
             self.link, model_scale, model_shape, model_skewness, self.max_lag)
         return theta, self.model_Y, self.model_scores
 
-    def _mean_prediction(self,theta,Y,scores,h,t_params):
+    def _mean_prediction(self, theta, Y, scores, h, t_params):
         """ Creates a h-step ahead mean prediction
 
         Parameters
@@ -245,7 +280,7 @@ class GAS(tsm.TSM):
             Vector of past values and predictions 
         """
         if not (self.ar==0 and self.sc == 0):
-            toy_model = GAS(ar=0, sc=0, integ=self.integ, family=self.family, data=self.data_original, gradient_only=self.gradient_only)
+            toy_model = GAS(ar=0, sc=0, integ=self.integ, family=self.family, data=self.data_original)
             toy_model.fit(method)
             self.latent_variables.z_list[0].start = toy_model.latent_variables.get_z_values(transformed=False)[0]
             
@@ -261,7 +296,7 @@ class GAS(tsm.TSM):
 
             for start in range(random_starts.shape[1]):
                 proposal_start[1:1+self.ar+self.sc] = random_starts[:,start]
-                proposal_start[0] = proposal_start[0]*(1.0-np.sum(random_starts[0:self.ar,start]))
+                proposal_start[0] = proposal_start[0]*(1.0-np.sum(random_starts[:self.ar,start]))
                 proposal_likelihood = self.neg_loglik(proposal_start)
                 if proposal_likelihood < best_lik:
                     best_lik = proposal_likelihood
@@ -310,30 +345,29 @@ class GAS(tsm.TSM):
             scores_exp = scores.copy()
 
             #(TODO: vectorize the inner construction here)  
-            for t in range(0,h):
+            for t in range(0, h):
                 new_value = t_params[0]
 
                 if self.ar != 0:
-                    for j in range(1,self.ar+1):
+                    for j in range(1, self.ar+1):
                         new_value += t_params[j]*theta_exp[-j]
 
                 if self.sc != 0:
-                    for k in range(1,self.sc+1):
+                    for k in range(1, self.sc+1):
                         new_value += t_params[k+self.ar]*scores_exp[-k]
 
                 if self.model_name2 == "Exponential GAS":
-                    rnd_value = self.family.draw_variable(1.0/self.link(new_value),model_scale,model_shape,model_skewness,1)[0]
+                    rnd_value = self.family.draw_variable(1.0/self.link(new_value), model_scale, model_shape, model_skewness, 1)[0]
                 else:
-                    rnd_value = self.family.draw_variable(self.link(new_value),model_scale,model_shape,model_skewness,1)[0]
+                    rnd_value = self.family.draw_variable(self.link(new_value), model_scale, model_shape, model_skewness, 1)[0]
 
-                Y_exp = np.append(Y_exp,[rnd_value])
-                theta_exp = np.append(theta_exp,[new_value]) # For indexing consistency
-                scores_exp = np.append(scores_exp,scores[np.random.randint(scores.shape[0])]) # expectation of score is zero
+                Y_exp = np.append(Y_exp, [rnd_value])
+                theta_exp = np.append(theta_exp, [new_value]) # For indexing consistency
+                scores_exp = np.append(scores_exp, scores[np.random.randint(scores.shape[0])]) # expectation of score is zero
 
             sim_vector[n] = Y_exp[-h:]
 
         return np.transpose(sim_vector)
-
 
     def _summarize_simulations(self,mean_values,sim_vector,date_index,h,past_values):
         """ Summarizes a simulation vector and a mean vector of predictions
@@ -361,17 +395,24 @@ class GAS(tsm.TSM):
 
         error_bars = []
         for pre in range(5,100,5):
-            error_bars.append(np.insert([np.percentile(i,pre) for i in sim_vector],0,mean_values[-h-1]))
+            error_bars.append(np.insert([np.percentile(i,pre) for i in sim_vector], 0, mean_values[-h-1]))
         forecasted_values = mean_values[-h-1:]
         plot_values = mean_values[-h-past_values:]
         plot_index = date_index[-h-past_values:]
         return error_bars, forecasted_values, plot_values, plot_index
 
-    def neg_loglik(self,beta):
+    def neg_loglik(self, beta):
+        """ Returns the negative loglikelihood of the model
+
+        Parameters
+        ----------
+        beta : np.array
+            Contains untransformed starting values for latent variables
+        """
         theta, Y, _ = self._model(beta)
         parm = np.array([self.latent_variables.z_list[k].prior.transform(beta[k]) for k in range(beta.shape[0])])
         model_scale, model_shape, model_skewness = self._get_scale_and_shape(parm)
-        return self.family.neg_loglikelihood(Y,self.link(theta),model_scale,model_shape,model_skewness)
+        return self.family.neg_loglikelihood(Y, self.link(theta), model_scale, model_shape, model_skewness)
 
     def plot_fit(self,intervals=False,**kwargs):
         """ Plots the fit of the model
@@ -393,6 +434,7 @@ class GAS(tsm.TSM):
             plt.subplot(2,1,1)
             plt.title("Model fit for " + self.data_name)
 
+            # Catch specific family properties (imply different link functions/moments)
             if self.model_name2 == "Exponential GAS":
                 values_to_plot = 1.0/self.link(mu)
             elif self.model_name2 == "Skewt GAS":
@@ -488,8 +530,7 @@ class GAS(tsm.TSM):
         predictions = []
 
         for t in range(0,h):
-            x = GAS(ar=self.ar,sc=self.sc,integ=self.integ,family=self.family,data=self.data_original[:-h+t],
-                gradient_only=self.gradient_only)
+            x = GAS(ar=self.ar,sc=self.sc,integ=self.integ,family=self.family,data=self.data_original[:-h+t])
             if fit_once is False:
                 x.fit(printer=False)
             if t == 0:
@@ -507,7 +548,7 @@ class GAS(tsm.TSM):
 
         return predictions
 
-    def plot_predict_is(self,h=5,**kwargs):
+    def plot_predict_is(self, h=5, fit_once=True, **kwargs):
         """ Plots forecasts with the estimated model against data
             (Simulated prediction with data)
 
@@ -515,6 +556,9 @@ class GAS(tsm.TSM):
         ----------
         h : int (default : 5)
             How many steps to forecast
+
+        fit_once : boolean
+            (default: True) Fits only once before the in-sample prediction; if False, fits after every new datapoint
 
         Returns
         ----------
@@ -524,16 +568,16 @@ class GAS(tsm.TSM):
         figsize = kwargs.get('figsize',(10,7))
 
         plt.figure(figsize=figsize)
-        predictions = self.predict_is(h)
+        predictions = self.predict_is(h, fit_once=fit_once)
         data = self.data[-h:]
 
-        plt.plot(predictions.index,data,label='Data')
-        plt.plot(predictions.index,predictions,label='Predictions',c='black')
+        plt.plot(predictions.index, data, label='Data')
+        plt.plot(predictions.index, predictions, label='Predictions', c='black')
         plt.title(self.data_name)
         plt.legend(loc=2)   
         plt.show()          
 
-    def predict(self,h=5):
+    def predict(self, h=5):
         """ Makes forecast with the estimated model
 
         Parameters
@@ -554,12 +598,14 @@ class GAS(tsm.TSM):
             date_index = self.shift_dates(h)
             t_params = self.transform_z()
             mean_values = self._mean_prediction(theta,Y,scores,h,t_params)
+
             if self.model_name2 == "Skewt GAS":
                 model_scale, model_shape, model_skewness = self._get_scale_and_shape(t_params)
                 m1 = (np.sqrt(model_shape)*sp.gamma((model_shape-1.0)/2.0))/(np.sqrt(np.pi)*sp.gamma(model_shape/2.0))
                 forecasted_values = mean_values[-h:] + (model_skewness - (1.0/model_skewness))*model_scale*m1 
             else:
                 forecasted_values = mean_values[-h:] 
+            
             result = pd.DataFrame(forecasted_values)
             result.rename(columns={0:self.data_name}, inplace=True)
             result.index = date_index[-h:]

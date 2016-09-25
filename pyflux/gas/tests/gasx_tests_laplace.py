@@ -3,7 +3,6 @@ import pandas as pd
 import pyflux as pf
 
 # Set up some data to use for the tests
-
 noise = np.random.normal(0,1,250)
 y = np.zeros(250)
 x1 = np.random.normal(0,1,250)
@@ -33,11 +32,10 @@ data2_oos = pd.DataFrame([countdata_oos,x1_oos,x2_oos]).T
 data2_oos.columns = ['y', 'x1', 'x2']
 
 
-
 def test_laplace_no_terms():
 	"""
 	Tests the length of the latent variable vector for an GASX model
-	with no AR or MA terms, and tests that the values are not nan
+	with no AR or SC terms, and tests that the values are not nan
 	"""
 	model = pf.GASX(formula="y ~ x1", data=data, ar=0, sc=0, family=pf.GASLaplace())
 	x = model.fit()
@@ -48,7 +46,7 @@ def test_laplace_no_terms():
 def test_laplace_couple_terms():
 	"""
 	Tests the length of the latent variable vector for an GASX model
-	with 1 AR and 1 MA term, and tests that the values are not nan
+	with 1 AR and 1 SC term, and tests that the values are not nan
 	"""
 	model = pf.GASX(formula="y ~ x1", data=data, ar=1, sc=1, family=pf.GASLaplace())
 	x = model.fit()
@@ -59,7 +57,7 @@ def test_laplace_couple_terms():
 def test_laplace_couple_terms_integ():
 	"""
 	Tests the length of the latent variable vector for an GASX model
-	with 1 AR and 1 MA term and integrated once, and tests that the 
+	with 1 AR and 1 SC term and integrated once, and tests that the 
 	values are not nan
 	"""
 	model = pf.GASX(formula="y ~ x1", data=data, ar=1, sc=1, integ=1, family=pf.GASLaplace())
@@ -153,7 +151,7 @@ def test_laplace_predict_is_nans():
 def test2_laplace_no_terms():
 	"""
 	Tests the length of the latent variable vector for an GASX model
-	with no AR or MA terms, and two predictors, and tests that the values 
+	with no AR or SC terms, and two predictors, and tests that the values 
 	are not nan
 	"""
 	model = pf.GASX(formula="y ~ x1 + x2", data=data, ar=0, sc=0, family=pf.GASLaplace())
@@ -165,7 +163,7 @@ def test2_laplace_no_terms():
 def test2_laplace_couple_terms():
 	"""
 	Tests the length of the latent variable vector for an GASX model
-	with 1 AR and 1 MA term, and two predictors, and tests that the values 
+	with 1 AR and 1 SC term, and two predictors, and tests that the values 
 	are not nan
 	"""
 	model = pf.GASX(formula="y ~ x1 + x2", data=data, ar=1, sc=1, family=pf.GASLaplace())

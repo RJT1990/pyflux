@@ -11,10 +11,11 @@ class RMSProp(object):
         self.variance = starting_variance
         self.learning_rate = learning_rate
         self.ewma = ewma
+        self.epsilon = np.power(10.0,-8)    
 
     def update(self,gradient):
         self.variance = self.ewma*self.variance + (1-self.ewma)*np.power(gradient,2)
-        self.parameters += self.learning_rate*(gradient/np.sqrt(self.variance))  
+        self.parameters += self.learning_rate*(gradient/np.sqrt(self.variance+self.epsilon))  
         return self.parameters
 
 class ADAM(object):

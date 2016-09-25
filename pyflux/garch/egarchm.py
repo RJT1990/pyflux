@@ -89,7 +89,7 @@ class EGARCHM(tsm.TSM):
         # Starting values
         self.latent_variables.z_list[-3].start = 2.0
 
-    def _model(self,beta):
+    def _model(self, beta):
         """ Creates the structure of the model
 
         Parameters
@@ -138,11 +138,11 @@ class EGARCHM(tsm.TSM):
                 if self.leverage is True:
                     lmda[t] += parm[-4]*np.sign(-(Y[t-1]-parm[-2]-parm[-1]*np.exp(lmda[t-1]/2.0)))*(scores[t-1]+1)
 
-            scores[t] = gas.BetatScore.mu_adj_score(Y[t],parm[-2]+parm[-1]*np.exp(lmda[t]/2.0),lmda[t],parm[-3])
-
+            scores[t] = (((parm[-3]+1.0)*np.power(Y[t]-(parm[-2]+parm[-1]*np.exp(lmda[t]/2.0)),2))/float(parm[-3]*np.exp(lmda[t]) + np.power(Y[t]-(parm[-2]+parm[-1]*np.exp(lmda[t]/2.0)),2))) - 1.0
+ 
         return lmda, Y, scores
 
-    def _mean_prediction(self,lmda,Y,scores,h,t_params):
+    def _mean_prediction(self, lmda, Y, scores, h, t_params):
         """ Creates a h-step ahead mean prediction
 
         Parameters
@@ -193,7 +193,7 @@ class EGARCHM(tsm.TSM):
 
         return lmda_exp
 
-    def _sim_prediction(self,lmda,Y,scores,h,t_params,simulations):
+    def _sim_prediction(self, lmda, Y, scores, h, t_params, simulations):
         """ Simulates a h-step ahead mean prediction
 
         Parameters
@@ -252,7 +252,7 @@ class EGARCHM(tsm.TSM):
 
         return np.transpose(sim_vector)
 
-    def _summarize_simulations(self,mean_values,sim_vector,date_index,h,past_values):
+    def _summarize_simulations(self, mean_values, sim_vector, date_index, h, past_values):
         """ Summarizes a simulation vector and a mean vector of predictions
 
         Parameters
@@ -306,7 +306,7 @@ class EGARCHM(tsm.TSM):
             self.latent_variables.add_z('GARCH-M',ifr.Normal(0,3,transform=None),dst.q_Normal(0,3))
             self.latent_variables.z_list[-3].start = 2.0
 
-    def neg_loglik(self,beta):
+    def neg_loglik(self, beta):
         """ Creates the negative log-likelihood of the model
 
         Parameters
@@ -325,7 +325,7 @@ class EGARCHM(tsm.TSM):
             df=self.latent_variables.z_list[-3].prior.transform(beta[-3]),
             loc=loc,scale=np.exp(lmda/2.0)))
     
-    def plot_fit(self,**kwargs):
+    def plot_fit(self, **kwargs):
         """ Plots the fit of the model
 
         Returns
@@ -348,7 +348,7 @@ class EGARCHM(tsm.TSM):
             plt.legend(loc=2)   
             plt.show()              
 
-    def plot_predict(self,h=5,past_values=20,intervals=True,**kwargs):
+    def plot_predict(self, h=5, past_values=20, intervals=True, **kwargs):
 
         """ Plots forecast with the estimated model
 
@@ -396,13 +396,16 @@ class EGARCHM(tsm.TSM):
             plt.ylabel(self.data_name + " Conditional Volatility")
             plt.show()
 
-    def predict_is(self,h=5):
+    def predict_is(self, h=5, fit_once=True):
         """ Makes dynamic in-sample predictions with the estimated model
 
         Parameters
         ----------
         h : int (default : 5)
             How many steps would you like to forecast?
+
+        fit_once : boolean
+            (default: True) Fits only once before the in-sample prediction; if False, fits after every new datapoint
 
         Returns
         ----------
@@ -412,11 +415,18 @@ class EGARCHM(tsm.TSM):
         predictions = []
 
         for t in range(0,h):
-            x = EGARCHM(p=self.p,q=self.q,data=self.data[:-h+t])
-            x.fit(printer=False)
+            x = EGARCHM(p=self.p, q=self.q, data=self.data[:-h+t])
+            if fit_once is False:
+                x.fit(printer=False)
+
             if t == 0:
+                if fit_once is True:
+                    x.fit(printer=False)
+                    saved_lvs = x.latent_variables
                 predictions = x.predict(1)
             else:
+                if fit_once is True:
+                    x.latent_variables = saved_lvs
                 predictions = pd.concat([predictions,x.predict(1)])
         
         predictions.rename(columns={0:self.data_name}, inplace=True)
@@ -424,7 +434,7 @@ class EGARCHM(tsm.TSM):
 
         return predictions
 
-    def plot_predict_is(self,h=5,**kwargs):
+    def plot_predict_is(self, h=5, fit_once=True, **kwargs):
         """ Plots forecasts with the estimated model against data
             (Simulated prediction with data)
 
@@ -432,6 +442,9 @@ class EGARCHM(tsm.TSM):
         ----------
         h : int (default : 5)
             How many steps to forecast
+
+        fit_once : boolean
+            (default: True) Fits only once before the in-sample prediction; if False, fits after every new datapoint
 
         Returns
         ----------
@@ -442,7 +455,7 @@ class EGARCHM(tsm.TSM):
 
         plt.figure(figsize=figsize)
         date_index = self.index[-h:]
-        predictions = self.predict_is(h)
+        predictions = self.predict_is(h, fit_once=fit_once)
         data = self.data[-h:]
 
         t_params = self.transform_z()
@@ -453,7 +466,7 @@ class EGARCHM(tsm.TSM):
         plt.legend(loc=2)   
         plt.show()          
 
-    def predict(self,h=5):
+    def predict(self, h=5):
         """ Makes forecast with the estimated model
 
         Parameters

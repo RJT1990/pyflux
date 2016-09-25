@@ -322,13 +322,16 @@ class DynReg(tsm.TSM):
 
             return result
 
-    def predict_is(self,h=5):
+    def predict_is(self, h=5, fit_once=True):
         """ Makes dynamic in-sample predictions with the estimated model
 
         Parameters
         ----------
         h : int (default : 5)
             How many steps would you like to forecast?
+
+        fit_once : boolean
+            Whether to fit the model once at the beginning (True), or fit every iteration (False)
 
         Returns
         ----------
@@ -341,18 +344,25 @@ class DynReg(tsm.TSM):
             data1 = self.data_original.iloc[0:-h+t,:]
             data2 = self.data_original.iloc[-h+t:,:]
             x = DynReg(formula=self.formula,data=data1)
-            x.fit(printer=False)
+
+            if fit_once is False:
+                x.fit(printer=False)
             if t == 0:
-                predictions = x.predict(1,oos_data=data2)
+                if fit_once is True:
+                    x.fit(printer=False)
+                    saved_lvs = x.latent_variables
+                predictions = x.predict(1, oos_data=data2)
             else:
-                predictions = pd.concat([predictions,x.predict(h=1,oos_data=data2)])
+                if fit_once is True:
+                    x.latent_variables = saved_lvs
+                predictions = pd.concat([predictions,x.predict(h=1, oos_data=data2)])
         
         predictions.rename(columns={0:self.y_name}, inplace=True)
         predictions.index = self.index[-h:]
 
         return predictions
 
-    def plot_predict_is(self,h=5,**kwargs):
+    def plot_predict_is(self, h=5, fit_once=True, **kwargs):
         """ Plots forecasts with the estimated model against data
             (Simulated prediction with data)
 
@@ -360,6 +370,9 @@ class DynReg(tsm.TSM):
         ----------
         h : int (default : 5)
             How many steps to forecast
+
+        fit_once : boolean
+            Whether to fit the model once at the beginning (True), or fit every iteration (False)
 
         Returns
         ----------
@@ -369,7 +382,7 @@ class DynReg(tsm.TSM):
         figsize = kwargs.get('figsize',(10,7))
 
         plt.figure(figsize=figsize)
-        predictions = self.predict_is(h)
+        predictions = self.predict_is(h=h, fit_once=fit_once)
         data = self.data[-h:]
         plt.plot(predictions.index,data,label='Data')
         plt.plot(predictions.index,predictions,label='Predictions',c='black')

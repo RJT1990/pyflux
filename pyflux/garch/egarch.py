@@ -13,25 +13,25 @@ from .. import distributions as dst
 from .. import output as op
 from .. import tests as tst
 from .. import tsm as tsm
-from .. import gas as gas
+from .. import gas as gs
 from .. import data_check as dc
 
 class EGARCH(tsm.TSM):
     """ Inherits time series methods from TSM class.
 
     **** BETA-t-EGARCH MODELS ****
-
+    
     Parameters
     ----------
     data : pd.DataFrame or np.array
         Field to specify the time series data that will be used.
-
+    
     p : int
         Field to specify how many GARCH terms the model will have.
-
+    
     q : int
         Field to specify how many SCORE terms the model will have.
-
+    
     target : str (pd.DataFrame) or int (np.array)
         Specifies which column name or array index to use. By default, first
         column/array will be selected as the dependent variable.
@@ -60,10 +60,10 @@ class EGARCH(tsm.TSM):
 
     def _create_latent_variables(self):
         """ Creates latent variables for the model
-
+        
         Returns
         ----------
-        None (changes model attributes)
+        - None (changes model attributes)
         """
 
         self.latent_variables.add_z('Vol Constant', ifr.Normal(0,3,transform=None), dst.q_Normal(0,3))
@@ -71,7 +71,7 @@ class EGARCH(tsm.TSM):
         for p_term in range(self.p):
             self.latent_variables.add_z('p(' + str(p_term+1) + ')', ifr.Normal(0,0.5,transform='logit'), dst.q_Normal(0,3))
             if p_term == 0:
-                self.latent_variables.z_list[-1].start = 3.00
+                self.latent_variables.z_list[-1].start = 3.20
             else:
                 self.latent_variables.z_list[-1].start = -4.00
 
@@ -88,20 +88,22 @@ class EGARCH(tsm.TSM):
 
     def _model(self, beta):
         """ Creates the structure of the model (model matrices, etc)
-
+        
         Parameters
         ----------
+        
         beta : np.array
-            Contains untransformed starting values for thelatent variables
-
+            Contains untransformed starting values for the latent variables
+        
         Returns
         ----------
+        
         lambda : np.array
             Contains the values for the conditional volatility series
-
+        
         Y : np.array
             Contains the length-adjusted time series (accounting for lags)
-
+        
         scores : np.array
             Contains the score terms for the time series
         """
@@ -134,30 +136,30 @@ class EGARCH(tsm.TSM):
                 if self.leverage is True:
                     lmda[t] += parm[-3]*np.sign(-(Y[t-1]-parm[-1]))*(scores[t-1]+1)
 
-            scores[t] = gas.BetatScore.mu_adj_score(Y[t], parm[-1], lmda[t], parm[-2])
-
+            scores[t] = (((parm[-2]+1.0)*np.power(Y[t]-parm[-1],2))/float(parm[-2]*np.exp(lmda[t]) + np.power(Y[t]-parm[-1],2))) - 1.0
         return lmda, Y, scores
 
     def _mean_prediction(self, lmda, Y, scores, h, t_params):
         """ Creates an h-step ahead mean prediction
-
+        
         Parameters
         ----------
+        
         lmda : np.array
             The past predicted values
-
+        
         Y : np.array
             The past data
-
+        
         scores : np.array
             The past scores
-
+        
         h : int
             How many steps ahead for the prediction
-
+        
         t_params : np.array
             A vector of (transformed) latent variables
-
+        
         Returns
         ----------
         h-length vector of mean predictions
@@ -191,27 +193,27 @@ class EGARCH(tsm.TSM):
 
     def _sim_prediction(self, lmda, Y, scores, h, t_params, simulations):
         """ Simulates a h-step ahead predictions with randomly drawn variables
-
+        
         Parameters
         ----------
         lmda : np.array
             The past predicted values
-
+        
         Y : np.array
             The past data
-
+        
         scores : np.array
             The past scores
-
+        
         h : int
             How many steps ahead for the prediction
-
+        
         t_params : np.array
             A vector of (transformed) latent variables
-
+        
         simulations : int
             How many simulations to perform
-
+        
         Returns
         ----------
         Matrix of simulations
@@ -250,24 +252,25 @@ class EGARCH(tsm.TSM):
 
     def _summarize_simulations(self, mean_values, sim_vector, date_index, h, past_values):
         """ Summarizes a simulation vector and a mean vector of predictions
-
+        
         Parameters
         ----------
+        
         mean_values : np.array
             Mean predictions for h-step ahead forecasts
-
+        
         sim_vector : np.array
             N simulation predictions for h-step ahead forecasts
-
+        
         date_index : pd.DateIndex or np.array
             Dates for the simulations
-
+        
         h : int
             How many steps ahead are forecast
-
+        
         past_values : int
             How many past observations to include in the forecast plot
-
+        
         intervals : Boolean
             Would you like to show prediction intervals for the forecast?
         """ 
@@ -282,7 +285,7 @@ class EGARCH(tsm.TSM):
 
     def add_leverage(self):
         """ Adds a leverage term to the model to account for the asymmetric effect of new information on volatility
-
+        
         Returns
         ----------
         None (changes instance attributes)
@@ -302,12 +305,12 @@ class EGARCH(tsm.TSM):
 
     def neg_loglik(self, beta):
         """ Creates the negative log-likelihood of the model
-
+        
         Parameters
         ----------
         beta : np.array
             Contains untransformed starting values for latent variables
-
+        
         Returns
         ----------
         The negative logliklihood of the model
@@ -317,6 +320,29 @@ class EGARCH(tsm.TSM):
         return -np.sum(ss.t.logpdf(x=Y, df=self.latent_variables.z_list[-2].prior.transform(beta[-2]),
             loc=np.ones(lmda.shape[0])*self.latent_variables.z_list[-1].prior.transform(beta[-1]), scale=np.exp(lmda/2.0)))
     
+    def plot_fit(self, **kwargs):
+        """ Plots the fit of the model
+        
+        Returns
+        ----------
+        None (plots data and the fit)
+        """
+
+        figsize = kwargs.get('figsize',(10,7))
+
+        if self.latent_variables.estimated is False:
+            raise Exception("No latent variables estimated!")
+        else:
+            t_params = self.transform_z()
+            plt.figure(figsize=figsize)
+            date_index = self.index[max(self.p,self.q):]
+            sigma2, Y, ___ = self._model(self.latent_variables.get_z_values())
+            plt.plot(date_index,np.abs(Y-t_params[-1]), label=self.data_name + ' Absolute Demeaned Values')
+            plt.plot(date_index,np.exp(sigma2/2.0), label='EGARCH(' + str(self.p) + ',' + str(self.q) + ') Conditional Volatility', c='black')                   
+            plt.title(self.data_name + " Volatility Plot")  
+            plt.legend(loc=2)   
+            plt.show()              
+
     def plot_fit(self, **kwargs):
         """ Plots the fit of the model
 
@@ -341,7 +367,6 @@ class EGARCH(tsm.TSM):
             plt.show()              
 
     def plot_predict(self, h=5, past_values=20, intervals=True, **kwargs):
-
         """ Plots predictions with the estimated model
 
         Parameters
@@ -388,13 +413,16 @@ class EGARCH(tsm.TSM):
             plt.ylabel(self.data_name + " Conditional Volatility")
             plt.show()
 
-    def predict_is(self, h=5):
+    def predict_is(self, h=5, fit_once=True):
         """ Makes dynamic out-of-sample predictions with the model on in-sample data
 
         Parameters
         ----------
         h : int (default : 5)
             How many steps would you like to forecast?
+
+        fit_once : boolean
+            (default: True) Fits only once before the in-sample prediction; if False, fits after every new datapoint
 
         Returns
         ----------
@@ -403,12 +431,20 @@ class EGARCH(tsm.TSM):
 
         predictions = []
 
-        for t in range(0, h):
+        for t in range(0,h):
             x = EGARCH(p=self.p, q=self.q, data=self.data[:-h+t])
-            x.fit(printer=False)
+
+            if fit_once is False:
+                x.fit(printer=False)
+
             if t == 0:
+                if fit_once is True:
+                    x.fit(printer=False)
+                    saved_lvs = x.latent_variables
                 predictions = x.predict(1)
             else:
+                if fit_once is True:
+                    x.latent_variables = saved_lvs
                 predictions = pd.concat([predictions,x.predict(1)])
         
         predictions.rename(columns={0:self.data_name}, inplace=True)
@@ -416,13 +452,16 @@ class EGARCH(tsm.TSM):
 
         return predictions
 
-    def plot_predict_is(self, h=5, **kwargs):
+    def plot_predict_is(self, h=5, fit_once=True, **kwargs):
         """ Plots forecasts with the estimated model against data (Simulated prediction with data)
 
         Parameters
         ----------
         h : int (default : 5)
             How many steps to forecast
+
+        fit_once : boolean
+            (default: True) Fits only once before the in-sample prediction; if False, fits after every new datapoint
 
         Returns
         ----------
@@ -433,7 +472,7 @@ class EGARCH(tsm.TSM):
 
         plt.figure(figsize=figsize)
         date_index = self.index[-h:]
-        predictions = self.predict_is(h)
+        predictions = self.predict_is(h, fit_once=fit_once)
         data = self.data[-h:]
 
         t_params = self.transform_z()
@@ -472,5 +511,3 @@ class EGARCH(tsm.TSM):
             result.index = date_index[-h:]
 
             return result
-
-

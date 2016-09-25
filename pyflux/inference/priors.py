@@ -87,9 +87,56 @@ class Uniform(object):
         return 0.0
 
 
+class TruncatedNormal(object):
+
+    def __init__(self, mu0, sigma0, lower=None, upper=None, transform=None):
+        self.mu0 = mu0
+        self.sigma0 = sigma0
+        self.transform_name = transform     
+        self.transform = transform_define(transform)
+        self.itransform = itransform_define(transform)
+        self.itransform_name = itransform_name_define(transform)
+        self.covariance_prior = False
+        self.lower = lower
+        self.upper = upper
+
+    def logpdf(self, mu):
+        if self.transform is not None:
+            mu = self.transform(mu)     
+        if mu < self.lower and self.lower is not None:
+            return -10.0**6
+        elif mu > self.upper and self.upper is not None:
+            return -10.0**6
+        else:
+            return -log(float(self.sigma0)) - (0.5*(mu-self.mu0)**2)/float(self.sigma0**2)
+
+    def pdf(self, mu):
+        if self.transform is not None:
+            mu = self.transform(mu)    
+        if mu < self.lower and self.lower is not None:
+            return 0.0
+        elif mu > self.upper and self.upper is not None:
+            return 0.0       
+        else:
+            return (1/float(self.sigma0))*exp(-(0.5*(mu-self.mu0)**2)/float(self.sigma0**2))
+
+
+class Uniform(object):
+
+    def __init__(self, transform=None):
+        self.transform_name = transform     
+        self.transform = transform_define(transform)
+        self.itransform = itransform_define(transform)
+        self.itransform_name = itransform_name_define(transform)
+        self.covariance_prior = False
+
+    def logpdf(self,mu):
+        return 0.0
+
+
 class InverseGamma(object):
 
-    def __init__(self, alpha, beta, transform=np.exp):
+    def __init__(self, alpha, beta, transform='exp'):
         self.alpha = alpha
         self.beta = beta
         self.transform_name = transform

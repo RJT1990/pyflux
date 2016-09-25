@@ -195,7 +195,7 @@ class TSM(object):
                 method='Laplace',ihessian=y.ihessian,signal=theta,scores=scores,
                 z_hide=self._z_hide,max_lag=self.max_lag,states=states,states_var=states_var)
 
-    def _mcmc_fit(self,scale=1.0,nsims=10000,printer=True,method="M-H",cov_matrix=None,
+    def _mcmc_fit(self,scale=1.0, nsims=10000, printer=True, method="M-H", cov_matrix=None,
         map_start=True, **kwargs):
         """ Performs MCMC 
 
@@ -223,6 +223,8 @@ class TSM(object):
             starting_values = y.z.get_z_values()
             try:
                 ses = np.abs(np.diag(y.ihessian))
+                if len(ses[np.isnan(ses)]) != 0:
+                    ses = np.ones(ses.shape[0])
                 cov_matrix = np.zeros((len(ses), len(ses)))
                 np.fill_diagonal(cov_matrix, ses)
             except:
@@ -236,16 +238,25 @@ class TSM(object):
         else:
             raise Exception("Method not recognized!")
 
-        for k in range(len(chain)):
-            chain[k] = self.latent_variables.z_list[k].prior.transform(chain[k])
+        if len(self.latent_variables.z_list) == 1:
+            chain = self.latent_variables.z_list[0].prior.transform(chain)
+            self.latent_variables.set_z_values(mean_est,'M-H',None,chain)
+            mean_est = self.latent_variables.z_list[0].prior.transform(mean_est)
+            median_est = self.latent_variables.z_list[0].prior.transform(median_est)
+            upper_95_est = self.latent_variables.z_list[0].prior.transform(upper_95_est)
+            lower_95_est = self.latent_variables.z_list[0].prior.transform(lower_95_est)        
 
-        self.latent_variables.set_z_values(mean_est,'M-H',None,chain)
+        else:
+            for k in range(len(chain)):
+                chain[k] = self.latent_variables.z_list[k].prior.transform(chain[k])
 
-        for k in range(len(chain)):
-            mean_est[k] = self.latent_variables.z_list[k].prior.transform(mean_est[k])
-            median_est[k] = self.latent_variables.z_list[k].prior.transform(median_est[k])
-            upper_95_est[k] = self.latent_variables.z_list[k].prior.transform(upper_95_est[k])
-            lower_95_est[k] = self.latent_variables.z_list[k].prior.transform(lower_95_est[k])        
+            self.latent_variables.set_z_values(mean_est,'M-H',None,chain)
+
+            for k in range(len(chain)):
+                mean_est[k] = self.latent_variables.z_list[k].prior.transform(mean_est[k])
+                median_est[k] = self.latent_variables.z_list[k].prior.transform(median_est[k])
+                upper_95_est[k] = self.latent_variables.z_list[k].prior.transform(upper_95_est[k])
+                lower_95_est[k] = self.latent_variables.z_list[k].prior.transform(lower_95_est[k])        
 
         theta, Y, scores, states, states_var, X_names = self._categorize_model_output(mean_est)
     
@@ -331,9 +342,10 @@ class TSM(object):
         phi = kwargs.get('start',phi).copy() # If user supplied
 
         # Optimize using L-BFGS-B
-        p = optimize.minimize(obj_type, phi, method='L-BFGS-B')
+        p = optimize.minimize(obj_type, phi, method='L-BFGS-B', options={'gtol': 1e-8})
         if preoptimized is True:
-            p2 = optimize.minimize(obj_type, self.latent_variables.get_z_starting_values(), method='L-BFGS-B')
+            p2 = optimize.minimize(obj_type, self.latent_variables.get_z_starting_values(), method='L-BFGS-B', 
+                options={'gtol': 1e-8})
             if self.neg_loglik(p2.x) < self.neg_loglik(p.x):
                 p = p2
 

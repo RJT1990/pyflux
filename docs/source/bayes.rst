@@ -121,6 +121,29 @@ Priors are contained as classes in the inference module. The following priors ar
       (default: None) one of ['exp', 'logit', 'tanh'] - changes the support of the latent variable.
 
 
+.. py:class:: TruncatedNormal(mu0, sigma0, lower, upper, transform)
+
+   .. py:attribute:: mu0
+
+      the location parameter for the prior
+
+   .. py:attribute:: sigma0
+
+      the scale parameter for the prior
+
+   .. py.attribute:: lower
+
+      the lower support of the truncated Normal
+
+   .. py.attribute:: upper
+
+      the upper support of the truncated Normal
+
+   .. py:attribute:: transform
+
+      (default: None) one of ['exp', 'logit', 'tanh'] - changes the support of the latent variable.
+
+
 .. py:class:: Uniform(transform)
 
    .. py:attribute:: transform

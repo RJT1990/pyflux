@@ -15,7 +15,6 @@ from .. import tsm as tsm
 from .. import distributions as dst
 from .. import data_check as dc
 
-from .scores import *
 from .gasmodels import *
 
 from .gas_recursions import gasx_recursion
@@ -44,13 +43,9 @@ class GASX(tsm.TSM):
 
     dist : str
         Which distribution to use
-
-    gradient_only : Boolean (default: True)
-        If true, will only use gradient rather than second-order terms
-        to construct the modified score.
     """
 
-    def __init__(self,data,formula,ar,sc,family,integ=0,gradient_only=False):
+    def __init__(self, data, formula, ar, sc, family, integ=0):
 
         # Initialize TSM object     
         super(GASX,self).__init__('GASX')
@@ -58,7 +53,6 @@ class GASX(tsm.TSM):
         self.ar = ar
         self.sc = sc
         self.integ = integ
-        self.gradient_only = gradient_only
         self.z_no = self.ar + self.sc
         self.max_lag = max(self.ar,self.sc)
         self._z_hide = 0 # Whether to cutoff variance latent variables from results
@@ -93,9 +87,21 @@ class GASX(tsm.TSM):
 
         self.family = family
         
-        self.model_name2, self.link, self.scale, self.shape, self.skewness, self.mean_transform = self.family.setup()
+        self.model_name2, self.link, self.scale, self.shape, self.skewness, self.mean_transform, self.cythonized = self.family.setup()
+
+        # Identify whether model has cythonized backend - then choose update type
+        if self.cythonized is True:
+            self._model = self._cythonized_model
+            if self.family.gradient_only is True:
+                self.recursion = self.family.gradientx_recursion()
+            else:
+                self.recursion = self.family.newtonx_recursion()
+        else:
+            self._model = self._uncythonized_model
+
         self.model_name = self.model_name2 + "X(" + str(self.ar) + "," + str(self.integ) + "," + str(self.sc) + ")"
 
+        # Build any remaining latent variables that are specific to the family chosen
         for no, i in enumerate(self.family.build_latent_variables()):
             self.latent_variables.add_z(i[0],i[1],i[2])
             self.latent_variables.z_list[no+self.ar+self.sc+self.X.shape[1]].start = i[3]
@@ -131,7 +137,7 @@ class GASX(tsm.TSM):
         for parm in range(len(self.X_names)):
             self.latent_variables.add_z('Beta ' + self.X_names[parm],ifr.Normal(0,3,transform=None),dst.q_Normal(0,3))
 
-    def _get_scale_and_shape(self,parm):
+    def _get_scale_and_shape(self, parm):
         """ Obtains appropriate model scale and shape latent variables
 
         Parameters
@@ -162,7 +168,36 @@ class GASX(tsm.TSM):
 
         return model_scale, model_shape, model_skewness
 
-    def _model(self,beta):
+    def _cythonized_model(self, beta):
+        """ Creates the structure of the model
+
+        Parameters
+        ----------
+        beta : np.array
+            Contains untransformed starting values for latent variables
+
+        Returns
+        ----------
+        theta : np.array
+            Contains the predicted values for the time series
+
+        Y : np.array
+            Contains the length-adjusted time series (accounting for lags)
+
+        scores : np.array
+            Contains the scores for the time series
+        """
+
+        parm = np.array([self.latent_variables.z_list[k].prior.transform(beta[k]) for k in range(beta.shape[0])])
+        model_scale, model_shape, model_skewness = self._get_scale_and_shape(parm)
+        theta = np.matmul(self.X[self.integ+self.max_lag:],parm[self.sc+self.ar:(self.sc+self.ar+len(self.X_names))])
+
+        # Loop over time series
+        theta, self.model_scores = self.recursion(parm, theta, self.model_scores, self.model_Y, self.ar, self.sc, self.model_Y.shape[0], model_scale, model_shape, model_skewness, self.max_lag)
+
+        return theta, self.model_Y, self.model_scores
+
+    def _uncythonized_model(self, beta):
         """ Creates the structure of the model
 
         Parameters
@@ -192,7 +227,7 @@ class GASX(tsm.TSM):
 
         return theta, self.model_Y, self.model_scores
 
-    def _mean_prediction(self,theta,Y,scores,h,t_params,X_oos):
+    def _mean_prediction(self, theta, Y, scores, h, t_params, X_oos):
         """ Creates a h-step ahead mean prediction
 
         Parameters
@@ -264,7 +299,7 @@ class GASX(tsm.TSM):
             Vector of past values and predictions 
         """
         if not (self.ar==0 and self.sc == 0):
-            toy_model = GASX(formula=self.formula, ar=0, sc=0, integ=self.integ, family=self.family, data=self.data_original, gradient_only=self.gradient_only)
+            toy_model = GASX(formula=self.formula, ar=0, sc=0, integ=self.integ, family=self.family, data=self.data_original)
             toy_model.fit(method)
             self.latent_variables.z_list[0].start = toy_model.latent_variables.get_z_values(transformed=False)[0]
             
@@ -280,7 +315,7 @@ class GASX(tsm.TSM):
 
             for start in range(random_starts.shape[1]):
                 proposal_start[:self.ar+self.sc+len(self.X_names)] = random_starts[:,start]
-                proposal_start[0] = proposal_start[0]*(1.0-np.sum(random_starts[0:self.ar,start]))
+                proposal_start[0] = proposal_start[0]*(1.0-np.sum(random_starts[:self.ar,start]))
                 proposal_likelihood = self.neg_loglik(proposal_start)
                 if proposal_likelihood < best_lik:
                     best_lik = proposal_likelihood
@@ -332,15 +367,15 @@ class GASX(tsm.TSM):
             scores_exp = scores.copy()
 
             #(TODO: vectorize the inner construction here)  
-            for t in range(0,h):
+            for t in range(0, h):
                 new_value = t_params[0]
 
                 if self.ar != 0:
-                    for j in range(1,self.ar+1):
+                    for j in range(1, self.ar+1):
                         new_value += t_params[j]*theta_exp[-j]
 
                 if self.sc != 0:
-                    for k in range(1,self.sc+1):
+                    for k in range(1, self.sc+1):
                         new_value += t_params[k+self.ar]*scores_exp[-k]
 
                 new_value += np.matmul(X_oos[t,:],t_params[self.sc+self.ar:(self.sc+self.ar+len(self.X_names))])            
@@ -359,7 +394,7 @@ class GASX(tsm.TSM):
         return np.transpose(sim_vector)
 
 
-    def _summarize_simulations(self,mean_values,sim_vector,date_index,h,past_values):
+    def _summarize_simulations(self, mean_values, sim_vector, date_index, h, past_values):
         """ Summarizes a simulation vector and a mean vector of predictions
 
         Parameters
@@ -391,13 +426,20 @@ class GASX(tsm.TSM):
         plot_index = date_index[-h-past_values:]
         return error_bars, forecasted_values, plot_values, plot_index
 
-    def neg_loglik(self,beta):
+    def neg_loglik(self, beta):
+        """ Returns the negative loglikelihood of the model
+
+        Parameters
+        ----------
+        beta : np.array
+            Contains untransformed starting values for latent variables
+        """
         theta, Y, _ = self._model(beta)
         parm = np.array([self.latent_variables.z_list[k].prior.transform(beta[k]) for k in range(beta.shape[0])])
         model_scale, model_shape, model_skewness = self._get_scale_and_shape(parm)
         return self.family.neg_loglikelihood(Y,self.link(theta),model_scale,model_shape,model_skewness)
 
-    def plot_fit(self,intervals=False,**kwargs):
+    def plot_fit(self, intervals=False, **kwargs):
         """ Plots the fit of the model
 
         Returns
@@ -416,6 +458,7 @@ class GASX(tsm.TSM):
             plt.subplot(2,1,1)
             plt.title("Model fit for " + self.data_name)
 
+            # Catch specific family properties (imply different link functions/moments)
             if self.model_name2 == "Exponential GAS":
                 values_to_plot = 1.0/self.link(mu)
             elif self.model_name2 == "Skewt GAS":
@@ -438,7 +481,7 @@ class GASX(tsm.TSM):
 
             plt.show()              
     
-    def plot_predict(self,h=5,past_values=20,intervals=True,oos_data=None,**kwargs):
+    def plot_predict(self, h=5, past_values=20, intervals=True, oos_data=None, **kwargs):
         """ Makes forecast with the estimated model
 
         Parameters
@@ -498,7 +541,7 @@ class GASX(tsm.TSM):
             plt.ylabel(self.data_name)
             plt.show()
 
-    def predict_is(self,h=5):
+    def predict_is(self, h=5, fit_once=True):
         """ Makes dynamic in-sample predictions with the estimated model
 
         Parameters
@@ -506,30 +549,39 @@ class GASX(tsm.TSM):
         h : int (default : 5)
             How many steps would you like to forecast?
 
+        fit_once : boolean
+            (default: True) Fits only once before the in-sample prediction; if False, fits after every new datapoint
+
         Returns
         ----------
         - pd.DataFrame with predicted values
         """     
-
 
         predictions = []
 
         for t in range(0,h):
             data1 = self.data_original.iloc[:-(h+t),:]
             data2 = self.data_original.iloc[-h+t:,:]
-            x = GASX(ar=self.ar,sc=self.sc,formula=self.formula,integ=self.integ,family=self.family,data=self.data_original[:-h+t],gradient_only=self.gradient_only)
-            x.fit(printer=False)
+            x = GASX(ar=self.ar,sc=self.sc,formula=self.formula,integ=self.integ,family=self.family,data=self.data_original[:-h+t])
+            
+            if fit_once is False:
+                x.fit(printer=False)
             if t == 0:
-                predictions = x.predict(1,oos_data=data2)
+                if fit_once is True:
+                    x.fit(printer=False)
+                    saved_lvs = x.latent_variables
+                predictions = x.predict(1, oos_data=data2)
             else:
-                predictions = pd.concat([predictions,x.predict(h=1,oos_data=data2)])
-        
+                if fit_once is True:
+                    x.latent_variables = saved_lvs
+                predictions = pd.concat([predictions,x.predict(h=1, oos_data=data2)])
+    
         predictions.rename(columns={0:self.y_name}, inplace=True)
         predictions.index = self.index[-h:]
 
         return predictions
 
-    def plot_predict_is(self,h=5,**kwargs):
+    def plot_predict_is(self, h=5, fit_once=True, **kwargs):
         """ Plots forecasts with the estimated model against data
             (Simulated prediction with data)
 
@@ -537,6 +589,9 @@ class GASX(tsm.TSM):
         ----------
         h : int (default : 5)
             How many steps to forecast
+
+        fit_once : boolean
+            (default: True) Fits only once before the in-sample prediction; if False, fits after every new datapoint
 
         Returns
         ----------
@@ -546,7 +601,7 @@ class GASX(tsm.TSM):
         figsize = kwargs.get('figsize',(10,7))
 
         plt.figure(figsize=figsize)
-        predictions = self.predict_is(h)
+        predictions = self.predict_is(h, fit_once=fit_once)
         data = self.data[-h:]
 
         plt.plot(predictions.index,data,label='Data')
@@ -589,6 +644,7 @@ class GASX(tsm.TSM):
                 forecasted_values = mean_values[-h:] + (model_skewness - (1.0/model_skewness))*model_scale*m1 
             else:
                 forecasted_values = mean_values[-h:] 
+                
             result = pd.DataFrame(forecasted_values)
             result.rename(columns={0:self.data_name}, inplace=True)
             result.index = date_index[-h:]

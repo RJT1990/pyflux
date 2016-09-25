@@ -18,12 +18,10 @@ data_oos = pd.DataFrame([countdata_oos,x1_oos,x2_oos]).T
 data_oos.columns = ['y', 'x1', 'x2']
 
 
-
-
 def test_poisson_no_terms():
 	"""
 	Tests the length of the latent variable vector for an GASX model
-	with no AR or MA terms, and tests that the values are not nan
+	with no AR or SC terms, and tests that the values are not nan
 	"""
 	model = pf.GASX(formula="y ~ x1", data=data, ar=0, sc=0, family=pf.GASPoisson())
 	x = model.fit()
@@ -34,7 +32,7 @@ def test_poisson_no_terms():
 def test_poisson_couple_terms():
 	"""
 	Tests the length of the latent variable vector for an GASX model
-	with 1 AR and 1 MA term, and tests that the values are not nan
+	with 1 AR and 1 SC term, and tests that the values are not nan
 	"""
 	model = pf.GASX(formula="y ~ x1", data=data, ar=1, sc=1, family=pf.GASPoisson())
 	x = model.fit()
@@ -127,7 +125,7 @@ def test_poisson_predict_is_nans():
 def test2_poisson_no_terms():
 	"""
 	Tests the length of the latent variable vector for an GASX model
-	with no AR or MA terms, and two predictors, and tests that the values 
+	with no AR or SC terms, and two predictors, and tests that the values 
 	are not nan
 	"""
 	model = pf.GASX(formula="y ~ x1 + x2", data=data, ar=0, sc=0, family=pf.GASPoisson())
@@ -139,7 +137,7 @@ def test2_poisson_no_terms():
 def test2_poisson_couple_terms():
 	"""
 	Tests the length of the latent variable vector for an GASX model
-	with 1 AR and 1 MA term, and two predictors, and tests that the values 
+	with 1 AR and 1 SC term, and two predictors, and tests that the values 
 	are not nan
 	"""
 	model = pf.GASX(formula="y ~ x1 + x2", data=data, ar=1, sc=1, family=pf.GASPoisson())

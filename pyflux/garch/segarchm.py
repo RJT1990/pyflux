@@ -113,10 +113,10 @@ class SEGARCHM(tsm.TSM):
             else: 
                 self.latent_variables.z_list[-1].start = -4.00 
 
-        self.latent_variables.add_z('Skewness',ifr.Uniform(transform='exp'),dst.q_Normal(0,3))
-        self.latent_variables.add_z('v',ifr.Uniform(transform='exp'),dst.q_Normal(0,3))
-        self.latent_variables.add_z('Returns Constant',ifr.Normal(0,3,transform=None),dst.q_Normal(0,3))
-        self.latent_variables.add_z('GARCH-M',ifr.Normal(0,3,transform=None),dst.q_Normal(0,3))
+        self.latent_variables.add_z('Skewness', ifr.Uniform(transform='exp'),dst.q_Normal(0,3))
+        self.latent_variables.add_z('v', ifr.Uniform(transform='exp'),dst.q_Normal(0,3))
+        self.latent_variables.add_z('Returns Constant', ifr.Normal(0, 3, transform=None),dst.q_Normal(0,3))
+        self.latent_variables.add_z('GARCH-M', ifr.Normal(0, 3, transform=None),dst.q_Normal(0,3))
 
         self.latent_variables.z_list[-3].start = 3.0
 
@@ -170,7 +170,11 @@ class SEGARCHM(tsm.TSM):
                     lmda[t] += parm[-5]*np.sign(-(Y[t-1]-theta[t-1]))*(scores[t-1]+1)
 
                 theta[t] += parm[-1]*np.exp(lmda[t]/2.0) + (parm[-4] - (1.0/parm[-4]))*np.exp(lmda[t]/2.0)*(np.sqrt(parm[-3])*sp.gamma((parm[-3]-1.0)/2.0))/(np.sqrt(np.pi)*sp.gamma(parm[-3]/2.0))
-            scores[t] = gas.SkewBetatScore.mu_adj_score(Y[t],theta[t],lmda[t],parm[-3],parm[-4])
+
+            if (Y[t]-theta[t])>=0:
+                scores[t] = (((parm[-3]+1.0)*np.power(Y[t]-theta[t],2))/float(np.power(parm[-4], 2)*parm[-3]*np.exp(lmda[t]) + np.power(Y[t]-theta[t], 2))) - 1.0
+            else:
+                scores[t] = (((parm[-3]+1.0)*np.power(Y[t]-theta[t],2))/float(np.power(parm[-4], -2)*parm[-3]*np.exp(lmda[t]) + np.power(Y[t]-theta[t], 2))) - 1.0    
 
         return lmda, Y, scores, theta
 
@@ -291,7 +295,7 @@ class SEGARCHM(tsm.TSM):
 
         return np.transpose(sim_vector)
 
-    def _summarize_simulations(self,mean_values,sim_vector,date_index,h,past_values):
+    def _summarize_simulations(self, mean_values, sim_vector, date_index, h, past_values):
         """ Summarizes a simulation vector and a mean vector of predictions
 
         Parameters
@@ -347,7 +351,7 @@ class SEGARCHM(tsm.TSM):
             self.latent_variables.add_z('GARCH-M',ifr.Normal(0,3,transform=None),dst.q_Normal(0,3))
             self.latent_variables.z_list[-3].start = 2.0
 
-    def neg_loglik(self,beta):
+    def neg_loglik(self, beta):
         """ Creates the negative log-likelihood of the model
 
         Parameters
@@ -365,7 +369,7 @@ class SEGARCHM(tsm.TSM):
             loc=theta, scale=np.exp(lmda/2.0), 
             skewness = self.latent_variables.z_list[-4].prior.transform(beta[-4])))
     
-    def plot_fit(self,**kwargs):
+    def plot_fit(self, **kwargs):
         """ Plots the fit of the model
 
         Returns
@@ -380,15 +384,15 @@ class SEGARCHM(tsm.TSM):
         else:
             t_params = self.transform_z()
             plt.figure(figsize=figsize)
-            date_index = self.index[max(self.p,self.q):]
+            date_index = self.index[max(self.p, self.q):]
             sigma2, Y, ___, theta = self._model(self.latent_variables.get_z_values())
-            plt.plot(date_index,np.abs(Y-theta),label=self.data_name + ' Absolute Demeaned Values')
-            plt.plot(date_index,np.exp(sigma2/2.0),label='SEGARCHM(' + str(self.p) + ',' + str(self.q) + ') Conditional Volatility',c='black')                   
+            plt.plot(date_index, np.abs(Y-theta),label=self.data_name + ' Absolute Demeaned Values')
+            plt.plot(date_index, np.exp(sigma2/2.0),label='SEGARCHM(' + str(self.p) + ',' + str(self.q) + ') Conditional Volatility',c='black')                   
             plt.title(self.data_name + " Volatility Plot")  
             plt.legend(loc=2)   
             plt.show()              
 
-    def plot_predict(self,h=5,past_values=20,intervals=True,**kwargs):
+    def plot_predict(self, h=5, past_values=20, intervals=True, **kwargs):
 
         """ Plots forecast with the estimated model
 
@@ -436,13 +440,16 @@ class SEGARCHM(tsm.TSM):
             plt.ylabel(self.data_name + " Conditional Volatility")
             plt.show()
 
-    def predict_is(self,h=5):
+    def predict_is(self, h=5, fit_once=True):
         """ Makes dynamic in-sample predictions with the estimated model
 
         Parameters
         ----------
         h : int (default : 5)
             How many steps would you like to forecast?
+
+        fit_once : boolean
+            (default: True) Fits only once before the in-sample prediction; if False, fits after every new datapoint
 
         Returns
         ----------
@@ -451,20 +458,28 @@ class SEGARCHM(tsm.TSM):
 
         predictions = []
 
-        for t in range(0,h):
-            x = SEGARCHM(p=self.p,q=self.q,data=self.data[:-h+t])
-            x.fit(printer=False)
+        for t in range(0, h):
+            x = SEGARCHM(p=self.p, q=self.q, data=self.data[:-h+t])
+
+            if fit_once is False:
+                x.fit(printer=False)
+
             if t == 0:
+                if fit_once is True:
+                    x.fit(printer=False)
+                    saved_lvs = x.latent_variables
                 predictions = x.predict(1)
             else:
-                predictions = pd.concat([predictions,x.predict(1)])
+                if fit_once is True:
+                    x.latent_variables = saved_lvs
+                predictions = pd.concat([predictions, x.predict(1)])
         
         predictions.rename(columns={0:self.data_name}, inplace=True)
         predictions.index = self.index[-h:]
 
         return predictions
 
-    def plot_predict_is(self,h=5,**kwargs):
+    def plot_predict_is(self, h=5, fit_once=True, **kwargs):
         """ Plots forecasts with the estimated model against data
             (Simulated prediction with data)
 
@@ -472,6 +487,9 @@ class SEGARCHM(tsm.TSM):
         ----------
         h : int (default : 5)
             How many steps to forecast
+
+        fit_once : boolean
+            (default: True) Fits only once before the in-sample prediction; if False, fits after every new datapoint
 
         Returns
         ----------
@@ -482,18 +500,18 @@ class SEGARCHM(tsm.TSM):
 
         plt.figure(figsize=figsize)
         date_index = self.index[-h:]
-        predictions = self.predict_is(h)
+        predictions = self.predict_is(h, fit_once=fit_once)
         data = self.data[-h:]
         t_params = self.transform_z()
         loc = t_params[-2] + t_params[-1]*predictions.values.T[0] + (t_params[-4] - (1.0/t_params[-4]))*predictions.values.T[0]*(np.sqrt(t_params[-3])*sp.gamma((t_params[-3]-1.0)/2.0))/(np.sqrt(np.pi)*sp.gamma(t_params[-3]/2.0))
 
-        plt.plot(date_index,np.abs(data-loc),label='Data')
-        plt.plot(date_index,predictions,label='Predictions',c='black')
+        plt.plot(date_index, np.abs(data-loc), label='Data')
+        plt.plot(date_index, predictions, label='Predictions', c='black')
         plt.title(self.data_name)
         plt.legend(loc=2)   
         plt.show()          
 
-    def predict(self,h=5):
+    def predict(self, h=5):
         """ Makes forecast with the estimated model
 
         Parameters
@@ -514,7 +532,7 @@ class SEGARCHM(tsm.TSM):
             date_index = self.shift_dates(h)
             t_params = self.transform_z()
 
-            mean_values = self._mean_prediction(sigma2,Y,scores,h,t_params)
+            mean_values = self._mean_prediction(sigma2, Y, scores, h, t_params)
             forecasted_values = mean_values[-h:]
             result = pd.DataFrame(np.exp(forecasted_values/2.0))
             result.rename(columns={0:self.data_name}, inplace=True)

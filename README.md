@@ -19,8 +19,9 @@ See some examples, model explanations and documentation at [PyFlux.com](http://w
  - [Skew-t-EGARCH models](http://www.pyflux.com/skew-t-egarch/)
  - [Skew-t-EGARCH-in-mean models](http://www.pyflux.com/skew-t-egarch-in-mean/)
 - [GAS models](http://www.pyflux.com/gas-models/)
+ - [GASX models](http://www.pyflux.com/gasx-models/)
 - [GAS State Space models](http://www.pyflux.com/gas-state-space-models/)
-- [GP-NARX models](http://www.pyflux.com/gp-narx/) (currently being rewritten)
+- [GP-NARX models](http://www.pyflux.com/gp-narx/)
 - [Gaussian State Space models](http://www.pyflux.com/gaussian-state-space-models/)
 - [Non-Gaussian State Space models](http://www.pyflux.com/non-gaussian-state-space-models/)
 - [VAR models](http://www.pyflux.com/vector-autoregression)
@@ -32,6 +33,10 @@ See some examples, model explanations and documentation at [PyFlux.com](http://w
 - [Laplace Approximation](http://www.pyflux.com/laplace-approximation/)
 - [Maximum Likelihood](http://www.pyflux.com/maximum-likelihood/) and [Penalized Maximum Likelihood](http://www.pyflux.com/penalized-maximum-likelihood/)
 - [Metropolis-Hastings](http://www.pyflux.com/metropolis-hastings)
+
+## Tools
+
+- [Aggregating Algorithms](http://www.pyflux.com/aggregating-algorithms/)
 
 ## Installing PyFlux
 

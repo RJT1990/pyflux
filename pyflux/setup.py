@@ -10,6 +10,7 @@ def configuration(parent_package='', top_path=None):
     config.add_subpackage('__check_build')
     config.add_subpackage('arma')
     config.add_subpackage('distributions')
+    config.add_subpackage('ensembles')
     config.add_subpackage('garch')
     config.add_subpackage('gas')
     config.add_subpackage('gpnarx')

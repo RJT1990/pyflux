@@ -9,7 +9,7 @@ Example
 
    import numpy as np
    import pandas as pd
-   from pandas.io.data import DataReader
+   from pandas_datareader.data import DataReader
    from datetime import datetime
    import pyflux as pf
 
@@ -89,9 +89,9 @@ Here is example usage for :py:func:`fit`:
 
    Optional arguments include **figsize** - the dimensions of the figure to plot.
 
-.. py:function:: plot_predict_is(h, past_values, intervals, **kwargs)
+.. py:function:: plot_predict_is(h, fit_once, **kwargs)
    
-   Plots in-sample rolling predictions for the model. **h** is an int of how many previous steps to simulate performance on. **past_values** is an int of how many past values of the series to plot. **intervals** is a bool on whether to include confidence/credibility intervals or not.
+   Plots in-sample rolling predictions for the model. **h** is an int of how many previous steps to simulate performance on. **fit_once** is a boolean specifying whether to fit the model once at the beginning of the period (True), or whether to fit after every step (False).
 
    Optional arguments include **figsize** - the dimensions of the figure to plot.
 
@@ -103,6 +103,6 @@ Here is example usage for :py:func:`fit`:
    
    Returns DataFrame of model predictions. **h** is an int of how many steps ahead to predict. 
 
-.. py:function:: predict_is(h)
+.. py:function:: predict_is(h, fit_once)
    
-   Returns DataFrame of in-sample rolling predictions for the model. **h** is an int of how many previous steps to simulate performance on.
+   Returns DataFrame of in-sample rolling predictions for the model. **h** is an int of how many previous steps to simulate performance on. **fit_once** is a boolean specifying whether to fit the model once at the beginning of the period (True), or whether to fit after every step (False).

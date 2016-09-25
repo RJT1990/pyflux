@@ -4,6 +4,7 @@ if sys.version_info < (3,):
 
 import numpy as np
 import pandas as pd
+import scipy.linalg as la
 import scipy.sparse as sp
 import scipy.stats as ss
 from scipy.stats import multivariate_normal
@@ -34,7 +35,7 @@ class GPNARX(tsm.TSM):
         Field to specify how many AR terms the model will have.
     
     kernel : kernel object
-        For example, SquaredExponential() or ARD()
+        For example, SquaredExponential() or OrnsteinUhlenbeck()
     
     integ : int (default : 0)
         Specifies how many time to difference the time series.
@@ -42,7 +43,6 @@ class GPNARX(tsm.TSM):
     target : str (pd.DataFrame) or int (np.array)
         Specifies which column name or array index to use. By default, first
         column/array will be selected as the dependent variable.
-
     """
 
     def __init__(self, data, ar, kernel, integ=0, target=None):
@@ -52,6 +52,10 @@ class GPNARX(tsm.TSM):
 
         # Latent variables
         self.ar = ar
+
+        if ar < 1:
+            raise ValueError('Cannot have less than 1 AR term!')
+
         self.integ = integ
 
         self.max_lag = self.ar
@@ -100,7 +104,7 @@ class GPNARX(tsm.TSM):
         ----------
         np.ndarray (alpha)
         """     
-        return np.linalg.solve(np.transpose(L),np.linalg.solve(L,np.transpose(self.data)))
+        return la.cho_solve((L.T, True), la.cho_solve((L, True), np.transpose(self.data)))
 
     def _construct_predict(self, beta, h):    
         """ Creates h-step ahead forecasts for the Gaussian process
@@ -108,7 +112,7 @@ class GPNARX(tsm.TSM):
         Parameters
         ----------
         beta : np.array
-            Contains untransformed starting values for THE latent variables
+            Contains untransformed starting values for the latent variables
         
         h: int
             How many steps ahead to forecast
@@ -146,11 +150,9 @@ class GPNARX(tsm.TSM):
             L = self._L(parm)
             alpha = self._alpha(L)   
 
-            predictions[step] = np.dot(np.transpose(Kstar),alpha)
-            variances[step] = self.kernel.Kstarstar(parm, np.transpose(np.array(Xstar))) 
-            - np.dot(np.dot(np.transpose(self.kernel.Kstar(parm, np.transpose(np.array(Xstar)))),
-                np.linalg.inv(self.kernel.K(parm) + np.identity(self.kernel.K(parm).shape[0])*parm[0])),
-                self.kernel.Kstar(parm, np.transpose(np.array(Xstar)))) + parm[0] 
+            predictions[step] = np.dot(np.transpose(Kstar), alpha)
+            v = la.cho_solve((L, True), Kstar)
+            variances[step] = self.kernel.Kstarstar(parm, np.transpose(np.array(Xstar))) - np.dot(v.T, v)
 
         return predictions, variances, predictions - 1.98*np.power(variances,0.5), predictions + 1.98*np.power(variances,0.5)
 
@@ -170,7 +172,7 @@ class GPNARX(tsm.TSM):
         self.z_no = len(self.kernel.build_latent_variables())
 
         # Use an ARIMA model to find starting point for the initial noise latent variable
-        arma_start = arma.ARIMA(self.data,ar=self.ar,ma=0,integ=self.integ)
+        arma_start = arma.ARIMA(self.data, ar=self.ar, ma=0, integ=self.integ)
         x = arma_start.fit()
         arma_starting_values = arma_start.latent_variables.get_z_values()
         self.latent_variables.z_list[0].start = np.log(np.exp(np.power(arma_starting_values[-1],2)))
@@ -188,7 +190,7 @@ class GPNARX(tsm.TSM):
         The cholesky decomposition (L) of K
         """ 
 
-        return np.linalg.cholesky(self.kernel.K(parm)) + np.identity(self.X().shape[1])*parm[0]
+        return np.linalg.cholesky(self.kernel.K(parm) + np.identity(self.X().shape[1])*parm[0])
 
     def X(self):
         """ Creates design matrix of variables to use in GP regression
@@ -197,13 +199,15 @@ class GPNARX(tsm.TSM):
         ----------
         The design matrix
         """     
-
-        for i in range(0,self.ar):
-            datapoint = self.data_full[(self.max_lag-i-1):-i-1]         
-            if i == 0:
-                X = datapoint
-            else:
-                X = np.vstack((X,datapoint))
+        if self.ar == 1:
+            return np.array([self.data_full[(self.max_lag-1):-1]])
+        else:
+            for i in range(0,self.ar):
+                datapoint = self.data_full[(self.max_lag-i-1):-i-1]         
+                if i == 0:
+                    X = datapoint
+                else:
+                    X = np.vstack((X,datapoint))
         return X
 
     def expected_values(self, beta):
@@ -237,7 +241,9 @@ class GPNARX(tsm.TSM):
         Covariance matrix for the estimated function 
         """     
         parm = np.array([self.latent_variables.z_list[k].prior.transform(beta[k]) for k in range(beta.shape[0])])
-        return self.kernel.K(parm) - np.dot(np.dot(np.transpose(self.kernel.K(parm)),np.linalg.inv(self.kernel.K(parm) + np.identity(self.kernel.K(parm).shape[0])*parm[0])),self.kernel.K(parm)) + parm[0]
+        L = self._L(parm)
+        v = la.cho_solve((L, True), self.kernel.K(parm))
+        return self.kernel.K(parm) - np.dot(v.T, v)
 
     def full_neg_loglik(self, beta):
         """ Creates the negative log marginal likelihood of the model
@@ -253,7 +259,7 @@ class GPNARX(tsm.TSM):
         """             
         parm = np.array([self.latent_variables.z_list[k].prior.transform(beta[k]) for k in range(beta.shape[0])])
         L = self._L(parm)
-        return -(-0.5*(np.dot(np.transpose(self.data),self._alpha(L))) - np.trace(np.log(L))- (self.data.shape[0]/2)*np.log(2*np.pi))
+        return -(-0.5*(np.dot(np.transpose(self.data),self._alpha(L))) - np.log(np.diag(L)).sum() - (self.data.shape[0]/2.0)*np.log(2.0*np.pi))
 
     def plot_fit(self, intervals=True, **kwargs):
         """ Plots the fit of the Gaussian process model to the data
@@ -275,17 +281,9 @@ class GPNARX(tsm.TSM):
 
         date_index = self.index[self.max_lag:]
         expectation = self.expected_values(self.latent_variables.get_z_values())
-        posterior = multivariate_normal(expectation, self.variance_values(self.latent_variables.get_z_values()))
-        simulations = 500
-        sim_vector = np.zeros([simulations,len(expectation)])
-
-        for i in range(simulations):
-            sim_vector[i] = posterior.rvs()
-
-        error_bars = []
-        for pre in range(5,100,5):
-            error_bars.append([(np.percentile(i,pre)*self._norm_std + self._norm_mean) for i in sim_vector.transpose()] 
-                - (expectation*self._norm_std + self._norm_mean))
+        variance = self.variance_values(self.latent_variables.get_z_values())
+        upper = expectation + 1.98*np.power(np.diag(variance),0.5)
+        lower = expectation - 1.98*np.power(np.diag(variance),0.5)
 
         plt.figure(figsize=figsize) 
 
@@ -302,11 +300,8 @@ class GPNARX(tsm.TSM):
         plt.title(self.data_name + " Raw and Expected (with intervals)")    
 
         if intervals == True:
-            alpha =[0.15*i/float(100) for i in range(50,12,-2)]
-            for count, pre in enumerate(error_bars):
-                plt.fill_between(date_index, (expectation*self._norm_std + self._norm_mean)-pre, 
-                    (expectation*self._norm_std + self._norm_mean)+pre,alpha=alpha[count])      
-
+            plt.fill_between(date_index, lower*self._norm_std + self._norm_mean, upper*self._norm_std + self._norm_mean, alpha=0.2)          
+            
         plt.plot(date_index,self.data*self._norm_std + self._norm_mean,'k',alpha=0.2)
         plt.plot(date_index,self.expected_values(self.latent_variables.get_z_values())*self._norm_std + self._norm_mean,'b')
 
@@ -315,11 +310,8 @@ class GPNARX(tsm.TSM):
         plt.title("Expected " + self.data_name + " (with intervals)")   
 
         if intervals == True:
-            alpha =[0.15*i/float(100) for i in range(50,12,-2)]
-            for count, pre in enumerate(error_bars):
-                plt.fill_between(date_index, (expectation*self._norm_std + self._norm_mean)-pre, 
-                    (expectation*self._norm_std + self._norm_mean)+pre,alpha=alpha[count])      
-
+            plt.fill_between(date_index, lower*self._norm_std + self._norm_mean, upper*self._norm_std + self._norm_mean, alpha=0.2)          
+            
         plt.plot(date_index,self.expected_values(self.latent_variables.get_z_values())*self._norm_std + self._norm_mean,'b')
 
         plt.show()
@@ -377,7 +369,7 @@ class GPNARX(tsm.TSM):
             plt.ylabel(self.data_name)
             plt.show()
 
-    def predict_is(self, h=5):
+    def predict_is(self, h=5, fit_once=True):
         """ Makes dynamic in-sample predictions with the estimated model
         
         Parameters
@@ -385,6 +377,9 @@ class GPNARX(tsm.TSM):
         h : int (default : 5)
             How many steps would you like to forecast?
         
+        fit_once : boolean
+            (default: True) Fits only once before the in-sample prediction; if False, fits after every new datapoint
+
         Returns
         ----------
         - pd.DataFrame with predicted values
@@ -395,11 +390,16 @@ class GPNARX(tsm.TSM):
         for t in range(0,h):
             x = GPNARX(ar=self.ar,kernel=self.kernel,integ=self.integ,
                 data=self.data_original[:-h+t])
+            if fit_once is False:
+                x.fit(printer=False)
             if t == 0:
-                x.fit(printer=False)
-                predictions = x.predict(1)  
+                if fit_once is True:
+                    x.fit(printer=False)
+                    saved_lvs = x.latent_variables
+                predictions = x.predict(1)
             else:
-                x.fit(printer=False)
+                if fit_once is True:
+                    x.latent_variables = saved_lvs
                 predictions = pd.concat([predictions,x.predict(1)])
 
         predictions.rename(columns={0:self.data_name}, inplace=True)
@@ -407,7 +407,7 @@ class GPNARX(tsm.TSM):
 
         return predictions
 
-    def plot_predict_is(self, h=5, **kwargs):
+    def plot_predict_is(self, h=5, fit_once=True, **kwargs):
         """ Plots forecasts with the estimated model against data
             (Simulated prediction with data)
         
@@ -415,7 +415,10 @@ class GPNARX(tsm.TSM):
         ----------
         h : int (default : 5)
             How many steps to forecast
-        
+
+        fit_once : boolean
+            (default: True) Fits only once before the in-sample prediction; if False, fits after every new datapoint
+
         Returns
         ----------
         - Plot of the forecast against data 
@@ -425,7 +428,7 @@ class GPNARX(tsm.TSM):
 
         plt.figure(figsize=figsize)
         date_index = self.index[-h:]
-        predictions = self.predict_is(h)
+        predictions = self.predict_is(h, fit_once=fit_once)
         data = self.data[-h:]
 
         plt.plot(date_index,data*self._norm_std + self._norm_mean,label='Data')
@@ -434,7 +437,7 @@ class GPNARX(tsm.TSM):
         plt.legend(loc=2)   
         plt.show()          
 
-    def predict(self,h=5):
+    def predict(self, h=5):
         """ Makes forecast with the estimated model
         
         Parameters

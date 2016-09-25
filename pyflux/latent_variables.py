@@ -123,6 +123,9 @@ class LatentVariables(object):
             elif isinstance(prior, InverseWishart):
                 prior_names.append('InverseWishart')
                 prior_z_names.append('v: ' + str(np.round(prior.v,4)) + ' and scale matrix')
+            elif isinstance(prior, TruncatedNormal):
+                prior_names.append('TruncatedNormal')
+                prior_z_names.append('mu0: ' + str(np.round(prior.mu0,4)) + ', sigma0: ' + str(np.round(prior.sigma0,4)))                
             else:
                 raise ValueError("Prior distribution not detected!")
         return prior_names, prior_z_names

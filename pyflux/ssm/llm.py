@@ -285,13 +285,16 @@ class LLEV(tsm.TSM):
 
             return result
 
-    def predict_is(self,h=5):
+    def predict_is(self, h=5, fit_once=True):
         """ Makes dynamic in-sample predictions with the estimated model
 
         Parameters
         ----------
         h : int (default : 5)
             How many steps would you like to forecast?
+
+        fit_once : boolean
+            (default: True) Fits only once before the in-sample prediction; if False, fits after every new datapoint
 
         Returns
         ----------
@@ -302,12 +305,18 @@ class LLEV(tsm.TSM):
 
         for t in range(0,h):
             x = LLEV(integ=self.integ,data=self.data_original[:(-h+t)])
-            x.fit(printer=False)
+            if fit_once is False:
+                x.fit(printer=False)
             if t == 0:
+                if fit_once is True:
+                    x.fit(printer=False)
+                    saved_lvs = x.latent_variables
                 predictions = x.predict(1)
             else:
+                if fit_once is True:
+                    x.latent_variables = saved_lvs
                 predictions = pd.concat([predictions,x.predict(1)])
-        
+
         predictions.rename(columns={0:self.data_name}, inplace=True)
         predictions.index = self.index[-h:]
 

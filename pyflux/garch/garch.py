@@ -38,7 +38,7 @@ class GARCH(tsm.TSM):
         column/array will be selected as the dependent variable.
     """
 
-    def __init__(self,data,p,q,target=None):
+    def __init__(self, data, p, q, target=None):
 
         # Initialize TSM object
         super(GARCH,self).__init__('GARCH')
@@ -70,22 +70,22 @@ class GARCH(tsm.TSM):
         self.latent_variables.z_list[0].start = -7.00
         
         for q_term in range(self.q):
-            self.latent_variables.add_z('q(' + str(q_term+1) + ')',ifr.Normal(0,0.5,transform=None),dst.q_Normal(0,3))
+            self.latent_variables.add_z('q(' + str(q_term+1) + ')',ifr.Normal(0,0.5,transform='logit'),dst.q_Normal(0,3))
             if q_term == 0:
-                self.latent_variables.z_list[-1].start = 0.10
+                self.latent_variables.z_list[-1].start = -1.50
             else:
-                self.latent_variables.z_list[-1].start = 0.00
+                self.latent_variables.z_list[-1].start = -4.00
 
         for p_term in range(self.p):
-            self.latent_variables.add_z('p(' + str(p_term+1) + ')',ifr.Normal(0,0.5,transform=None),dst.q_Normal(0,3))
+            self.latent_variables.add_z('p(' + str(p_term+1) + ')',ifr.Normal(0,0.5,transform='logit'),dst.q_Normal(0,3))
             if p_term == 0:
-                self.latent_variables.z_list[-1].start = 0.80
+                self.latent_variables.z_list[-1].start = 3.00
             else:
-                self.latent_variables.z_list[-1].start = 0.00
+                self.latent_variables.z_list[-1].start = -4.00
         
         self.latent_variables.add_z('Returns Constant',ifr.Normal(0,3,transform=None),dst.q_Normal(0,3))
 
-    def _model(self,beta):
+    def _model(self, beta):
         """ Creates the structure of the model
 
         Parameters
@@ -125,7 +125,7 @@ class GARCH(tsm.TSM):
 
         return sigma2, Y, eps
 
-    def _mean_prediction(self,sigma2,Y,scores,h,t_params):
+    def _mean_prediction(self, sigma2, Y, scores, h, t_params):
         """ Creates a h-step ahead mean prediction
 
         Parameters
@@ -173,7 +173,7 @@ class GARCH(tsm.TSM):
 
         return sigma2_exp
 
-    def _sim_prediction(self,sigma2,Y,scores,h,t_params,simulations):
+    def _sim_prediction(self, sigma2, Y, scores, h, t_params, simulations):
         """ Simulates a h-step ahead mean prediction
 
         Parameters
@@ -225,7 +225,7 @@ class GARCH(tsm.TSM):
             sim_vector[n] = sigma2_exp[-h:]
         return np.transpose(sim_vector)
 
-    def _summarize_simulations(self,mean_values,sim_vector,date_index,h,past_values):
+    def _summarize_simulations(self, mean_values, sim_vector, date_index, h, past_values):
         """ Summarizes a simulation vector and a mean vector of predictions
 
         Parameters
@@ -297,7 +297,7 @@ class GARCH(tsm.TSM):
             plt.legend(loc=2)   
             plt.show()              
 
-    def plot_predict(self,h=5,past_values=20,intervals=True,**kwargs):      
+    def plot_predict(self, h=5, past_values=20, intervals=True, **kwargs):      
         """ Makes forecast with the estimated model
 
         Parameters
@@ -343,13 +343,16 @@ class GARCH(tsm.TSM):
             plt.ylabel(self.data_name + " Conditional Volatility")
             plt.show()
 
-    def predict_is(self,h=5):
+    def predict_is(self, h=5, fit_once=True):
         """ Makes dynamic in-sample predictions with the estimated model
 
         Parameters
         ----------
         h : int (default : 5)
             How many steps would you like to forecast?
+
+        fit_once : boolean
+            (default: True) Fits only once before the in-sample prediction; if False, fits after every new datapoint
 
         Returns
         ----------
@@ -359,11 +362,19 @@ class GARCH(tsm.TSM):
         predictions = []
 
         for t in range(0,h):
-            x = GARCH(p=self.p,q=self.q,data=self.data[0:-h+t])
-            x.fit(printer=False)
+            x = GARCH(p=self.p, q=self.q, data=self.data[0:-h+t])
+
+            if fit_once is False:
+                x.fit(printer=False)
+
             if t == 0:
+                if fit_once is True:
+                    x.fit(printer=False)
+                    saved_lvs = x.latent_variables
                 predictions = x.predict(1)
             else:
+                if fit_once is True:
+                    x.latent_variables = saved_lvs
                 predictions = pd.concat([predictions,x.predict(1)])
         
         predictions.rename(columns={0:self.data_name}, inplace=True)
@@ -371,7 +382,7 @@ class GARCH(tsm.TSM):
 
         return predictions
 
-    def plot_predict_is(self,h=5,**kwargs):
+    def plot_predict_is(self, h=5, fit_once=True, **kwargs):
         """ Plots forecasts with the estimated model against data
             (Simulated prediction with data)
 
@@ -379,6 +390,9 @@ class GARCH(tsm.TSM):
         ----------
         h : int (default : 5)
             How many steps to forecast
+
+        fit_once : boolean
+            (default: True) Fits only once before the in-sample prediction; if False, fits after every new datapoint
 
         Returns
         ----------
@@ -389,7 +403,7 @@ class GARCH(tsm.TSM):
 
         plt.figure(figsize=figsize)
         date_index = self.index[-h:]
-        predictions = self.predict_is(h)
+        predictions = self.predict_is(h, fit_once=fit_once)
         data = self.data[-h:]
 
         plt.plot(date_index,np.abs(data),label='Data')
@@ -398,7 +412,7 @@ class GARCH(tsm.TSM):
         plt.legend(loc=2)   
         plt.show()          
 
-    def predict(self,h=5):
+    def predict(self, h=5):
         """ Makes forecast with the estimated model
 
         Parameters

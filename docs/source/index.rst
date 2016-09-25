@@ -26,6 +26,7 @@ Models
    segarchm
    gas
    gasreg
+   gasssm
    gasx
    gpnar
    ssm

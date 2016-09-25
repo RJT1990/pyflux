@@ -298,17 +298,18 @@ class BBVIResults(Results):
         print(".summary() : printed results")
         return("")
 
-    def summary(self):
+    def summary(self, transformed=True):
         ihessian = np.diag(np.power(np.exp(self.ses),2))
         z_values = self.z.get_z_values(transformed=False)
         chain, mean_est, median_est, upper_95_est, lower_95_est = norm_post_sim(z_values,ihessian)
 
-        for k in range(len(chain)):
-            chain[k] = self.z.z_list[k].prior.transform(chain[k])
-            mean_est[k] = self.z.z_list[k].prior.transform(mean_est[k])
-            median_est[k] = self.z.z_list[k].prior.transform(median_est[k])
-            upper_95_est[k] = self.z.z_list[k].prior.transform(upper_95_est[k])
-            lower_95_est[k] = self.z.z_list[k].prior.transform(lower_95_est[k])                
+        if transformed is True:
+            for k in range(len(chain)):
+                chain[k] = self.z.z_list[k].prior.transform(chain[k])
+                mean_est[k] = self.z.z_list[k].prior.transform(mean_est[k])
+                median_est[k] = self.z.z_list[k].prior.transform(median_est[k])
+                upper_95_est[k] = self.z.z_list[k].prior.transform(upper_95_est[k])
+                lower_95_est[k] = self.z.z_list[k].prior.transform(lower_95_est[k])                
 
         mean_est = np.array(mean_est)
         self.chains = chain[:]
@@ -426,16 +427,18 @@ class BBVISSResults(Results):
         print(".summary() : printed results")
         return("")
 
-    def summary(self):
+    def summary(self, transformed=True):
         ihessian = np.diag(np.power(np.exp(self.ses),2))
         z_values = self.z.get_z_values(transformed=False)
         chain, mean_est, median_est, upper_95_est, lower_95_est = norm_post_sim(z_values,ihessian)
-        for k in range(len(z_values)):
-            chain[k] = self.z.z_list[k].prior.transform(chain[k])
-            mean_est[k] = self.z.z_list[k].prior.transform(mean_est[k])
-            median_est[k] = self.z.z_list[k].prior.transform(median_est[k])
-            upper_95_est[k] = self.z.z_list[k].prior.transform(upper_95_est[k])
-            lower_95_est[k] = self.z.z_list[k].prior.transform(lower_95_est[k])                
+
+        if transformed is True:
+            for k in range(len(z_values)):
+                chain[k] = self.z.z_list[k].prior.transform(chain[k])
+                mean_est[k] = self.z.z_list[k].prior.transform(mean_est[k])
+                median_est[k] = self.z.z_list[k].prior.transform(median_est[k])
+                upper_95_est[k] = self.z.z_list[k].prior.transform(upper_95_est[k])
+                lower_95_est[k] = self.z.z_list[k].prior.transform(lower_95_est[k])                
 
         mean_est = np.array(mean_est)
         self.chains = chain[:]
@@ -552,16 +555,17 @@ class LaplaceResults(Results):
         print(".summary() : printed results")
         return("")
 
-    def summary(self):
+    def summary(self, transformed=True):
         z_values = self.z.get_z_values(transformed=False)
         chain, mean_est, median_est, upper_95_est, lower_95_est = norm_post_sim(z_values,self.ihessian)
 
-        for k in range(len(chain)):
-            chain[k] = self.z.z_list[k].prior.transform(chain[k])
-            mean_est[k] = self.z.z_list[k].prior.transform(mean_est[k])
-            median_est[k] = self.z.z_list[k].prior.transform(median_est[k])
-            upper_95_est[k] = self.z.z_list[k].prior.transform(upper_95_est[k])
-            lower_95_est[k] = self.z.z_list[k].prior.transform(lower_95_est[k])                
+        if transformed is True:
+            for k in range(len(chain)):
+                chain[k] = self.z.z_list[k].prior.transform(chain[k])
+                mean_est[k] = self.z.z_list[k].prior.transform(mean_est[k])
+                median_est[k] = self.z.z_list[k].prior.transform(median_est[k])
+                upper_95_est[k] = self.z.z_list[k].prior.transform(upper_95_est[k])
+                lower_95_est[k] = self.z.z_list[k].prior.transform(lower_95_est[k])                
 
         mean_est = np.array(mean_est)
         self.chains = chain[:]
@@ -682,7 +686,7 @@ class MCMCResults(Results):
         print(".summary() : printed results")
         return("")
 
-    def summary(self):
+    def summary(self, transformed=True):
         z_values = self.z.get_z_values(transformed=False)
 
         data = []

@@ -86,6 +86,8 @@ class GASRank(tsm.TSM):
         self.plot_abilities = self.plot_abilities_one_components
         self.predict = self.predict_one_component
 
+        self.z_no = len(self.latent_variables.z_list)
+
     def _create_ids(self, home_teams, away_teams):
         """
         Creates IDs for both players/teams

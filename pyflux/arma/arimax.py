@@ -29,7 +29,7 @@ class ARIMAX(tsm.TSM):
         Field to specify the univariate time series data that will be used.
 
     formula : string
-        patsy string describing the regression
+        patsy string notation describing the regression
 
     ar : int
         Field to specify how many AR lags the model will have.
@@ -109,15 +109,15 @@ class ARIMAX(tsm.TSM):
         """
 
         for ar_term in range(self.ar):
-            self.latent_variables.add_z('AR(' + str(ar_term+1) + ')', ifr.Normal(0,0.5,transform=None), dst.q_Normal(0,3))
+            self.latent_variables.add_z('AR(' + str(ar_term+1) + ')', ifr.Normal(0, 0.5, transform=None), dst.q_Normal(0, 3))
 
         for ma_term in range(self.ma):
-            self.latent_variables.add_z('MA(' + str(ma_term+1) + ')', ifr.Normal(0,0.5,transform=None), dst.q_Normal(0,3))
+            self.latent_variables.add_z('MA(' + str(ma_term+1) + ')', ifr.Normal(0, 0.5, transform=None), dst.q_Normal(0, 3))
 
         for z in range(len(self.X_names)):
-            self.latent_variables.add_z('Beta ' + self.X_names[z], ifr.Normal(0,3,transform=None), dst.q_Normal(0,3))
+            self.latent_variables.add_z('Beta ' + self.X_names[z], ifr.Normal(0, 3, transform=None), dst.q_Normal(0, 3))
 
-        self.latent_variables.add_z('Sigma', ifr.Uniform(transform='exp'), dst.q_Normal(0,3))
+        self.latent_variables.add_z('Sigma', ifr.Uniform(transform='exp'), dst.q_Normal(0, 3))
         self.z_no = len(self.latent_variables.z_list)
 
     def _model(self, beta):
@@ -146,9 +146,9 @@ class ARIMAX(tsm.TSM):
         if self.ar == 0:
             mu = np.transpose(self.ar_matrix)
         elif self.ar == 1:
-            mu = np.transpose(self.ar_matrix)*z[0:-1-self.ma-len(self.X_names)][0]
+            mu = np.transpose(self.ar_matrix)*z[:-1-self.ma-len(self.X_names)][0]
         else:
-            mu = np.matmul(np.transpose(self.ar_matrix),z[0:-1-self.ma-len(self.X_names)])
+            mu = np.matmul(np.transpose(self.ar_matrix),z[:-1-self.ma-len(self.X_names)])
 
         # X terms
         mu = mu + np.matmul(self.X[self.integ+self.max_lag:],z[self.ma+self.ar:(self.ma+self.ar+len(self.X_names))])
@@ -381,13 +381,16 @@ class ARIMAX(tsm.TSM):
             plt.ylabel(self.data_name)
             plt.show()
 
-    def predict_is(self, h=5):
+    def predict_is(self, h=5, fit_once=True):
         """ Makes dynamic out-of-sample predictions on in-sample data with the estimated model
 
         Parameters
         ----------
         h : int (default : 5)
             How many steps would you like to forecast?
+
+        fit_once : boolean
+            Whether to fit the model once at the beginning (True), or fit every iteration (False)
 
         Returns
         ----------
@@ -400,10 +403,17 @@ class ARIMAX(tsm.TSM):
             data1 = self.data_original.iloc[:-(h+t),:]
             data2 = self.data_original.iloc[-h+t:,:]
             x = ARIMAX(ar=self.ar, ma=self.ma, integ=self.integ, formula=self.formula, data=data1)
-            x.fit(printer=False)
+
+            if fit_once is False:
+                x.fit(printer=False)
             if t == 0:
+                if fit_once is True:
+                    x.fit(printer=False)
+                    saved_lvs = x.latent_variables
                 predictions = x.predict(1, oos_data=data2)
             else:
+                if fit_once is True:
+                    x.latent_variables = saved_lvs
                 predictions = pd.concat([predictions,x.predict(h=1, oos_data=data2)])
         
         predictions.rename(columns={0:self.y_name}, inplace=True)
@@ -411,13 +421,16 @@ class ARIMAX(tsm.TSM):
 
         return predictions
 
-    def plot_predict_is(self, h=5, **kwargs):
+    def plot_predict_is(self, h=5, fit_once=True, **kwargs):
         """ Plots dynamic in-sample forecasts with the estimated model against the data 
 
         Parameters
         ----------
         h : int (default : 5)
             How many steps to forecast
+
+        fit_once : boolean
+            Whether to fit the model once at the beginning (True), or fit every iteration (False)
 
         Returns
         ----------
@@ -430,8 +443,8 @@ class ARIMAX(tsm.TSM):
         predictions = self.predict_is(h)
         data = self.data[-h:]
 
-        plt.plot(predictions.index, data,label='Data')
-        plt.plot(predictions.index, predictions,label='Predictions',c='black')
+        plt.plot(predictions.index, data, label='Data')
+        plt.plot(predictions.index, predictions, label='Predictions', c='black')
         plt.title(self.data_name)
         plt.legend(loc=2)   
         plt.show()          

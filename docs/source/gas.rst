@@ -14,7 +14,7 @@ Example
    d = pd.read_csv("https://vincentarelbundock.github/io/Rdatasets/csv/MASS/drivers.csv")
    accidents = d['drivers'].values
 
-   model = pf.GAS(data=accidents,ar=1,sc=1,dist='Poisson')
+   model = pf.GAS(data=accidents, ar=1, sc=1, dist='Poisson')
 
 Class Arguments
 ----------
@@ -62,7 +62,7 @@ Here is example usage for :py:func:`adjust_prior`:
 
    # model = ... (specify a model)
    model.list_priors()
-   model.adjust_prior(2,pf.Normal(0,1))
+   model.adjust_prior(2, pf.Normal(0, 1))
 
 .. py:function:: fit(method,**kwargs)
    
@@ -90,15 +90,15 @@ Here is example usage for :py:func:`fit`:
 
    Returns a plot of the latent variables and their associated uncertainty. **indices** is a list referring to the latent variable indices that you want ot plot. Figsize specifies how big the plot will be.
 
-.. py:function:: plot_predict(h,past_values,intervals,**kwargs)
+.. py:function:: plot_predict(h, past_values, intervals, **kwargs)
    
    Plots predictions of the model. **h** is an int of how many steps ahead to predict. **past_values** is an int of how many past values of the series to plot. **intervals** is a bool on whether to include confidence/credibility intervals or not.
 
    Optional arguments include **figsize** - the dimensions of the figure to plot.
 
-.. py:function:: plot_predict_is(h,past_values,intervals,**kwargs)
+.. py:function:: plot_predict_is(h, fit_once, **kwargs)
    
-   Plots in-sample rolling predictions for the model. **h** is an int of how many previous steps to simulate performance on. **past_values** is an int of how many past values of the series to plot. **intervals** is a bool on whether to include confidence/credibility intervals or not.
+   Plots in-sample rolling predictions for the model. **h** is an int of how many previous steps to simulate performance on. **fit_once** is a boolean specifying whether to fit the model once at the beginning of the period (True), or whether to fit after every step (False).
 
    Optional arguments include **figsize** - the dimensions of the figure to plot.
 
@@ -106,6 +106,6 @@ Here is example usage for :py:func:`fit`:
    
    Returns DataFrame of model predictions. **h** is an int of how many steps ahead to predict. 
 
-.. py:function:: predict_is(h)
+.. py:function:: predict_is(h, fit_once)
    
-   Returns DataFrame of in-sample rolling predictions for the model. **h** is an int of how many previous steps to simulate performance on.
+   Returns DataFrame of in-sample rolling predictions for the model. **h** is an int of how many previous steps to simulate performance on. **fit_once** is a boolean specifying whether to fit the model once at the beginning of the period (True), or whether to fit after every step (False).

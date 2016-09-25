@@ -2,6 +2,8 @@ import numpy as np
 cimport numpy as np
 cimport cython
 
+from libc.math cimport exp, abs, M_PI
+
 @cython.boundscheck(False)
 @cython.wraparound(False)
 @cython.cdivision(True)

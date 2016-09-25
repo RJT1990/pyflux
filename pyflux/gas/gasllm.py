@@ -14,7 +14,6 @@ from .. import tsm as tsm
 from .. import distributions as dst
 from .. import data_check as dc
 
-from .scores import *
 from .gasmodels import *
 
 from .gas_recursions import gas_llev_recursion
@@ -38,19 +37,14 @@ class GASLLEV(tsm.TSM):
 
     dist : str
         Which distribution to use
-
-    gradient_only : Boolean (default: True)
-        If true, will only use gradient rather than second-order terms
-        to construct the modified score.
     """
 
-    def __init__(self,data,family,integ=0,target=None,gradient_only=False):
+    def __init__(self, data, family, integ=0, target=None):
 
         # Initialize TSM object     
         super(GASLLEV,self).__init__('GASLLEV')
 
         self.integ = integ
-        self.gradient_only = gradient_only
         self.z_no = 1
         self.max_lag = 1
         self._z_hide = 0 # Whether to cutoff variance latent variables from results
@@ -71,12 +65,26 @@ class GASLLEV(tsm.TSM):
 
         self.family = family
         
-        self.model_name2, self.link, self.scale, self.shape, self.skewness, self.mean_transform = self.family.setup()
+        self.model_name2, self.link, self.scale, self.shape, self.skewness, self.mean_transform, self.cythonized = self.family.setup()
+
+        # Identify whether model has cythonized backend - then choose update type
+        if self.cythonized is True:
+            self._model = self._cythonized_model
+            if self.family.gradient_only is True:
+                self.recursion = self.family.gradientllev_recursion() # first-order update
+            else:
+                self.recursion = self.family.newtonllev_recursion() # second-order update
+        else:
+            self._model = self._uncythonized_model
+
         self.model_name = self.model_name2 + " LLM"
 
+        # Build any remaining latent variables that are specific to the family chosen
         for no, i in enumerate(self.family.build_latent_variables()):
             self.latent_variables.add_z(i[0],i[1],i[2])
             self.latent_variables.z_list[no+1].start = i[3]
+
+        self.z_no = len(self.latent_variables.z_list)
 
     def _create_model_matrices(self):
         """ Creates model matrices/vectors
@@ -97,9 +105,9 @@ class GASLLEV(tsm.TSM):
         None (changes model attributes)
         """
 
-        self.latent_variables.add_z('SC(1)',ifr.Normal(0,0.5,transform=None),dst.q_Normal(0,3))
+        self.latent_variables.add_z('SC(1)',ifr.Normal(0, 0.5, transform=None), dst.q_Normal(0, 3))
 
-    def _get_scale_and_shape(self,parm):
+    def _get_scale_and_shape(self, parm):
         """ Obtains appropriate model scale and shape latent variables
 
         Parameters
@@ -130,7 +138,36 @@ class GASLLEV(tsm.TSM):
 
         return model_scale, model_shape, model_skewness
 
-    def _model(self,beta):
+    def _cythonized_model(self, beta):
+        """ Creates the structure of the model
+
+        Parameters
+        ----------
+        beta : np.array
+            Contains untransformed starting values for latent variables
+
+        Returns
+        ----------
+        theta : np.array
+            Contains the predicted values for the time series
+
+        Y : np.array
+            Contains the length-adjusted time series (accounting for lags)
+
+        scores : np.array
+            Contains the scores for the time series
+        """
+
+        parm = np.array([self.latent_variables.z_list[k].prior.transform(beta[k]) for k in range(beta.shape[0])])
+        theta = np.zeros(self.model_Y.shape[0])
+        model_scale, model_shape, model_skewness = self._get_scale_and_shape(parm)
+
+         # Loop over time series
+        theta, self.model_scores = self.recursion(parm, theta, self.model_scores, self.model_Y, self.model_Y.shape[0], model_scale, model_shape, model_skewness, self.max_lag)
+
+        return theta, self.model_Y, self.model_scores
+
+    def _uncythonized_model(self, beta):
         """ Creates the structure of the model
 
         Parameters
@@ -194,11 +231,11 @@ class GASLLEV(tsm.TSM):
         for t in range(0,h):
             new_value = theta_exp[-1] + t_params[0]*scores_exp[-1]
             if self.model_name2 == "Exponential GAS":
-                Y_exp = np.append(Y_exp,[1.0/self.link(new_value)])
+                Y_exp = np.append(Y_exp, [1.0/self.link(new_value)])
             else:
-                Y_exp = np.append(Y_exp,[self.link(new_value)])
-            theta_exp = np.append(theta_exp,[new_value]) # For indexing consistency
-            scores_exp = np.append(scores_exp,[0]) # expectation of score is zero
+                Y_exp = np.append(Y_exp, [self.link(new_value)])
+            theta_exp = np.append(theta_exp, [new_value]) # For indexing consistency
+            scores_exp = np.append(scores_exp, [0]) # expectation of score is zero
         return Y_exp
 
     def _preoptimize_model(self, initials, method):
@@ -233,7 +270,7 @@ class GASLLEV(tsm.TSM):
 
         return best_start
 
-    def _sim_prediction(self,theta,Y,scores,h,t_params,simulations):
+    def _sim_prediction(self, theta, Y, scores, h, t_params, simulations):
         """ Simulates a h-step ahead mean prediction
 
         Parameters
@@ -275,19 +312,19 @@ class GASLLEV(tsm.TSM):
                 new_value = theta_exp[-1] + t_params[0]*scores_exp[-1]
 
                 if self.model_name2 == "Exponential GAS":
-                    rnd_value = self.family.draw_variable(1.0/self.link(new_value),model_scale,model_shape,model_skewness,1)[0]
+                    rnd_value = self.family.draw_variable(1.0/self.link(new_value), model_scale, model_shape, model_skewness, 1)[0]
                 else:
-                    rnd_value = self.family.draw_variable(self.link(new_value),model_scale,model_shape,model_skewness,1)[0]
+                    rnd_value = self.family.draw_variable(self.link(new_value), model_scale, model_shape, model_skewness, 1)[0]
 
-                Y_exp = np.append(Y_exp,[rnd_value])
-                theta_exp = np.append(theta_exp,[new_value]) # For indexing consistency
-                scores_exp = np.append(scores_exp,scores[np.random.randint(scores.shape[0])]) # expectation of score is zero
+                Y_exp = np.append(Y_exp, [rnd_value])
+                theta_exp = np.append(theta_exp, [new_value]) # For indexing consistency
+                scores_exp = np.append(scores_exp, scores[np.random.randint(scores.shape[0])]) # expectation of score is zero
 
             sim_vector[n] = Y_exp[-h:]
 
         return np.transpose(sim_vector)
 
-    def _summarize_simulations(self,mean_values,sim_vector,date_index,h,past_values):
+    def _summarize_simulations(self, mean_values, sim_vector, date_index, h, past_values):
         """ Summarizes a simulation vector and a mean vector of predictions
 
         Parameters
@@ -319,13 +356,20 @@ class GASLLEV(tsm.TSM):
         plot_index = date_index[-h-past_values:]
         return error_bars, forecasted_values, plot_values, plot_index
 
-    def neg_loglik(self,beta):
+    def neg_loglik(self, beta):
+        """ Returns the negative loglikelihood of the model
+
+        Parameters
+        ----------
+        beta : np.array
+            Contains untransformed starting values for latent variables
+        """
         theta, Y, _ = self._model(beta)
         parm = np.array([self.latent_variables.z_list[k].prior.transform(beta[k]) for k in range(beta.shape[0])])
         model_scale, model_shape, model_skewness = self._get_scale_and_shape(parm)
         return self.family.neg_loglikelihood(Y,self.link(theta),model_scale,model_shape,model_skewness)
 
-    def plot_fit(self,intervals=False,**kwargs):
+    def plot_fit(self, intervals=False, **kwargs):
         """ Plots the fit of the model
 
         Returns
@@ -345,6 +389,7 @@ class GASLLEV(tsm.TSM):
             plt.subplot(2,1,1)
             plt.title("Model fit for " + self.data_name)
 
+            # Catch specific family properties (imply different link functions/moments)
             if self.model_name2 == "Exponential GAS":
                 values_to_plot = 1.0/self.link(mu)
             elif self.model_name2 == "Skewt GAS":
@@ -357,17 +402,17 @@ class GASLLEV(tsm.TSM):
                 values_to_plot = self.link(mu)
 
             plt.plot(date_index,Y,label='Data')
-            plt.plot(date_index,values_to_plot,label='GAS Filter',c='black')
+            plt.plot(date_index,values_to_plot, label='GAS Filter', c='black')
             plt.legend(loc=2)   
 
             plt.subplot(2,1,2)
             plt.title("Filtered values for " + self.data_name)
-            plt.plot(date_index,values_to_plot,label='GAS Filter',c='black')
+            plt.plot(date_index,values_to_plot, label='GAS Filter', c='black')
             plt.legend(loc=2)   
 
             plt.show()              
     
-    def plot_predict(self,h=5,past_values=20,intervals=True,**kwargs):
+    def plot_predict(self, h=5, past_values=20, intervals=True, **kwargs):
         """ Makes forecast with the estimated model
 
         Parameters
@@ -420,13 +465,16 @@ class GASLLEV(tsm.TSM):
             plt.ylabel(self.data_name)
             plt.show()
 
-    def predict_is(self,h=5):
+    def predict_is(self, h=5, fit_once=True):
         """ Makes dynamic in-sample predictions with the estimated model
 
         Parameters
         ----------
         h : int (default : 5)
             How many steps would you like to forecast?
+
+        fit_once : boolean
+            (default: True) Fits only once before the in-sample prediction; if False, fits after every new datapoint
 
         Returns
         ----------
@@ -436,19 +484,25 @@ class GASLLEV(tsm.TSM):
         predictions = []
 
         for t in range(0,h):
-            x = GASLLEV(integ=self.integ,family=self.family,data=self.data_original[:-h+t],gradient_only=self.gradient_only)
-            x.fit(printer=False)
+            x = GASLLEV(integ=self.integ, family=self.family, data=self.data_original[:-h+t])
+            if fit_once is False:
+                x.fit(printer=False)
             if t == 0:
+                if fit_once is True:
+                    x.fit(printer=False)
+                    saved_lvs = x.latent_variables
                 predictions = x.predict(1)
             else:
+                if fit_once is True:
+                    x.latent_variables = saved_lvs
                 predictions = pd.concat([predictions,x.predict(1)])
-        
+
         predictions.rename(columns={0:self.data_name}, inplace=True)
         predictions.index = self.index[-h:]
 
         return predictions
 
-    def plot_predict_is(self,h=5,**kwargs):
+    def plot_predict_is(self, h=5, fit_once=True, **kwargs):
         """ Plots forecasts with the estimated model against data
             (Simulated prediction with data)
 
@@ -456,6 +510,9 @@ class GASLLEV(tsm.TSM):
         ----------
         h : int (default : 5)
             How many steps to forecast
+
+        fit_once : boolean
+            (default: True) Fits only once before the in-sample prediction; if False, fits after every new datapoint
 
         Returns
         ----------
@@ -465,16 +522,16 @@ class GASLLEV(tsm.TSM):
         figsize = kwargs.get('figsize',(10,7))
 
         plt.figure(figsize=figsize)
-        predictions = self.predict_is(h)
+        predictions = self.predict_is(h, fit_once=fit_once)
         data = self.data[-h:]
 
-        plt.plot(predictions.index,data,label='Data')
-        plt.plot(predictions.index,predictions,label='Predictions',c='black')
+        plt.plot(predictions.index,data, label='Data')
+        plt.plot(predictions.index,predictions, label='Predictions', c='black')
         plt.title(self.data_name)
         plt.legend(loc=2)   
         plt.show()          
 
-    def predict(self,h=5):
+    def predict(self, h=5):
         """ Makes forecast with the estimated model
 
         Parameters
@@ -502,6 +559,7 @@ class GASLLEV(tsm.TSM):
                 forecasted_values = mean_values[-h:] + (model_skewness - (1.0/model_skewness))*model_scale*m1 
             else:
                 forecasted_values = mean_values[-h:] 
+            
             result = pd.DataFrame(forecasted_values)
             result.rename(columns={0:self.data_name}, inplace=True)
             result.index = date_index[-h:]

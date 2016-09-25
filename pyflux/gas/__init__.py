@@ -6,4 +6,4 @@ from .gasllm import GASLLEV
 from .gasllt import GASLLT
 from .gasreg import GASReg
 
-from .scores import BetatScore, SkewtScore
+from .scores import BetatScore

@@ -15,8 +15,6 @@ from .. import tsm as tsm
 from .. import distributions as dst
 from .. import data_check as dc
 
-from .scores import *
-
 from .gas_recursions import gas_reg_recursion
 
 class GASReg(tsm.TSM):
@@ -73,9 +71,18 @@ class GASReg(tsm.TSM):
 
         self.family = family
         
-        self.model_name2, self.link, self.scale, self.shape, self.skewness, self.mean_transform = self.family.setup()
+        self.model_name2, self.link, self.scale, self.shape, self.skewness, self.mean_transform, self.cythonized = self.family.setup()
+    
+        # Identify whether model has cythonized backend - then choose update type
+        if self.cythonized is True:
+            self._model = self._cythonized_model 
+            self.recursion = self.family.gradientreg_recursion()
+        else:
+            self._model = self._uncythonized_model
+
         self.model_name = self.model_name2 + " Regression"
 
+        # Build any remaining latent variables that are specific to the family chosen
         for no, i in enumerate(self.family.build_latent_variables()):
             self.latent_variables.add_z(i[0],i[1],i[2])
             self.latent_variables.z_list[no+self.z_no].start = i[3]
@@ -91,7 +98,7 @@ class GASReg(tsm.TSM):
         """
 
         self.model_Y = self.data
-        self.model_scores = np.zeros((self.X.shape[1],self.model_Y.shape[0]+1))
+        self.model_scores = np.zeros((self.X.shape[1], self.model_Y.shape[0]+1))
 
     def _create_latent_variables(self):
         """ Creates model latent variables
@@ -102,7 +109,7 @@ class GASReg(tsm.TSM):
         """
 
         for parm in range(self.z_no):
-            self.latent_variables.add_z('Scale ' + self.X_names[parm],ifr.Uniform(transform='exp'),dst.q_Normal(0,3))
+            self.latent_variables.add_z('Scale ' + self.X_names[parm], ifr.Uniform(transform='exp'), dst.q_Normal(0, 3))
             self.latent_variables.z_list[parm].start = -5.0
         self.z_no = len(self.latent_variables.z_list)
 
@@ -135,7 +142,38 @@ class GASReg(tsm.TSM):
             model_skewness = 0
         return model_scale, model_shape, model_skewness
 
-    def _model(self,beta):
+    def _cythonized_model(self, beta):
+        """ Creates the structure of the model
+
+        Parameters
+        ----------
+        beta : np.array
+            Contains untransformed starting values for latent variables
+
+        Returns
+        ----------
+        theta : np.array
+            Contains the predicted values for the time series
+
+        Y : np.array
+            Contains the length-adjusted time series (accounting for lags)
+
+        scores : np.array
+            Contains the scores for the time series
+        """
+
+        parm = np.array([self.latent_variables.z_list[k].prior.transform(beta[k]) for k in range(beta.shape[0])])
+        coefficients = np.zeros((self.X.shape[1],self.model_Y.shape[0]+1))
+        coefficients[:,0] = self.initial_values
+        theta = np.zeros(self.model_Y.shape[0]+1)
+        model_scale, model_shape, model_skewness = self._get_scale_and_shape(parm)
+
+        # Loop over time series
+        theta, self.model_scores, coefficients = self.recursion(parm, theta, self.X, coefficients, self.model_scores, self.model_Y, self.model_Y.shape[0], model_scale, model_shape, model_skewness)
+
+        return theta[:-1], self.model_Y, self.model_scores[:-1], coefficients
+
+    def _uncythonized_model(self, beta):
         """ Creates the structure of the model
 
         Parameters
@@ -204,13 +242,20 @@ class GASReg(tsm.TSM):
 
         return best_start
 
-    def neg_loglik(self,beta):
+    def neg_loglik(self, beta):
+        """ Returns the negative loglikelihood of the model
+
+        Parameters
+        ----------
+        beta : np.array
+            Contains untransformed starting values for latent variables
+        """
         theta, Y, scores,_ = self._model(beta)
         parm = np.array([self.latent_variables.z_list[k].prior.transform(beta[k]) for k in range(beta.shape[0])])
         model_scale, model_shape, model_skewness = self._get_scale_and_shape(parm)
         return self.family.neg_loglikelihood(Y,self.link(theta),model_scale,model_shape,model_skewness)
 
-    def plot_fit(self,**kwargs):
+    def plot_fit(self, **kwargs):
         """ Plots the fit of the model
 
         Notes
@@ -261,7 +306,7 @@ class GASReg(tsm.TSM):
 
             plt.show()          
     
-    def plot_predict(self,h=5,past_values=20,intervals=True,oos_data=None,**kwargs):
+    def plot_predict(self, h=5, past_values=20, intervals=True, oos_data=None, **kwargs):
         """ Makes forecast with the estimated model
 
         Parameters
@@ -329,7 +374,7 @@ class GASReg(tsm.TSM):
             plt.ylabel(self.y_name)
             plt.show()
 
-    def plot_predict_is(self,h=5,**kwargs):
+    def plot_predict_is(self, h=5, fit_once=True, **kwargs):
         """ Plots forecasts with the estimated model against data
             (Simulated prediction with data)
 
@@ -337,6 +382,9 @@ class GASReg(tsm.TSM):
         ----------
         h : int (default : 5)
             How many steps to forecast
+
+        fit_once : boolean
+            (default: True) Fits only once before the in-sample prediction; if False, fits after every new datapoint
 
         Returns
         ----------
@@ -346,7 +394,7 @@ class GASReg(tsm.TSM):
         figsize = kwargs.get('figsize',(10,7))
 
         plt.figure(figsize=figsize)
-        predictions = self.predict_is(h)
+        predictions = self.predict_is(h=h, fit_once=fit_once)
         data = self.data[-h:]
 
         plt.plot(predictions.index,data,label='Data')
@@ -355,7 +403,7 @@ class GASReg(tsm.TSM):
         plt.legend(loc=2)   
         plt.show()          
 
-    def predict(self,h=5,oos_data=None):
+    def predict(self, h=5, oos_data=None):
         """ Makes forecast with the estimated model
 
         Parameters
@@ -396,13 +444,16 @@ class GASReg(tsm.TSM):
 
             return result
 
-    def predict_is(self,h=5):
+    def predict_is(self, h=5, fit_once=True):
         """ Makes dynamic in-sample predictions with the estimated model
 
         Parameters
         ----------
         h : int (default : 5)
             How many steps would you like to forecast?
+
+        fit_once : boolean
+            (default: True) Fits only once before the in-sample prediction; if False, fits after every new datapoint
 
         Returns
         ----------
@@ -414,13 +465,20 @@ class GASReg(tsm.TSM):
         for t in range(0,h):
             data1 = self.data_original.iloc[:-(h+t),:]
             data2 = self.data_original.iloc[-h+t:,:]
-            x = GASReg(formula=self.formula,data=self.data_original[:(-h+t)],family=self.family)
-            x.fit(printer=False)
+            x = GASReg(formula=self.formula, data=self.data_original[:(-h+t)], family=self.family)
+
+            if fit_once is False:
+                x.fit(printer=False)
             if t == 0:
-                predictions = x.predict(1,oos_data=data2)
+                if fit_once is True:
+                    x.fit(printer=False)
+                    saved_lvs = x.latent_variables
+                predictions = x.predict(h=1, oos_data=data2)
             else:
-                predictions = pd.concat([predictions,x.predict(h=1,oos_data=data2)])
-        
+                if fit_once is True:
+                    x.latent_variables = saved_lvs
+                predictions = pd.concat([predictions,x.predict(h=1, oos_data=data2)])
+
         predictions.rename(columns={0:self.y_name}, inplace=True)
         predictions.index = self.index[-h:]
 

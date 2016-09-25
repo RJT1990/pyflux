@@ -38,7 +38,7 @@ class ARIMA(tsm.TSM):
 
     target : str (if data is a pd.DataFrame) or int (if data is a np.ndarray)
         Specifies which column name or array index to use. By default, first
-        column/array will be selected as the dependent variable.
+        column/array index will be selected as the dependent variable.
     """
 
     def __init__(self, data, ar, ma, integ=0, target=None):
@@ -133,7 +133,7 @@ class ARIMA(tsm.TSM):
 
         # Constant and AR terms
         if self.ar != 0:
-            mu = np.matmul(np.transpose(self.X),z[0:-1-self.ma])
+            mu = np.matmul(np.transpose(self.X),z[:-1-self.ma])
         else:
             mu = np.ones(Y.shape[0])*z[0]
             
@@ -348,13 +348,16 @@ class ARIMA(tsm.TSM):
             plt.ylabel(self.data_name)
             plt.show()
 
-    def predict_is(self, h=5):
+    def predict_is(self, h=5, fit_once=True):
         """ Makes dynamic out-of-sample predictions with the estimated model on in-sample data
 
         Parameters
         ----------
         h : int (default : 5)
             How many steps would you like to forecast?
+
+        fit_once : boolean
+            (default: True) Fits only once before the in-sample prediction; if False, fits after every new datapoint
 
         Returns
         ----------
@@ -364,10 +367,16 @@ class ARIMA(tsm.TSM):
 
         for t in range(0,h):
             x = ARIMA(ar=self.ar, ma=self.ma, integ=self.integ, data=self.data_original[:-h+t])
-            x.fit(printer=False)
+            if fit_once is False:
+                x.fit(printer=False)
             if t == 0:
+                if fit_once is True:
+                    x.fit(printer=False)
+                    saved_lvs = x.latent_variables
                 predictions = x.predict(1)
             else:
+                if fit_once is True:
+                    x.latent_variables = saved_lvs
                 predictions = pd.concat([predictions,x.predict(1)])
         
         predictions.rename(columns={0:self.data_name}, inplace=True)
@@ -375,13 +384,16 @@ class ARIMA(tsm.TSM):
 
         return predictions
 
-    def plot_predict_is(self, h=5, **kwargs):
+    def plot_predict_is(self, h=5, fit_once=True, **kwargs):
         """ Plots forecasts with the estimated model against data (Simulated prediction with data)
 
         Parameters
         ----------
         h : int (default : 5)
             How many steps to forecast
+
+        fit_once : boolean
+            (default: True) Fits only once before the in-sample prediction; if False, fits after every new datapoint
 
         Returns
         ----------
@@ -390,7 +402,7 @@ class ARIMA(tsm.TSM):
 
         figsize = kwargs.get('figsize',(10,7))
         plt.figure(figsize=figsize)
-        predictions = self.predict_is(h)
+        predictions = self.predict_is(h, fit_once=fit_once)
         data = self.data[-h:]
         plt.plot(predictions.index, data, label='Data')
         plt.plot(predictions.index, predictions, label='Predictions', c='black')

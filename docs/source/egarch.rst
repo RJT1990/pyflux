@@ -9,7 +9,7 @@ Example
 
    import numpy as np
    import pyflux as pf
-   from pandas.io.data import DataReader
+   from pandas_datareader.data import DataReader
    from datetime import datetime
 
    ibm = DataReader('IBM',  'yahoo', datetime(2000,1,1), datetime(2016,3,10))
@@ -83,7 +83,7 @@ Here is example usage for :py:func:`fit`:
 
 .. py:function:: plot_z(indices, figsize)
 
-   Returns a plot of the latent variables and their associated uncertainty. **indices** is a list referring to the parameter indices that you want to plot. Figsize specifies how big the plot will be.
+   Returns a plot of the latent variables and their associated uncertainty. **indices** is a list referring to the latent variable indices that you want to plot. Figsize specifies how big the plot will be.
 
 .. py:function:: plot_predict(h, past_values, intervals, **kwargs)
    
@@ -91,9 +91,9 @@ Here is example usage for :py:func:`fit`:
 
    Optional arguments include **figsize** - the dimensions of the figure to plot.
 
-.. py:function:: plot_predict_is(h, past_values, intervals, **kwargs)
+.. py:function:: plot_predict_is(h, fit_once, **kwargs)
    
-   Plots in-sample rolling predictions for the model. **h** is an int of how many previous steps to simulate performance on. **past_values** is an int of how many past values of the series to plot. **intervals** is a bool on whether to include confidence/credibility intervals or not.
+   Plots in-sample rolling predictions for the model. **h** is an int of how many previous steps to simulate performance on. **fit_once** is a boolean specifying whether to fit the model once at the beginning of the period (True), or whether to fit after every step (False).
 
    Optional arguments include **figsize** - the dimensions of the figure to plot.
 
@@ -101,6 +101,7 @@ Here is example usage for :py:func:`fit`:
    
    Returns DataFrame of model predictions. **h** is an int of how many steps ahead to predict. 
 
-.. py:function:: predict_is(h)
+.. py:function:: predict_is(h, fit_once)
    
-   Returns DataFrame of in-sample rolling predictions for the model. **h** is an int of how many previous steps to simulate performance on.
+   Returns DataFrame of in-sample rolling predictions for the model. **h** is an int of how many previous steps to simulate performance on. **fit_once** is a boolean specifying whether to fit the model once at the beginning of the period (True), or whether to fit after every step (False).
+

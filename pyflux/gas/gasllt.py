@@ -14,7 +14,6 @@ from .. import tsm as tsm
 from .. import distributions as dst
 from .. import data_check as dc
 
-from .scores import *
 from .gasmodels import *
 
 from .gas_recursions import gas_llt_recursion
@@ -38,19 +37,14 @@ class GASLLT(tsm.TSM):
 
     dist : str
         Which distribution to use
-
-    gradient_only : Boolean (default: True)
-        If true, will only use gradient rather than second-order terms
-        to construct the modified score.
     """
 
-    def __init__(self, data, family, integ=0, target=None, gradient_only=False):
+    def __init__(self, data, family, integ=0, target=None):
 
         # Initialize TSM object     
         super(GASLLT,self).__init__('GASLLT')
 
         self.integ = integ
-        self.gradient_only = gradient_only
         self.z_no = 2
         self.max_lag = 1
         self._z_hide = 0 # Whether to cutoff variance latent variables from results
@@ -71,12 +65,25 @@ class GASLLT(tsm.TSM):
 
         self.family = family
         
-        self.model_name2, self.link, self.scale, self.shape, self.skewness, self.mean_transform = self.family.setup()
+        self.model_name2, self.link, self.scale, self.shape, self.skewness, self.mean_transform, self.cythonized = self.family.setup()
+
+        # Identify whether model has cythonized backend - then choose update type
+        if self.cythonized is True:
+            self._model = self._cythonized_model
+            if self.family.gradient_only is True:
+                self.recursion = self.family.gradientllt_recursion() # first-order update
+            else:
+                self.recursion = self.family.newtonllt_recursion() # second-order update
+        else:
+            self._model = self._uncythonized_model
         self.model_name = self.model_name2 + " LLT"
 
+        # Build any remaining latent variables that are specific to the family chosen
         for no, i in enumerate(self.family.build_latent_variables()):
-            self.latent_variables.add_z(i[0],i[1],i[2])
+            self.latent_variables.add_z(i[0], i[1], i[2])
             self.latent_variables.z_list[no+2].start = i[3]
+
+        self.z_no = len(self.latent_variables.z_list)
 
     def _create_model_matrices(self):
         """ Creates model matrices/vectors
@@ -97,8 +104,8 @@ class GASLLT(tsm.TSM):
         None (changes model attributes)
         """
 
-        self.latent_variables.add_z('Level Scale',ifr.Normal(0,0.5,transform=None),dst.q_Normal(0,3))
-        self.latent_variables.add_z('Trend Scale',ifr.Normal(0,0.5,transform=None),dst.q_Normal(0,3))
+        self.latent_variables.add_z('Level Scale', ifr.Normal(0, 0.5, transform=None), dst.q_Normal(0, 3))
+        self.latent_variables.add_z('Trend Scale', ifr.Normal(0, 0.5, transform=None), dst.q_Normal(0, 3))
 
 
     def _get_scale_and_shape(self,parm):
@@ -132,7 +139,37 @@ class GASLLT(tsm.TSM):
 
         return model_scale, model_shape, model_skewness
 
-    def _model(self,beta):
+    def _cythonized_model(self, beta):
+        """ Creates the structure of the model
+
+        Parameters
+        ----------
+        beta : np.array
+            Contains untransformed starting values for latent variables
+
+        Returns
+        ----------
+        theta : np.array
+            Contains the predicted values for the time series
+
+        Y : np.array
+            Contains the length-adjusted time series (accounting for lags)
+
+        scores : np.array
+            Contains the scores for the time series
+        """
+
+        parm = np.array([self.latent_variables.z_list[k].prior.transform(beta[k]) for k in range(beta.shape[0])])
+        theta = np.zeros(self.model_Y.shape[0])
+        theta_t = np.zeros(self.model_Y.shape[0])
+        model_scale, model_shape, model_skewness = self._get_scale_and_shape(parm)
+
+        # Loop over time series
+        theta, self.model_scores = self.recursion(parm, theta, theta_t, self.model_scores, self.model_Y, self.model_Y.shape[0], model_scale, model_shape, model_skewness, self.max_lag)
+
+        return theta, theta_t, self.model_Y, self.model_scores
+
+    def _uncythonized_model(self, beta):
         """ Creates the structure of the model
 
         Parameters
@@ -163,7 +200,7 @@ class GASLLT(tsm.TSM):
 
         return theta, theta_t, self.model_Y, self.model_scores
 
-    def _mean_prediction(self,theta,theta_t,Y,scores,h,t_params):
+    def _mean_prediction(self, theta, theta_t, Y, scores, h, t_params):
         """ Creates a h-step ahead mean prediction
 
         Parameters
@@ -202,12 +239,12 @@ class GASLLT(tsm.TSM):
             new_value1 = theta_t_exp[-1] + theta_exp[-1] + t_params[0]*scores_exp[-1]
             new_value2 = theta_t_exp[-1] + t_params[1]*scores_exp[-1]
             if self.model_name2 == "Exponential GAS":
-                Y_exp = np.append(Y_exp,[1.0/self.link(new_value1)])
+                Y_exp = np.append(Y_exp, [1.0/self.link(new_value1)])
             else:
-                Y_exp = np.append(Y_exp,[self.link(new_value1)])
-            theta_exp = np.append(theta_exp,[new_value1]) # For indexing consistency
-            theta_t_exp = np.append(theta_t_exp,[new_value2])
-            scores_exp = np.append(scores_exp,[0]) # expectation of score is zero
+                Y_exp = np.append(Y_exp, [self.link(new_value1)])
+            theta_exp = np.append(theta_exp, [new_value1]) # For indexing consistency
+            theta_t_exp = np.append(theta_t_exp, [new_value2])
+            scores_exp = np.append(scores_exp, [0]) # expectation of score is zero
         return Y_exp
 
     def _preoptimize_model(self, initials, method):
@@ -287,6 +324,7 @@ class GASLLT(tsm.TSM):
             for t in range(0,h):
                 new_value1 = theta_t_exp[-1] + theta_exp[-1] + t_params[0]*scores_exp[-1]
                 new_value2 = theta_t_exp[-1] + t_params[1]*scores_exp[-1]
+
                 if self.model_name2 == "Exponential GAS":
                     rnd_value = self.family.draw_variable(1.0/self.link(new_value1),model_scale,model_shape,model_skewness,1)[0]
                 else:
@@ -333,13 +371,20 @@ class GASLLT(tsm.TSM):
         plot_index = date_index[-h-past_values:]
         return error_bars, forecasted_values, plot_values, plot_index
 
-    def neg_loglik(self,beta):
+    def neg_loglik(self, beta):
+        """ Returns the negative loglikelihood of the model
+
+        Parameters
+        ----------
+        beta : np.array
+            Contains untransformed starting values for latent variables
+        """
         theta, _, Y, _ = self._model(beta)
         parm = np.array([self.latent_variables.z_list[k].prior.transform(beta[k]) for k in range(beta.shape[0])])
         model_scale, model_shape, model_skewness = self._get_scale_and_shape(parm)
-        return self.family.neg_loglikelihood(Y,self.link(theta),model_scale,model_shape,model_skewness)
+        return self.family.neg_loglikelihood(Y, self.link(theta), model_scale, model_shape, model_skewness)
 
-    def plot_fit(self,intervals=False,**kwargs):
+    def plot_fit(self, intervals=False, **kwargs):
         """ Plots the fit of the model
 
         Returns
@@ -359,6 +404,7 @@ class GASLLT(tsm.TSM):
             plt.subplot(3,1,1)
             plt.title("Model fit for " + self.data_name)
 
+            # Catch specific family properties (imply different link functions/moments)
             if self.model_name2 == "Exponential GAS":
                 values_to_plot = 1.0/self.link(mu)
             elif self.model_name2 == "Skewt GAS":
@@ -370,23 +416,23 @@ class GASLLT(tsm.TSM):
             else:
                 values_to_plot = self.link(mu)
 
-            plt.plot(date_index,Y,label='Data')
-            plt.plot(date_index,values_to_plot,label='GAS Filter',c='black')
+            plt.plot(date_index,Y, label='Data')
+            plt.plot(date_index, values_to_plot, label='GAS Filter', c='black')
             plt.legend(loc=2)   
 
             plt.subplot(3,1,2)
             plt.title("Local Level for " + self.data_name)
-            plt.plot(date_index,mu,label='GAS Filter',c='black')
+            plt.plot(date_index, mu, label='GAS Filter', c='black')
             plt.legend(loc=2)   
 
             plt.subplot(3,1,3)
             plt.title("Local Trend for " + self.data_name)
-            plt.plot(date_index,mu_t,label='GAS Filter',c='black')
+            plt.plot(date_index, mu_t, label='GAS Filter', c='black')
             plt.legend(loc=2)  
 
             plt.show()              
     
-    def plot_predict(self,h=5,past_values=20,intervals=True,**kwargs):
+    def plot_predict(self, h=5, past_values=20, intervals=True, **kwargs):
         """ Makes forecast with the estimated model
 
         Parameters
@@ -439,13 +485,16 @@ class GASLLT(tsm.TSM):
             plt.ylabel(self.data_name)
             plt.show()
 
-    def predict_is(self,h=5):
+    def predict_is(self, h=5, fit_once=True):
         """ Makes dynamic in-sample predictions with the estimated model
 
         Parameters
         ----------
         h : int (default : 5)
             How many steps would you like to forecast?
+
+        fit_once : boolean
+            (default: True) Fits only once before the in-sample prediction; if False, fits after every new datapoint
 
         Returns
         ----------
@@ -455,19 +504,25 @@ class GASLLT(tsm.TSM):
         predictions = []
 
         for t in range(0,h):
-            x = GASLLT(integ=self.integ,family=self.family,data=self.data_original[:-h+t],gradient_only=self.gradient_only)
-            x.fit(printer=False)
+            x = GASLLT(integ=self.integ,family=self.family,data=self.data_original[:-h+t])
+            if fit_once is False:
+                x.fit(printer=False)
             if t == 0:
+                if fit_once is True:
+                    x.fit(printer=False)
+                    saved_lvs = x.latent_variables
                 predictions = x.predict(1)
             else:
+                if fit_once is True:
+                    x.latent_variables = saved_lvs
                 predictions = pd.concat([predictions,x.predict(1)])
-        
+
         predictions.rename(columns={0:self.data_name}, inplace=True)
         predictions.index = self.index[-h:]
 
         return predictions
 
-    def plot_predict_is(self,h=5,**kwargs):
+    def plot_predict_is(self, h=5, fit_once=True, **kwargs):
         """ Plots forecasts with the estimated model against data
             (Simulated prediction with data)
 
@@ -475,6 +530,9 @@ class GASLLT(tsm.TSM):
         ----------
         h : int (default : 5)
             How many steps to forecast
+
+        fit_once : boolean
+            (default: True) Fits only once before the in-sample prediction; if False, fits after every new datapoint
 
         Returns
         ----------
@@ -484,7 +542,7 @@ class GASLLT(tsm.TSM):
         figsize = kwargs.get('figsize',(10,7))
 
         plt.figure(figsize=figsize)
-        predictions = self.predict_is(h)
+        predictions = self.predict_is(h=h, fit_once=fit_once)
         data = self.data[-h:]
 
         plt.plot(predictions.index,data,label='Data')
