@@ -6,7 +6,6 @@ import numpy as np
 import pandas as pd
 import scipy.stats as ss
 import scipy.special as sp
-import matplotlib.pyplot as plt
 import seaborn as sns
 
 from .. import inference as ifr
@@ -335,6 +334,7 @@ class GASRank(tsm.TSM):
         return self.family.neg_loglikelihood(Y,self.link(theta),model_scale,model_shape,model_skewness)
 
     def plot_abilities_one_components(self, team_ids, **kwargs):
+        import matplotlib.pyplot as plt
 
         figsize = kwargs.get('figsize',(15,5))
 
@@ -366,6 +366,7 @@ class GASRank(tsm.TSM):
             plt.show()
 
     def plot_abilities_two_components(self, team_ids, component_id=0, **kwargs):
+        import matplotlib.pyplot as plt
 
         figsize = kwargs.get('figsize',(15,5))
 

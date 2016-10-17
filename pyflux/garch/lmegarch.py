@@ -5,7 +5,6 @@ if sys.version_info < (3,):
 import numpy as np
 import pandas as pd
 import scipy.stats as ss
-import matplotlib.pyplot as plt
 import seaborn as sns
 
 from .. import inference as ifr
@@ -351,6 +350,7 @@ class LMEGARCH(tsm.TSM):
         ----------
         None (plots data and the fit)
         """
+        import matplotlib.pyplot as plt
 
         figsize = kwargs.get('figsize',(10,7))
 
@@ -385,7 +385,8 @@ class LMEGARCH(tsm.TSM):
         Returns
         ----------
         - Plot of the forecast
-        """     
+        """
+        import matplotlib.pyplot as plt
 
         figsize = kwargs.get('figsize',(10,7))
 
@@ -470,7 +471,8 @@ class LMEGARCH(tsm.TSM):
         Returns
         ----------
         - Plot of the forecast against data 
-        """     
+        """
+        import matplotlib.pyplot as plt
 
         figsize = kwargs.get('figsize',(10,7))
 
