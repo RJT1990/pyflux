@@ -1,6 +1,5 @@
 import pandas as pd
 import numpy as np
-import matplotlib.pyplot as plt
 
 class Aggregate():
     """ Aggregation Algorithm
@@ -293,6 +292,8 @@ class Aggregate():
         ----------
         - A plot of the weights for each model constituent over time
         """
+        import matplotlib.pyplot as plt
+
         figsize = kwargs.get('figsize',(10,7))
 
         weights, _, _ = self.run(h=h)

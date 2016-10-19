@@ -8,7 +8,6 @@ import scipy.linalg as la
 import scipy.sparse as sp
 import scipy.stats as ss
 from scipy.stats import multivariate_normal
-import matplotlib.pyplot as plt
 import seaborn as sns
 
 from .. import arma
@@ -276,6 +275,7 @@ class GPNARX(tsm.TSM):
         ----------
         None (plots the fit of the function)
         """
+        import matplotlib.pyplot as plt
 
         figsize = kwargs.get('figsize',(10,7))
 
@@ -334,7 +334,8 @@ class GPNARX(tsm.TSM):
         ----------
         - Plot of the forecast
         - Error bars, forecasted_values, plot_values, plot_index
-        """     
+        """
+        import matplotlib.pyplot as plt
 
         figsize = kwargs.get('figsize',(10,7))
 
@@ -422,7 +423,8 @@ class GPNARX(tsm.TSM):
         Returns
         ----------
         - Plot of the forecast against data 
-        """     
+        """
+        import matplotlib.pyplot as plt
 
         figsize = kwargs.get('figsize',(10,7))
 

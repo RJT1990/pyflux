@@ -3,8 +3,6 @@ if sys.version_info < (3,):
     range = xrange
 
 import numpy as np
-import matplotlib.pyplot as plt
-import matplotlib.mlab as mlab
 import scipy.stats as ss
 
 from .stoch_optim import RMSProp, ADAM

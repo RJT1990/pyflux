@@ -1,6 +1,4 @@
 import scipy.stats as ss
-import matplotlib.mlab as mlab
-import matplotlib.pyplot as plt
 import numpy as np
 
 class q_Normal(object):
@@ -125,6 +123,9 @@ class q_Normal(object):
         """
         Plots the PDF of the Normal Distribution
         """
+        import matplotlib.pyplot as plt
+        import matplotlib.mlab as mlab
+
         x = np.linspace(self.loc-np.exp(self.scale)*3.5,self.loc+np.exp(self.scale)*3.5,100)
         plt.plot(x,mlab.normpdf(x,self.loc,np.exp(self.scale)))
         plt.show()
