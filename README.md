@@ -8,6 +8,8 @@ __PyFlux__ is an open source time series library for Python. The library has a v
 
 See some examples, model explanations and documentation at [PyFlux.com](http://www.pyflux.com/). PyFlux is still only alpha software and can become much better and faster with your contributions! - see [here](https://github.com/RJT1990/pyflux/wiki/Contribution-Guidelines) for guidelines on how you can get involved.
 
+A new release is coming in the first week of November! Including faster inference, new distributions, more intuitive API, and new model types!
+
 ## Models
 
 - [ARIMA models](http://www.pyflux.com/arima-models)
