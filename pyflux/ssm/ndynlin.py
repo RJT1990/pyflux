@@ -570,7 +570,8 @@ class NDynReg(tsm.TSM):
         Returns
         ----------
         - Plot of the forecast
-        """     
+        """
+        import matplotlib.pyplot as plt
 
         figsize = kwargs.get('figsize',(10,7))
 
@@ -646,6 +647,7 @@ class NDynReg(tsm.TSM):
         ----------
         None (plots data and the fit)
         """
+        import matplotlib.pyplot as plt
 
         figsize = kwargs.get('figsize',(10,7))
 
@@ -770,7 +772,8 @@ class NDynReg(tsm.TSM):
         Returns
         ----------
         - Plot of the forecast against data 
-        """     
+        """
+        import matplotlib.pyplot as plt
 
         figsize = kwargs.get('figsize',(10,7))
 

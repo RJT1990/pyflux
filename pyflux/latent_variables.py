@@ -1,7 +1,5 @@
 import numpy as np
 import pandas as pd
-import matplotlib.pyplot as plt
-import matplotlib.mlab as mlab
 from matplotlib import rcParams
 import seaborn as sns
 
@@ -217,6 +215,9 @@ class LatentVariables(object):
             self.z_list[no].start = values[no]
 
     def plot_z(self,indices=None,figsize=(15,5),loc=1):
+        import matplotlib.pyplot as plt
+        import matplotlib.mlab as mlab
+
         plt.figure(figsize=figsize) 
         for z in range(1,len(self.z_list)+1):
             if indices is not None and z-1 not in indices:
@@ -245,6 +246,9 @@ class LatentVariables(object):
         plt.show()
 
     def trace_plot(self,figsize=(15,15)):
+        import matplotlib.pyplot as plt
+        import matplotlib.mlab as mlab
+
         if hasattr(self.z_list[0], 'sample'):
             fig = plt.figure(figsize=figsize)
             
@@ -309,6 +313,8 @@ class LatentVariable(object):
         self.q = q
 
     def plot_z(self,figsize=(15,5)):
+        import matplotlib.pyplot as plt
+
         if hasattr(self, 'sample'):
             sns.distplot(self.sample, rug=False, hist=False,label=self.method + ' estimate of ' + self.name)
 

@@ -4,9 +4,11 @@
 [![Join the chat at https://gitter.im/RJT1990/pyflux](https://badges.gitter.im/RJT1990/pyflux.svg)](https://gitter.im/RJT1990/pyflux?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
 [![PyPI version](https://badge.fury.io/py/pyflux.svg)](https://badge.fury.io/py/pyflux)
 
-__PyFlux__ is an open source time series library for Python. The library has a vast array of modern time series models and inference capabilities. The library is based on a probabilistic approach to time series, where the user chooses model priors and distributional assumptions.
+__PyFlux__ is an open source time series library for Python. The library has a vast array of modern time series models, as well as a flexible array of inference options (frequentist and Bayesian) that can be applied to these models. By combining breadth of models with breadth of inference, PyFlux allows for a probabilistic approach to time series modelling.
 
-See some examples, model explanations and documentation at [PyFlux.com](http://www.pyflux.com/). PyFlux is still only alpha software, and so results should be treated with care. The goal is to release a more stable beta version in 2017. 
+See some examples, model explanations and documentation at [PyFlux.com](http://www.pyflux.com/). PyFlux is still only alpha software and can become much better and faster with your contributions! - see [here](https://github.com/RJT1990/pyflux/wiki/Contribution-Guidelines) for guidelines on how you can get involved.
+
+**Update** : November release is incoming. Many new features and models, plus a rewrite of the documentation.
 
 ## Models
 
@@ -25,6 +27,7 @@ See some examples, model explanations and documentation at [PyFlux.com](http://w
 - [GAS State Space models](http://www.pyflux.com/gas-state-space-models/)
 - [GP-NARX models](http://www.pyflux.com/gp-narx/)
 - [Gaussian State Space models](http://www.pyflux.com/gaussian-state-space-models/)
+- [Neural Network AR models](http://www.pyflux.com)
 - [Non-Gaussian State Space models](http://www.pyflux.com/non-gaussian-state-space-models/)
 - [VAR models](http://www.pyflux.com/vector-autoregression)
  - [Bayesian VAR models](http://www.pyflux.com/bayesian-vector-autoregression)
@@ -62,3 +65,7 @@ PyFlux is still alpha software so results should be treated with care, but citat
 > Ross Taylor. 2016.
 > _PyFlux: An open source time series library for Python_
 > http://www.pyflux.com
+
+## Supporters
+
+[![ALPIMA](http://www.pyflux.com/supporters/alpima.png)](http://www.alpima.net/)

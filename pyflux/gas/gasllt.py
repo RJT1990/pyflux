@@ -6,7 +6,6 @@ import numpy as np
 import pandas as pd
 import scipy.stats as ss
 import scipy.special as sp
-import matplotlib.pyplot as plt
 import seaborn as sns
 
 from .. import families as fam
@@ -390,6 +389,7 @@ class GASLLT(tsm.TSM):
         ----------
         None (plots data and the fit)
         """
+        import matplotlib.pyplot as plt
 
         figsize = kwargs.get('figsize',(10,7))
 
@@ -448,7 +448,8 @@ class GASLLT(tsm.TSM):
         Returns
         ----------
         - Plot of the forecast
-        """     
+        """
+        import matplotlib.pyplot as plt
 
         figsize = kwargs.get('figsize',(10,7))
 
@@ -536,7 +537,8 @@ class GASLLT(tsm.TSM):
         Returns
         ----------
         - Plot of the forecast against data 
-        """     
+        """
+        import matplotlib.pyplot as plt
 
         figsize = kwargs.get('figsize',(10,7))
 

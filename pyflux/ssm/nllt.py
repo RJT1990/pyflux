@@ -6,7 +6,6 @@ import numpy as np
 import pandas as pd
 import scipy.stats as ss
 from scipy import optimize
-import matplotlib.pyplot as plt
 from matplotlib.animation import FuncAnimation, writers
 import seaborn as sns
 
@@ -596,7 +595,8 @@ class NLLT(tsm.TSM):
         Returns
         ----------
         - Plot of the forecast
-        """     
+        """
+        import matplotlib.pyplot as plt
 
         figsize = kwargs.get('figsize',(10,7))
 
@@ -661,6 +661,7 @@ class NLLT(tsm.TSM):
         ----------
         None (plots data and the fit)
         """
+        import matplotlib.pyplot as plt
 
         figsize = kwargs.get('figsize',(10,7))
 
@@ -790,7 +791,8 @@ class NLLT(tsm.TSM):
         Returns
         ----------
         - Plot of the forecast against data 
-        """     
+        """
+        import matplotlib.pyplot as plt
 
         figsize = kwargs.get('figsize',(10,7))
 
