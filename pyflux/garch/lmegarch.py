@@ -8,8 +8,7 @@ import scipy.stats as ss
 import matplotlib.pyplot as plt
 import seaborn as sns
 
-from .. import inference as ifr
-from .. import distributions as dst
+from .. import families as fam
 from .. import output as op
 from .. import tests as tst
 from .. import tsm as tsm
@@ -66,26 +65,26 @@ class LMEGARCH(tsm.TSM):
         None (changes model attributes)
         """
 
-        self.latent_variables.add_z('Vol Constant',ifr.Normal(0,3,transform=None),dst.q_Normal(0,3))
+        self.latent_variables.add_z('Vol Constant', fam.Normal(0,3,transform=None), fam.Normal(0,3))
 
         for component in range(2):
             increment = 0.05
             for p_term in range(self.p):
-                self.latent_variables.add_z("Component " + str(component+1) + ' p(' + str(p_term+1) + ')',ifr.Normal(0,0.5,transform='logit'),dst.q_Normal(0,3))
+                self.latent_variables.add_z("Component " + str(component+1) + ' p(' + str(p_term+1) + ')', fam.Normal(0,0.5,transform='logit'), fam.Normal(0,3))
                 if p_term == 0:
                     self.latent_variables.z_list[1+p_term+component*(self.p+self.q)].start = 3.00
                 else:
                     self.latent_variables.z_list[1+p_term+component*(self.p+self.q)].start = 2.00
 
             for q_term in range(self.q):
-                self.latent_variables.add_z("Component " + str(component+1) + ' q(' + str(q_term+1) + ')',ifr.Normal(0,0.5,transform='logit'),dst.q_Normal(0,3))
+                self.latent_variables.add_z("Component " + str(component+1) + ' q(' + str(q_term+1) + ')', fam.Normal(0,0.5,transform='logit'), fam.Normal(0,3))
                 if p_term == 0 and component == 0:
                     self.latent_variables.z_list[1+self.p+q_term+component*(self.p+self.q)].start = -4.00  
                 elif p_term == 0 and component == 1:
                     self.latent_variables.z_list[1+self.p+q_term+component*(self.p+self.q)].start = -3.00  
 
-        self.latent_variables.add_z('v', ifr.Uniform(transform='exp'), dst.q_Normal(0,3))
-        self.latent_variables.add_z('Returns Constant', ifr.Normal(0, 3, transform=None),dst.q_Normal(0,3))
+        self.latent_variables.add_z('v', fam.Flat(transform='exp'), fam.Normal(0,3))
+        self.latent_variables.add_z('Returns Constant', fam.Normal(0, 3, transform=None), fam.Normal(0,3))
         self.latent_variables.z_list[-2].start = 2.0
 
     def _model(self, beta):
@@ -321,9 +320,9 @@ class LMEGARCH(tsm.TSM):
             self.z_no += 1
             self.latent_variables.z_list.pop()
             self.latent_variables.z_list.pop()
-            self.latent_variables.add_z('Leverage Term',ifr.Uniform(transform=None),dst.q_Normal(0,3))
-            self.latent_variables.add_z('v',ifr.Uniform(transform='exp'),dst.q_Normal(0,3))
-            self.latent_variables.add_z('Returns Constant',ifr.Normal(0,3,transform=None),dst.q_Normal(0,3))
+            self.latent_variables.add_z('Leverage Term', fam.Flat(transform=None), fam.Normal(0,3))
+            self.latent_variables.add_z('v', fam.Flat(transform='exp'), fam.Normal(0,3))
+            self.latent_variables.add_z('Returns Constant', fam.Normal(0,3,transform=None), fam.Normal(0,3))
             self.latent_variables.z_list[-2].start = 2.0
 
     def neg_loglik(self, beta):

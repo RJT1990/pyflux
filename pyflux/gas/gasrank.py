@@ -9,9 +9,8 @@ import scipy.special as sp
 import matplotlib.pyplot as plt
 import seaborn as sns
 
-from .. import inference as ifr
+from .. import families as fam
 from .. import tsm as tsm
-from .. import distributions as dst
 from .. import data_check as dc
 
 from .scores import *
@@ -74,7 +73,7 @@ class GASRank(tsm.TSM):
         self.family = family
         
         self.model_name2, self.link, self.scale, self.shape, self.skewness, self.mean_transform = self.family.setup()
-        self.model_name = self.model_name2 + "Rank "
+        self.model_name = self.model_name2 + "GAS Rank "
 
         for no, i in enumerate(self.family.build_latent_variables()):
             self.latent_variables.add_z(i[0],i[1],i[2])
@@ -122,8 +121,8 @@ class GASRank(tsm.TSM):
         None (changes model attributes)
         """
 
-        self.latent_variables.add_z('Constant',ifr.Normal(0,10,transform=None),dst.q_Normal(0,3))
-        self.latent_variables.add_z('Ability Scale',ifr.Normal(0,1,transform=None),dst.q_Normal(0,3))
+        self.latent_variables.add_z('Constant', fam.Normal(0,10,transform=None), fam.Normal(0,3))
+        self.latent_variables.add_z('Ability Scale', fam.Normal(0,1,transform=None), fam.Normal(0,3))
 
     def _get_scale_and_shape(self,parm):
         """ Obtains appropriate model scale and shape latent variables
@@ -314,9 +313,9 @@ class GASRank(tsm.TSM):
         self.z_no += 1
         self.latent_variables.z_list = []
 
-        self.latent_variables.add_z('Constant',ifr.Normal(0,10,transform=None),dst.q_Normal(0,3))
-        self.latent_variables.add_z('Ability Scale 1',ifr.Normal(0,1,transform=None),dst.q_Normal(0,3))
-        self.latent_variables.add_z('Ability Scale 2',ifr.Normal(0,1,transform=None),dst.q_Normal(0,3))
+        self.latent_variables.add_z('Constant', fam.Normal(0, 10,transform=None), fam.Normal(0,3))
+        self.latent_variables.add_z('Ability Scale 1', fam.Normal(0,1,transform=None), fam.Normal(0,3))
+        self.latent_variables.add_z('Ability Scale 2', fam.Normal(0,1,transform=None), fam.Normal(0,3))
 
         for no, i in enumerate(self.family.build_latent_variables()):
             self.latent_variables.add_z(i[0],i[1],i[2])

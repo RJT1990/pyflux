@@ -9,8 +9,7 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 from patsy import dmatrices, dmatrix, demo_data
 
-from .. import inference as ifr
-from .. import distributions as dst
+from .. import families as fam
 from .. import output as op
 from .. import tests as tst
 from .. import tsm as tsm
@@ -109,15 +108,15 @@ class ARIMAX(tsm.TSM):
         """
 
         for ar_term in range(self.ar):
-            self.latent_variables.add_z('AR(' + str(ar_term+1) + ')', ifr.Normal(0, 0.5, transform=None), dst.q_Normal(0, 3))
+            self.latent_variables.add_z('AR(' + str(ar_term+1) + ')', fam.Normal(0, 0.5, transform=None), fam.Normal(0, 3))
 
         for ma_term in range(self.ma):
-            self.latent_variables.add_z('MA(' + str(ma_term+1) + ')', ifr.Normal(0, 0.5, transform=None), dst.q_Normal(0, 3))
+            self.latent_variables.add_z('MA(' + str(ma_term+1) + ')', fam.Normal(0, 0.5, transform=None), fam.Normal(0, 3))
 
         for z in range(len(self.X_names)):
-            self.latent_variables.add_z('Beta ' + self.X_names[z], ifr.Normal(0, 3, transform=None), dst.q_Normal(0, 3))
+            self.latent_variables.add_z('Beta ' + self.X_names[z], fam.Normal(0, 3, transform=None), fam.Normal(0, 3))
 
-        self.latent_variables.add_z('Sigma', ifr.Uniform(transform='exp'), dst.q_Normal(0, 3))
+        self.latent_variables.add_z('Sigma', fam.Flat(transform='exp'), fam.Normal(0, 3))
         self.z_no = len(self.latent_variables.z_list)
 
     def _model(self, beta):

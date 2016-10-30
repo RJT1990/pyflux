@@ -5,18 +5,19 @@ if sys.version_info < (3,):
 import numpy as np
 import pandas as pd
 import scipy.stats as ss
-import matplotlib.pyplot as plt
 from scipy import optimize
+import matplotlib.pyplot as plt
+from matplotlib.animation import FuncAnimation, writers
 import seaborn as sns
-from patsy import dmatrices, dmatrix, demo_data
 
 from .. import inference as ifr
-from .. import distributions as dst
+from .. import families as fam
 from .. import output as op
 from .. import tsm as tsm
-from .. import data_check as dcf
+from .. import data_check as dc
 from .. import covariances as cov
 from .. import results as res
+from .. import gas as gas
 
 from .kalman import *
 from .dynlin import *
@@ -34,14 +35,17 @@ class NDynReg(tsm.TSM):
 
     data : pd.DataFrame
         Field to specify the data that will be used
+
+    family : 
+        e.g. pf.Normal(0,1)
     """
 
-    def __init__(self,formula,data):
+    def __init__(self, formula, data, family):
 
         # Initialize TSM object
         super(NDynReg,self).__init__('NDynReg')
 
-        # Latent variables
+        # Latent Variables
         self.max_lag = 0
         self._z_hide = 0 # Whether to cutoff variance latent variables from results
         self.supported_methods = ["MLE","PML","Laplace","M-H","BBVI"]
@@ -59,11 +63,220 @@ class NDynReg(tsm.TSM):
         self.X_names = self.X.design_info.describe().split(" + ")
         self.y = np.array([self.y]).ravel()
         self.data = self.y
+        self.data_length = self.data.shape[0]
         self.X = np.array([self.X])[0]
         self.index = data.index
         self.state_no = self.X.shape[1]
 
         self._create_latent_variables()
+        self.family = family
+        self.model_name2, self.link, self.scale, self.shape, self.skewness, self.mean_transform, self.cythonized = self.family.setup()
+
+        self.model_name = self.model_name2 + " Dynamic Regression Model"
+
+        # Build any remaining latent variables that are specific to the family chosen
+        for no, i in enumerate(self.family.build_latent_variables()):
+            self.latent_variables.add_z(i[0],i[1],i[2])
+            self.latent_variables.z_list[no+1].start = i[3]
+
+        self.family_z_no = len(self.family.build_latent_variables())
+        self.z_no = len(self.latent_variables.z_list)
+
+    def _get_scale_and_shape(self, parm):
+        """ Obtains appropriate model scale and shape latent variables
+
+        Parameters
+        ----------
+        parm : np.array
+            Transformed latent variables vector
+
+        Returns
+        ----------
+        None (changes model attributes)
+        """
+
+        if self.scale is True:
+            if self.shape is True:
+                model_shape = parm[-1]  
+                model_scale = parm[-2]
+            else:
+                model_shape = 0
+                model_scale = parm[-1]
+        else:
+            model_scale = 0
+            model_shape = 0 
+
+        if self.skewness is True:
+            model_skewness = parm[-3]
+        else:
+            model_skewness = 0
+
+        return model_scale, model_shape, model_skewness
+
+    def neg_loglik(self, beta):
+        """ Creates negative loglikelihood of the model
+
+        Parameters
+        ----------
+        beta : np.array
+            Contains untransformed starting values for latent variables
+
+        Returns
+        ----------
+        - Negative loglikelihood
+        """     
+        states = np.zeros([self.state_no, self.data_length])
+        for state_i in range(self.state_no):
+            states[state_i,:] = beta[(self.z_no + (self.data_length*state_i)):(self.z_no + (self.data_length*(state_i+1)))]
+        parm = np.array([self.latent_variables.z_list[k].prior.transform(beta[k]) for k in range(self.z_no)]) # transformed distribution parameters
+        scale, shape, skewness = self._get_scale_and_shape(parm)
+        return self.state_likelihood(beta, states) + self.family.neg_loglikelihood(self.data, self.link(np.sum(self.X*states.T,axis=1)), scale, shape, skewness)  # negative loglikelihood for model
+
+    def likelihood_markov_blanket(self, beta):
+        """ Creates likelihood markov blanket of the model
+
+        Parameters
+        ----------
+        beta : np.array
+            Contains untransformed starting values for latent variables
+
+        Returns
+        ----------
+        - Negative loglikelihood
+        """     
+        states = np.zeros([self.state_no, self.data_length])
+        for state_i in range(self.state_no):
+            states[state_i,:] = beta[(self.z_no + (self.data_length*state_i)):(self.z_no + (self.data_length*(state_i+1)))]
+        parm = np.array([self.latent_variables.z_list[k].prior.transform(beta[k]) for k in range(self.z_no)]) # transformed distribution parameters
+        scale, shape, skewness = self._get_scale_and_shape(parm)
+        return self.family.markov_blanket(self.data, self.link(np.sum(self.X*states.T,axis=1)), scale, shape, skewness)  # negative loglikelihood for model
+
+    def state_likelihood(self, beta, alpha):
+        """ Returns likelihood of the states given the variance latent variables
+
+        Parameters
+        ----------
+        beta : np.array
+            Contains untransformed starting values for latent variables
+        alpha : np.array
+            State matrix
+        
+        Returns
+        ----------
+        State likelihood
+        """
+        _, _, _, Q = self._ss_matrices(beta)
+        state_lik = 0
+        for i in range(alpha.shape[0]):
+            state_lik += np.sum(ss.norm.logpdf(alpha[i][1:]-alpha[i][:-1],loc=0,scale=np.power(Q[i][i],0.5))) 
+        return state_lik
+
+    def state_likelihood_markov_blanket(self, beta, alpha, col_no):
+        """ Returns Markov blanket of the states given the variance latent variables
+
+        Parameters
+        ----------
+        beta : np.array
+            Contains untransformed starting values for latent variables
+
+        alpha : np.array
+            State matrix
+
+        Returns
+        ----------
+        State likelihood
+        """     
+        _, _, _, Q = self._ss_matrices(beta)
+        blanket = np.append(0,ss.norm.logpdf(alpha[col_no][1:]-alpha[col_no][:-1],loc=0,scale=np.sqrt(Q[col_no][col_no])))
+        blanket[:-1] = blanket[:-1] + blanket[1:]
+        return blanket
+
+    def neg_logposterior(self, beta):
+        """ Returns negative log posterior
+
+        Parameters
+        ----------
+        beta : np.array
+            Contains untransformed starting values for latent variables
+
+        alpha : np.array
+            State matrix
+
+        Returns
+        ----------
+        - Negative log posterior
+        """
+        post = self.neg_loglik(beta)
+        for k in range(0,self.z_no):
+            post += -self.latent_variables.z_list[k].prior.logpdf(beta[k])
+        return post     
+
+    def markov_blanket(self, beta, alpha):
+        """ Creates total Markov blanket for states
+
+        Parameters
+        ----------
+        beta : np.array
+            Contains untransformed starting values for latent variables
+
+        alpha : np.array
+            A vector of states
+
+        Returns
+        ----------
+        Markov blanket for states
+        """             
+        likelihood_blanket = self.likelihood_markov_blanket(beta)
+        state_blanket = self.state_likelihood_markov_blanket(beta, alpha, 0)
+        for i in range(self.state_no-1):
+            likelihood_blanket = np.append(likelihood_blanket,self.likelihood_markov_blanket(beta))
+            state_blanket = np.append(state_blanket,self.state_likelihood_markov_blanket(beta,alpha,i+1))
+        return likelihood_blanket + state_blanket
+        
+    def evo_blanket(self, beta, alpha):
+        """ Creates Markov blanket for the variance latent variables
+
+        Parameters
+        ----------
+        beta : np.array
+            Contains untransformed starting values for latent variables
+
+        alpha : np.array
+            A vector of states
+
+        Returns
+        ----------
+        Markov blanket for variance latent variables
+        """                 
+
+        # Markov blanket for each state
+        evo_blanket = np.zeros(self.state_no)
+        for i in range(evo_blanket.shape[0]):
+            evo_blanket[i] = self.state_likelihood_markov_blanket(beta, alpha, i).sum()
+
+        # If the family has additional parameters, add their markov blankets
+        if self.family_z_no > 0:
+            evo_blanket = np.append([self.likelihood_markov_blanket(beta).sum()]*(self.family_z_no),evo_blanket)
+
+        return evo_blanket
+
+    def log_p_blanket(self, beta):
+        """ Creates complete Markov blanket for latent variables
+
+        Parameters
+        ----------
+        beta : np.array
+            Contains untransformed starting values for latent variables
+
+        Returns
+        ----------
+        Markov blanket for latent variables
+        """             
+        states = np.zeros([self.state_no, self.data.shape[0]])
+        for state_i in range(self.state_no):
+            states[state_i,:] = beta[(self.z_no + (self.data.shape[0]*state_i)):(self.z_no + (self.data.shape[0]*(state_i+1)))]     
+        
+        return np.append(self.evo_blanket(beta,states),self.markov_blanket(beta,states))
 
     def _create_latent_variables(self):
         """ Creates model latent variables
@@ -72,27 +285,10 @@ class NDynReg(tsm.TSM):
         ----------
         None (changes model attributes)
         """
-
         for parm in range(self.z_no):
-            self.latent_variables.add_z('Sigma^2 ' + self.X_names[parm],ifr.Uniform(transform='exp'),dst.q_Normal(0,3))
+            self.latent_variables.add_z('Sigma^2 ' + self.X_names[parm], fam.Flat(transform='exp'), fam.Normal(0,3))
 
-    def _get_scale_and_shape(self):
-        """ Retrieves the scale and shape for the model
-
-        Returns
-        ----------
-        Scale (float) and shape (float)
-        """
-        if self.dist == 't':
-            return self.latent_variables.get_z_values(transformed=True)[-2],self.latent_variables.get_z_values(transformed=True)[-1],0
-        elif self.dist == 'Laplace':
-            return self.latent_variables.get_z_values(transformed=True)[-1],0,0
-        elif self.dist == 'skewt':
-            return self.latent_variables.get_z_values(transformed=True)[-2],self.latent_variables.get_z_values(transformed=True)[-1],self.latent_variables.get_z_values(transformed=True)[-3]
-        else:
-            return 0, 0, 0
-
-    def _model(self,data,beta):
+    def _model(self, data, beta):
         """ Creates the structure of the model
 
         Parameters
@@ -105,13 +301,49 @@ class NDynReg(tsm.TSM):
 
         Returns
         ----------
-        a,P,K,F,v : np.array
+        a, P, K, F, v : np.array
             Filted states, filtered variances, Kalman gains, F matrix, residuals
         """     
 
         T, Z, R, Q, H = self._ss_matrices(beta)
 
-        return nld_univariate_kalman(data,Z,H,T,Q,R,0.0)
+        return nld_univariate_kalman(data, Z, H, T, Q, R, 0.0)
+
+    def _preoptimize_model(self):
+        """ Preoptimizes the model by estimating a Gaussian state space models
+        
+        Returns
+        ----------
+        - Gaussian model latent variable object
+        """
+        gaussian_model = DynReg(formula=self.formula, data=self.data_original)
+        gaussian_model.fit()
+
+        for i in range(self.z_no-self.family_z_no):
+            self.latent_variables.z_list[i].start = gaussian_model.latent_variables.get_z_values()[i+1]
+
+        if self.model_name2 == 't':
+
+            def temp_function(params):
+                return -np.sum(ss.t.logpdf(x=self.data, df=np.exp(params[0]), 
+                    loc=np.ones(self.data.shape[0])*params[1], scale=np.exp(params[2])))
+
+            p = optimize.minimize(temp_function,np.array([2.0,0.0,-1.0]),method='L-BFGS-B')
+            self.latent_variables.z_list[-2].start = p.x[2]
+            self.latent_variables.z_list[-1].start = p.x[0]
+
+        elif self.model_name2 == 'Skewt':
+
+            def temp_function(params):
+                return -np.sum(fam.Skewt.logpdf_internal(x=self.data,df=np.exp(params[0]),
+                    loc=np.ones(self.data.shape[0])*params[1], scale=np.exp(params[2]),gamma=np.exp(params[3])))
+
+            p = optimize.minimize(temp_function,np.array([2.0,0.0,-1.0,0.0]),method='L-BFGS-B')
+            self.latent_variables.z_list[-3].start = p.x[3]
+            self.latent_variables.z_list[-2].start = p.x[2]
+            self.latent_variables.z_list[-1].start = p.x[0]
+
+        return gaussian_model.latent_variables
 
     def _ss_matrices(self,beta):
         """ Creates the state space matrices required
@@ -167,449 +399,7 @@ class NDynReg(tsm.TSM):
 
         return H, mu
 
-    def _poisson_approximating_model(self,beta,T,Z,R,Q):
-        """ Creates approximating Gaussian model for Poisson measurement density
-
-        Parameters
-        ----------
-        beta : np.array
-            Contains untransformed starting values for latent variables
-
-        T, Z, R, Q : np.array
-            State space matrices used in KFS algorithm
-
-        Returns
-        ----------
-
-        H : np.array
-            Approximating measurement variance matrix
-
-        mu : np.array
-            Approximating measurement constants
-        """     
-
-        if hasattr(self, 'H'):
-            H = self.H
-        else:
-            H = np.ones(self.data.shape[0])
-
-        if hasattr(self, 'mu'):
-            mu = self.mu
-        else:
-            mu = np.zeros(self.data.shape[0])
-
-        alpha = np.zeros([self.state_no, self.data.shape[0]])
-        tol = 100.0
-        it = 0
-        while tol > 10**-7 and it < 5:
-            old_alpha = np.sum(self.X*alpha.T,axis=1)
-            alpha, V = nld_univariate_KFS(self.data,Z,H,T,Q,R,mu)
-            H = np.exp(-np.sum(self.X*alpha.T,axis=1))
-            mu = self.data - np.sum(self.X*alpha.T,axis=1) - np.exp(-np.sum(self.X*alpha.T,axis=1))*(self.data - np.exp(np.sum(self.X*alpha.T,axis=1)))
-            tol = np.mean(np.abs(np.sum(self.X*alpha.T,axis=1)-old_alpha))
-            it += 1
-
-        return H, mu
-
-    def _t_approximating_model(self,beta,T,Z,R,Q):
-        """ Creates approximating Gaussian model for t measurement density
-
-        Parameters
-        ----------
-        beta : np.array
-            Contains untransformed starting values for latent variables
-
-        T, Z, R, Q : np.array
-            State space matrices used in KFS algorithm
-
-        Returns
-        ----------
-
-        H : np.array
-            Approximating measurement variance matrix
-
-        mu : np.array
-            Approximating measurement constants
-        """     
-
-        H = np.ones(self.data.shape[0])*self.latent_variables.z_list[-2].prior.transform(beta[-2])
-        mu = np.zeros(self.data.shape[0])
-
-        return H, mu
-
-    def _skewt_approximating_model(self,beta,T,Z,R,Q):
-        """ Creates approximating Gaussian model for t measurement density
-
-        Parameters
-        ----------
-        beta : np.array
-            Contains untransformed starting values for latent variables
-
-        T, Z, R, Q : np.array
-            State space matrices used in KFS algorithm
-
-        Returns
-        ----------
-
-        H : np.array
-            Approximating measurement variance matrix
-
-        mu : np.array
-            Approximating measurement constants
-        """     
-
-        H = np.ones(self.data.shape[0])*self.latent_variables.z_list[-2].prior.transform(beta[-2])
-        mu = np.zeros(self.data.shape[0])
-
-        return H, mu
-
-
-    @classmethod
-    def Exponential(cls,formula,data):
-        """ Creates Exponential-distributed state space model
-
-        Parameters
-        ----------
-        data : np.array
-            Contains the time series
-
-        integ : int (default : 0)
-            Specifies how many time to difference the time series.
-
-        target : str (pd.DataFrame) or int (np.array)
-            Specifies which column name or array index to use. By default, first
-            column/array will be selected as the dependent variable.
-
-        Returns
-        ----------
-        - NDynReg.Exponential object
-        """     
-
-        x = NDynReg(formula=formula,data=data)
-        x.meas_likelihood = x.exponential_likelihood
-        x.model_name = "Exponential Dynamic Regression Model"   
-        x.dist = "Exponential"
-        x.link = np.exp
-        temp = DynReg(formula=formula,data=data)
-        temp.fit()
-
-        for i in range(x.z_no):
-            x.latent_variables.z_list[i].start = temp.latent_variables.get_z_values()[i+1]
-
-        def approx_model(beta,T,Z,R,Q):
-            return x._general_approximating_model(beta,T,Z,R,Q,temp.latent_variables.get_z_values(transformed=True)[0])
-
-        x._approximating_model = approx_model
-
-        def draw_variable(loc,scale,shape,skewness,nsims):
-            return np.random.exponential(1/loc, nsims)
-
-        x.m_likelihood_markov_blanket = x.exponential_likelihood_markov_blanket
-
-        return x
-
-    @classmethod
-    def Laplace(cls,formula,data):
-        """ Creates Laplace-distributed state space model
-
-        Parameters
-        ----------
-        data : np.array
-            Contains the time series
-
-        integ : int (default : 0)
-            Specifies how many time to difference the time series.
-
-        target : str (pd.DataFrame) or int (np.array)
-            Specifies which column name or array index to use. By default, first
-            column/array will be selected as the dependent variable.
-
-        Returns
-        ----------
-        - NDynReg.Laplace object
-        """     
-
-        x = NDynReg(formula=formula,data=data)
-        
-        x.latent_variables.add_z('Laplace Scale',ifr.Uniform(transform='exp'),dst.q_Normal(0,3))
-        x.z_no += 1
-        x.meas_likelihood = x.laplace_likelihood
-        x.model_name = "Laplace Dynamic Regression Model"   
-        x.dist = "Laplace"
-        x.link = np.array
-        temp = DynReg(formula=formula,data=data)
-        temp.fit()
-
-        for i in range(x.z_no-1):
-            x.latent_variables.z_list[i].start = temp.latent_variables.get_z_values()[i+1]
-
-        x.latent_variables.z_list[-1].start = temp.latent_variables.get_z_values()[0]
-
-        def approx_model(beta,T,Z,R,Q):
-            return x._general_approximating_model(beta,T,Z,R,Q,temp.latent_variables.get_z_values(transformed=True)[0])
-
-        x._approximating_model = approx_model
-
-        def draw_variable(loc,scale,shape,skewness,nsims):
-            return np.random.laplace(loc, scale, nsims)
-
-        x.draw_variable = draw_variable
-        x.m_likelihood_markov_blanket = x.laplace_likelihood_markov_blanket
-
-        return x
-
-    @classmethod
-    def Poisson(cls,formula,data):
-        """ Creates Poisson-distributed state space model
-
-        Parameters
-        ----------
-        data : np.array
-            Contains the time series
-
-        integ : int (default : 0)
-            Specifies how many time to difference the time series.
-
-        target : str (pd.DataFrame) or int (np.array)
-            Specifies which column name or array index to use. By default, first
-            column/array will be selected as the dependent variable.
-
-        Returns
-        ----------
-        - NDynReg.Poisson object
-        """     
-
-        x = NDynReg(formula=formula,data=data)
-        x._approximating_model = x._poisson_approximating_model
-        x.meas_likelihood = x.poisson_likelihood
-        x.model_name = "Poisson Dynamic Regression Model"   
-        x.dist = "Poisson"
-        x.link = np.exp
-        temp = DynReg(formula=formula,data=data)
-        temp.fit()
-        for i in range(x.z_no):
-            x.latent_variables.z_list[i].start = temp.latent_variables.get_z_values()[i+1]
-
-        def draw_variable(loc,scale,shape,skewness,nsims):
-            return np.random.poisson(loc, nsims)
-
-        x.draw_variable = draw_variable
-        x.m_likelihood_markov_blanket = x.poisson_likelihood_markov_blanket
-
-        return x
-
-    @classmethod
-    def t(cls,formula,data):
-        """ Creates t-distributed state space model
-
-        Parameters
-        ----------
-        data : np.array
-            Contains the time series
-
-        integ : int (default : 0)
-            Specifies how many time to difference the time series.
-
-        target : str (pd.DataFrame) or int (np.array)
-            Specifies which column name or array index to use. By default, first
-            column/array will be selected as the dependent variable.
-
-        Returns
-        ----------
-        - NLLEV.t object
-        """     
-
-        x = NDynReg(formula=formula,data=data)
-        
-        x.latent_variables.add_z('Signal^2 irregular',ifr.Uniform(transform='exp'),dst.q_Normal(0,3))
-        x.latent_variables.add_z('v',ifr.Uniform(transform='exp'),dst.q_Normal(0,3))
-        x.z_no += 2
-
-        x._approximating_model = x._t_approximating_model
-        x.meas_likelihood = x.t_likelihood
-        x.model_name = "t-distributed Dynamic Regression Model" 
-        x.dist = "t"
-        x.link = np.array
-        temp = DynReg(formula=formula,data=data)
-        temp.fit()
-
-        for i in range(x.z_no-2):
-            x.latent_variables.z_list[i].start = temp.latent_variables.get_z_values()[i+1]
-
-        def temp_function(params):
-            return -np.sum(ss.t.logpdf(x=x.data,df=np.exp(params[0]),
-                loc=np.ones(x.data.shape[0])*params[1], scale=np.exp(params[2])))
-
-        p = optimize.minimize(temp_function,np.array([2.0,0.0,-1.0]),method='L-BFGS-B')
-
-        x.latent_variables.z_list[-1].start = p.x[0]
-        x.latent_variables.z_list[-2].start = p.x[2]
-
-        def draw_variable(loc,scale,shape,skewness,nsims):
-            return loc + scale*np.random.standard_t(shape,nsims)
-
-        x.draw_variable = draw_variable
-        x.m_likelihood_markov_blanket = x.t_likelihood_markov_blanket
-
-        return x
-
-    @classmethod
-    def skewt(cls,formula,data):
-        """ Creates skewt-distributed state space model
-
-        Parameters
-        ----------
-        data : np.array
-            Contains the time series
-
-        integ : int (default : 0)
-            Specifies how many time to difference the time series.
-
-        target : str (pd.DataFrame) or int (np.array)
-            Specifies which column name or array index to use. By default, first
-            column/array will be selected as the dependent variable.
-
-        Returns
-        ----------
-        - NLLEV.skewt object
-        """     
-
-        x = NDynReg(formula=formula,data=data)
-        
-        x.latent_variables.add_z('Skewness',ifr.Uniform(transform='exp'),dst.q_Normal(0,3))        
-        x.latent_variables.add_z('Signal^2 irregular',ifr.Uniform(transform='exp'),dst.q_Normal(0,3))
-        x.latent_variables.add_z('v',ifr.Uniform(transform='exp'),dst.q_Normal(0,3))
-        x.z_no += 3
-
-        x._approximating_model = x._skewt_approximating_model
-        x.meas_likelihood = x.skewt_likelihood
-        x.model_name = "skewt-distributed Dynamic Regression Model" 
-        x.dist = "skewt"
-        x.link = np.array
-        temp = DynReg(formula=formula,data=data)
-        temp.fit()
-
-        for i in range(x.z_no-3):
-            x.latent_variables.z_list[i].start = temp.latent_variables.get_z_values()[i+1]
-
-        def temp_function(params):
-            return -np.sum(dst.skewt.logpdf(x=x.data,df=np.exp(params[0]),
-                loc=np.ones(x.data.shape[0])*params[1], scale=np.exp(params[2]),gamma=np.exp(params[3])))
-
-        p = optimize.minimize(temp_function,np.array([2.0,0.0,-1.0,1.0]),method='L-BFGS-B')
-
-        x.latent_variables.z_list[-1].start = p.x[0]
-        x.latent_variables.z_list[-2].start = p.x[2]
-        x.latent_variables.z_list[-3].start = p.x[3]
-
-        def draw_variable(loc,scale,shape,skewness,nsims):
-            return loc + scale*dst.skewt.rvs(shape,skewness,nsims)
-
-        x.draw_variable = draw_variable
-        x.m_likelihood_markov_blanket = x.skewt_likelihood_markov_blanket
-
-        return x
-
-
-    def neg_logposterior(self,beta):
-        """ Returns negative log posterior
-
-        Parameters
-        ----------
-        beta : np.array
-            Contains untransformed starting values for latent variables
-
-        alpha : np.array
-            State matrix
-
-        Returns
-        ----------
-        Negative log posterior
-        """
-        post = self.neg_loglik(beta)
-        for k in range(0,self.z_no):
-            post += -self.latent_variables.z_list[k].prior.logpdf(beta[k])
-        return post     
-
-    def state_likelihood_markov_blanket(self,beta,alpha,col_no):
-        """ Returns Markov blanket of the states given the evolution latent variables
-
-        Parameters
-        ----------
-        beta : np.array
-            Contains untransformed starting values for latent variables
-
-        alpha : np.array
-            State matrix
-
-        Returns
-        ----------
-        State likelihood
-        """     
-        _, _, _, Q = self._ss_matrices(beta)
-        state_terms = np.append(0,ss.norm.logpdf(alpha[col_no][1:]-alpha[col_no][:-1],loc=0,scale=np.power(Q[col_no][col_no],0.5)))
-        blanket = state_terms
-        blanket[:-1] = blanket[:-1] + blanket[1:]
-        return blanket
-
-    def state_likelihood(self,beta,alpha):
-        """ Returns likelihood of the states given the evolution latent variables
-
-        Parameters
-        ----------
-        beta : np.array
-            Contains untransformed starting values for latent variables
-
-        alpha : np.array
-            State matrix
-
-        Returns
-        ----------
-        State likelihood
-        """
-
-        _, _, _, Q = self._ss_matrices(beta)
-        state_lik = 0
-        for i in range(alpha.shape[0]):
-            state_lik += np.sum(ss.norm.logpdf(alpha[i][1:]-alpha[i][:-1],loc=0,scale=np.power(Q[i][i],0.5))) 
-        return state_lik
-
-    def loglik(self,beta,alpha):
-        """ Creates negative loglikelihood of the model
-
-        Parameters
-        ----------
-        beta : np.array
-            Contains untransformed starting values for latent variables
-
-        alpha : np.array
-            A vector of states
-
-        Returns
-        ----------
-        Negative loglikelihood
-        """     
-
-        return (self.state_likelihood(beta,alpha) + self.meas_likelihood(beta,alpha))
-
-    def neg_loglik(self,beta):
-        """ Creates negative loglikelihood of the model
-
-        Parameters
-        ----------
-        beta : np.array
-            Contains untransformed starting values for latent variables
-
-        Returns
-        ----------
-        Negative loglikelihood
-        """     
-        states = np.zeros([self.state_no, self.data.shape[0]])
-        for state_i in range(self.state_no):
-            states[state_i,:] = beta[(self.z_no + (self.data.shape[0]*state_i)):(self.z_no + (self.data.shape[0]*(state_i+1)))]
-        return -self.loglik(beta[:self.z_no],states) 
-
-    def fit(self,optimizer='RMSProp',iterations=3000,print_progress=True,start_diffuse=False):
+    def fit(self, optimizer='RMSProp', iterations=1000, print_progress=True, start_diffuse=False, **kwargs):
         """ Fits the model
 
         Parameters
@@ -629,10 +419,60 @@ class NDynReg(tsm.TSM):
         Returns
         ----------
         BBVI fit object
-        """             
-        return self._bbvi_fit(self.neg_logposterior,optimizer=optimizer,print_progress=print_progress,start_diffuse=start_diffuse,iterations=iterations)
+        """     
 
-    def _bbvi_fit(self,posterior,optimizer='RMSProp',iterations=3000,print_progress=True,start_diffuse=False,**kwargs):
+        return self._bbvi_fit(optimizer=optimizer, print_progress=print_progress,
+            start_diffuse=start_diffuse, iterations=iterations, **kwargs)
+
+    def initialize_approx_dist(self, phi, start_diffuse, gaussian_latents):
+        """ Initializes the appoximate distibution for the model
+
+        Parameters
+        ----------
+        phi : np.ndarray
+            Latent variables
+
+        start_diffuse: boolean
+            Whether to start from diffuse values or not
+        
+        gaussian_latents: LatentVariables object
+            Latent variables for the Gaussian approximation
+
+        Returns
+        ----------
+        BBVI fit object
+        """     
+
+        # Starting values for approximate distribution
+        for i in range(len(self.latent_variables.z_list)):
+            approx_dist = self.latent_variables.z_list[i].q
+            if isinstance(approx_dist, fam.Normal):
+                self.latent_variables.z_list[i].q.loc = phi[i]
+                self.latent_variables.z_list[i].q.scale = -3.0
+
+        q_list = [k.q for k in self.latent_variables.z_list]
+
+        # Get starting values for states
+        T, Z, R, Q = self._ss_matrices(phi)
+
+        H, mu = self.family.approximating_model_reg(phi, T, Z, R, Q, 
+            gaussian_latents.get_z_values(transformed=True)[0], self.data, self.X, self.state_no)
+
+        a, V = self.smoothed_state(self.data, phi, H, mu)
+
+        V[0][0][0] = V[0][0][-1] 
+
+        for state in range(self.state_no):
+            for item in range(self.data_length):
+                if start_diffuse is False:
+                    q_list.append(fam.Normal(a[state][item], np.sqrt(np.abs(V[0][state][item]))))
+                else:
+                    q_list.append(fam.Normal(self.family.itransform(np.mean(self.data)),np.exp(-3)))
+
+        return q_list
+
+    def _bbvi_fit(self, optimizer='RMSProp', iterations=1000, print_progress=True,
+        start_diffuse=False, **kwargs):
         """ Performs Black Box Variational Inference
 
         Parameters
@@ -644,48 +484,44 @@ class NDynReg(tsm.TSM):
             Stochastic optimizer: either RMSProp or ADAM.
 
         iterations: int
-            How many iterations for BBVI
+            How many iterations to run
+
+        print_progress : bool
+            Whether tp print the ELBO progress or not
+        
+        start_diffuse : bool
+            Whether to start from diffuse values (if not: use approx Gaussian)
 
         Returns
         ----------
         BBVIResults object
         """
+        if self.model_name2 in ["t", "Skewt"]:
+            default_learning_rate = 0.0001
+        else:
+            default_learning_rate = 0.001
 
-        # Starting parameters
+        batch_size = kwargs.get('batch_size', 24) 
+        learning_rate = kwargs.get('learning_rate', default_learning_rate) 
+
+        # Starting values
+        gaussian_latents = self._preoptimize_model() # find parameters for Gaussian model
+
         phi = self.latent_variables.get_z_starting_values()
+        q_list = self.initialize_approx_dist(phi, start_diffuse, gaussian_latents)
 
-        # Starting values for approximate distribution
-        for i in range(len(self.latent_variables.z_list)):
-            approx_dist = self.latent_variables.z_list[i].q
-            if isinstance(approx_dist, dst.q_Normal):
-                self.latent_variables.z_list[i].q.loc = phi[i]
-                self.latent_variables.z_list[i].q.scale = -3.0
-
-        q_list = [k.q for k in self.latent_variables.z_list]
-
-        # Get starting values for states
-        T, Z, R, Q = self._ss_matrices(phi)
-
-        H, mu = self._approximating_model(phi,T,Z,R,Q)
-
-        a, V = self.smoothed_state(self.data,phi,H,mu)
-
-        for state in range(self.state_no):
-            V[0][0][0] = V[0][0][-1] 
-            for item in range(self.data.shape[0]):
-                if start_diffuse is False:
-                    q_list.append(dst.q_Normal(a[state][item],np.log(np.sqrt(np.abs(V[0][state][item])))))
-                else:
-                    q_list.append(dst.q_Normal(0,-3))
-
-        bbvi_obj = ifr.CBBVI(posterior,self.log_p_blanket,q_list,24,optimizer,iterations)
+        # PERFORM BBVI
+        bbvi_obj = ifr.CBBVI(self.neg_logposterior, self.log_p_blanket, q_list, batch_size, 
+            optimizer, iterations, learning_rate)
 
         if print_progress is False:
             bbvi_obj.printer = False
+
         q, q_params, q_ses = bbvi_obj.run()
 
         self.latent_variables.set_z_values(q_params[:self.z_no],'BBVI',np.exp(q_ses[:self.z_no]),None)    
 
+        # STORE RESULTS
         for k in range(len(self.latent_variables.z_list)):
             self.latent_variables.z_list[k].q = q[k]
 
@@ -710,261 +546,11 @@ class NDynReg(tsm.TSM):
 
         return res.BBVISSResults(data_name=self.data_name,X_names=X_names,model_name=self.model_name,
             model_type=self.model_type, latent_variables=self.latent_variables,data=Y,index=self.index,
-            multivariate_model=self.multivariate_model,objective=posterior(q_params), 
+            multivariate_model=self.multivariate_model,objective=self.neg_logposterior(q_params), 
             method='BBVI',ses=q_ses[:self.z_no],signal=theta,scores=scores,
             z_hide=self._z_hide,max_lag=self.max_lag,states=states,states_var=states_var)
 
-    def exponential_likelihood(self,beta,alpha):
-        """ Creates Exponential loglikelihood of the data given the states
-
-        Parameters
-        ----------
-        beta : np.array
-            Contains untransformed starting values for latent variables
-
-        alpha : np.array
-            A vector of states
-
-        Returns
-        ----------
-        Exponential loglikelihood
-        """     
-        return np.sum(ss.expon.logpdf(self.data,1/np.exp(np.sum(self.X*alpha.T,axis=1))))
-
-    def exponential_likelihood_markov_blanket(self,beta,alpha):
-        """ Creates Expnonential Markov blanket for each state
-
-        Parameters
-        ----------
-        beta : np.array
-            Contains untransformed starting values for latent variables
-
-        alpha : np.array
-            A vector of states
-
-        Returns
-        ----------
-        Exponential loglikelihood
-        """     
-        return ss.expon.logpdf(self.data,1/np.exp(np.sum(self.X*alpha.T,axis=1)))
-
-    def laplace_likelihood(self,beta,alpha):
-        """ Creates Poisson loglikelihood of the data given the states
-
-        Parameters
-        ----------
-        beta : np.array
-            Contains untransformed starting values for latent variables
-
-        alpha : np.array
-            A vector of states
-
-        Returns
-        ----------
-        Laplace loglikelihood
-        """     
-        return np.sum(ss.laplace.logpdf(self.data,np.sum(self.X*alpha.T,axis=1),scale=self.latent_variables.z_list[-1].prior.transform(beta[-1])))
-
-    def laplace_likelihood_markov_blanket(self,beta,alpha):
-        """ Creates Laplace Markov blanket for each state
-
-        Parameters
-        ----------
-        beta : np.array
-            Contains untransformed starting values for latent_variables
-
-        alpha : np.array
-            A vector of states
-
-        Returns
-        ----------
-        Laplace Markov Blanket
-        """     
-        return ss.laplace.logpdf(self.data,np.sum(self.X*alpha.T,axis=1),scale=self.latent_variables.z_list[-1].prior.transform(beta[-1]))
-
-    def poisson_likelihood(self,beta,alpha):
-        """ Creates Poisson loglikelihood of the data given the states
-
-        Parameters
-        ----------
-        beta : np.array
-            Contains untransformed starting values for latent variables
-
-        alpha : np.array
-            A vector of states
-
-        Returns
-        ----------
-        Poisson loglikelihood
-        """     
-        return np.sum(ss.poisson.logpmf(self.data,np.exp(np.sum(self.X*alpha.T,axis=1))))
-
-    def poisson_likelihood_markov_blanket(self,beta,alpha):
-        """ Creates Poisson Markov blanket for each state
-
-        Parameters
-        ----------
-        beta : np.array
-            Contains untransformed starting values for latent variables
-
-        alpha : np.array
-            A vector of states
-
-        Returns
-        ----------
-        Poisson Markov Blanket
-        """     
-        return ss.poisson.logpmf(self.data,np.exp(np.sum(self.X*alpha.T,axis=1)))
-
-    def t_likelihood(self,beta,alpha):
-        """ Creates t loglikelihood of the date given the states
-
-        Parameters
-        ----------
-        beta : np.array
-            Contains untransformed starting values for latent variables
-
-        alpha : np.array
-            A vector of states
-
-        Returns
-        ----------
-        t loglikelihood
-        """     
-        return np.sum(ss.t.logpdf(x=self.data,
-            df=self.latent_variables.z_list[-1].prior.transform(beta[-1]),
-            loc=np.sum(self.X*alpha.T,axis=1),
-            scale=self.latent_variables.z_list[-2].prior.transform(beta[-2])))
-
-    def t_likelihood_markov_blanket(self,beta,alpha):
-        """ Creates t Markov blanket for each state
-
-        Parameters
-        ----------
-        beta : np.array
-            Contains untransformed starting values for latent variables
-
-        alpha : np.array
-            A vector of states
-
-        Returns
-        ----------
-        t Markov Blanket
-        """     
-        return ss.t.logpdf(x=self.data,
-            df=self.latent_variables.z_list[-1].prior.transform(beta[-1]),
-            loc=np.sum(self.X*alpha.T,axis=1),
-            scale=self.latent_variables.z_list[-2].prior.transform(beta[-2]))
-
-    def skewt_likelihood(self,beta,alpha):
-        """ Creates skewt loglikelihood of the date given the states
-
-        Parameters
-        ----------
-        beta : np.array
-            Contains untransformed starting values for latent variables
-
-        alpha : np.array
-            A vector of states
-
-        Returns
-        ----------
-        skewt loglikelihood
-        """     
-        return np.sum(dst.skewt.logpdf(x=self.data,
-            df=self.latent_variables.z_list[-1].prior.transform(beta[-1]),
-            loc=np.sum(self.X*alpha.T,axis=1),
-            scale=self.latent_variables.z_list[-2].prior.transform(beta[-2]),  gamma=self.latent_variables.z_list[-3].prior.transform(beta[-3])))
-
-    def skewt_likelihood_markov_blanket(self,beta,alpha):
-        """ Creates skewt Markov blanket for each state
-
-        Parameters
-        ----------
-        beta : np.array
-            Contains untransformed starting values for latent variables
-
-        alpha : np.array
-            A vector of states
-
-        Returns
-        ----------
-        skewt Markov Blanket
-        """     
-        return dst.skewt.logpdf(x=self.data,
-            df=self.latent_variables.z_list[-1].prior.transform(beta[-1]),
-            loc=np.sum(self.X*alpha.T,axis=1),
-            scale=self.latent_variables.z_list[-2].prior.transform(beta[-2]),  gamma=self.latent_variables.z_list[-3].prior.transform(beta[-3]))
-
-    def markov_blanket(self,beta,alpha):
-        """ Creates total Markov blanket for states
-
-        Parameters
-        ----------
-        beta : np.array
-            Contains untransformed starting values for latent variables
-
-        alpha : np.array
-            A vector of states
-
-        Returns
-        ----------
-        Markov blanket for states
-        """ 
-        likelihood_blanket = self.m_likelihood_markov_blanket(beta,alpha)
-        state_blanket = self.state_likelihood_markov_blanket(beta,alpha,0)
-        for i in range(self.state_no-1):
-            likelihood_blanket = np.append(likelihood_blanket,self.m_likelihood_markov_blanket(beta,alpha))
-            state_blanket = np.append(state_blanket,self.state_likelihood_markov_blanket(beta,alpha,i+1))
-        return likelihood_blanket + state_blanket
-        
-    def evo_blanket(self,beta,alpha):
-        """ Creates Markov blanket for the evolution latent variables
-
-        Parameters
-        ----------
-        beta : np.array
-            Contains untransformed starting values for latent variables
-
-        alpha : np.array
-            A vector of states
-
-        Returns
-        ----------
-        Markov blanket for evolution latent variables
-        """ 
-        evo_blanket = np.zeros(self.state_no)
-        for i in range(evo_blanket.shape[0]):
-            evo_blanket[i] = self.state_likelihood_markov_blanket(beta,alpha,i).sum()
-
-        if self.dist in ['t']:
-            evo_blanket = np.append([self.m_likelihood_markov_blanket(beta,alpha).sum()]*2,evo_blanket)
-        if self.dist in ['skewt']:
-            evo_blanket = np.append([self.m_likelihood_markov_blanket(beta,alpha).sum()]*3,evo_blanket)            
-        elif self.dist in ['Laplace']:
-            evo_blanket = np.append([self.m_likelihood_markov_blanket(beta,alpha).sum()],evo_blanket)
-
-        return evo_blanket
-
-    def log_p_blanket(self,beta):
-        """ Creates complete Markov blanket for latent variables
-
-        Parameters
-        ----------
-        beta : np.array
-            Contains untransformed starting values for latent variables
-
-        Returns
-        ----------
-        Markov blanket for latent variables
-        """     
-        states = np.zeros([self.state_no, self.data.shape[0]])
-        for state_i in range(self.state_no):
-            states[state_i,:] = beta[(self.z_no + (self.data.shape[0]*state_i)):(self.z_no + (self.data.shape[0]*(state_i+1)))]     
-        
-        return np.append(self.evo_blanket(beta,states),self.markov_blanket(beta,states))
-
-    def plot_predict(self,h=5,past_values=20,intervals=True,oos_data=None,**kwargs):        
+    def plot_predict(self, h=5, past_values=20, intervals=True, oos_data=None, **kwargs):        
         """ Makes forecast with the estimated model
 
         Parameters
@@ -992,7 +578,7 @@ class NDynReg(tsm.TSM):
             raise Exception("No latent variables estimated!")
         else:
             # Retrieve data, dates and (transformed) latent variables
-            scale, shape, skewness = self._get_scale_and_shape()
+            scale, shape, skewness = self._get_scale_and_shape(self.latent_variables.get_z_values(transformed=True))
 
             # Retrieve data, dates and (transformed) latent variables
             date_index = self.shift_dates(h)
@@ -1027,7 +613,7 @@ class NDynReg(tsm.TSM):
                         for state in range(self.state_no):
                             coeff_sim[state][t] = coeff_sim[state][t-1] + rnd_q[state][t]
 
-                sim_vector[n] = self.draw_variable(loc=self.link(np.sum(coeff_sim.T*Z[self.y.shape[0]:self.y.shape[0]+h,:],axis=1)),shape=shape,scale=scale,skewness=skewness,nsims=h)
+                sim_vector[n] = self.family.draw_variable(loc=self.link(np.sum(coeff_sim.T*Z[self.y.shape[0]:self.y.shape[0]+h,:],axis=1)),shape=shape,scale=scale,skewness=skewness,nsims=h)
 
             sim_vector = np.transpose(sim_vector)
             forecasted_values = smoothed_series
@@ -1048,7 +634,7 @@ class NDynReg(tsm.TSM):
             plt.ylabel(self.data_name)
             plt.show()
 
-    def plot_fit(self,intervals=True,**kwargs):
+    def plot_fit(self, intervals=True, **kwargs):
         """ Plots the fit of the model
 
         Parameters
@@ -1159,15 +745,8 @@ class NDynReg(tsm.TSM):
 
         for t in range(0,h):
             data1 = self.data_original.iloc[0:-h+t,:]
-            data2 = self.data_original.iloc[-h+t:,:]            
-            if self.dist == 'Poisson':
-                x = NDynReg.Poisson(formula=self.formula,data=data1)
-            elif self.dist == 't':
-                x = NDynReg.t(formula=self.formula,data=data1)
-            elif self.dist == 'Laplace':
-                x = NDynReg.Laplace(formula=self.formula,data=data1)
-            elif self.dist == 'Exponential':
-                x = NDynReg.Exponential(formula=self.formula,data=data1)                            
+            data2 = self.data_original.iloc[-h+t:,:] 
+            x = NDynReg(formula=self.formula, data=data1, family=self.family)                                       
             x.fit(print_progress=False)
             if t == 0:
                 predictions = x.predict(1,oos_data=data2)
@@ -1205,6 +784,7 @@ class NDynReg(tsm.TSM):
         plt.title(self.data_name)
         plt.legend(loc=2)   
         plt.show()          
+
 
     def simulation_smoother(self,beta):
         """ Durbin and Koopman simulation smoother - simulates from states 

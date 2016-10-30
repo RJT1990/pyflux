@@ -9,8 +9,7 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 import datetime
 
-from .. import inference as ifr
-from .. import distributions as dst
+from .. import families as fam
 from .. import output as op
 from .. import tests as tst
 from .. import tsm as tsm
@@ -118,12 +117,12 @@ class VAR(tsm.TSM):
 
         # Create VAR latent variables
         for variable in range(self.ylen):
-            self.latent_variables.add_z(self.data_name[variable] + ' Constant',ifr.Normal(0,3,transform=None),dst.q_Normal(0,3))
+            self.latent_variables.add_z(self.data_name[variable] + ' Constant', fam.Normal(0,3,transform=None), fam.Normal(0,3))
             other_variables = np.delete(range(self.ylen), [variable])
             for lag_no in range(self.lags):
-                self.latent_variables.add_z(str(self.data_name[variable]) + ' AR(' + str(lag_no+1) + ')',ifr.Normal(0,0.5,transform=None),dst.q_Normal(0,3))
+                self.latent_variables.add_z(str(self.data_name[variable]) + ' AR(' + str(lag_no+1) + ')', fam.Normal(0,0.5,transform=None), fam.Normal(0,3))
                 for other in other_variables:
-                    self.latent_variables.add_z(str(self.data_name[other]) + ' to ' + str(self.data_name[variable]) + ' AR(' + str(lag_no+1) + ')',ifr.Normal(0,0.5,transform=None),dst.q_Normal(0,3))
+                    self.latent_variables.add_z(str(self.data_name[other]) + ' to ' + str(self.data_name[variable]) + ' AR(' + str(lag_no+1) + ')', fam.Normal(0,0.5,transform=None), fam.Normal(0,3))
 
         starting_params_temp = self._create_B_direct().flatten()
 
@@ -131,9 +130,9 @@ class VAR(tsm.TSM):
         for i in range(self.ylen):
             for k in range(self.ylen):
                 if i == k:
-                    self.latent_variables.add_z('Cholesky Diagonal ' + str(i),ifr.Uniform(transform='exp'),dst.q_Normal(0,3))
+                    self.latent_variables.add_z('Cholesky Diagonal ' + str(i), fam.Flat(transform='exp'), fam.Normal(0,3))
                 elif i > k:
-                    self.latent_variables.add_z('Cholesky Off-Diagonal (' + str(i) + ',' + str(k) + ')',ifr.Uniform(transform=None),dst.q_Normal(0,3))
+                    self.latent_variables.add_z('Cholesky Off-Diagonal (' + str(i) + ',' + str(k) + ')', fam.Flat(transform=None), fam.Normal(0,3))
 
         for i in range(0,self.ylen):
             for k in range(0,self.ylen):
@@ -618,4 +617,4 @@ class VAR(tsm.TSM):
         Constructs a Wishart prior for the covariance matrix
         """
         self.adjust_prior(list(range(int((len(self.latent_variables.z_list)-self.ylen-(self.ylen**2-self.ylen)/2)),
-            int(len(self.latent_variables.z_list)))),ifr.InverseWishart(v,X))
+            int(len(self.latent_variables.z_list)))), fam.InverseWishart(v,X))

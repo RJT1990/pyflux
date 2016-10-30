@@ -10,9 +10,8 @@ import scipy.special as sp
 import matplotlib.pyplot as plt
 import seaborn as sns
 
-from .. import inference as ifr
+from .. import families as fam
 from .. import tsm as tsm
-from .. import distributions as dst
 from .. import data_check as dc
 
 from .gasmodels import *
@@ -86,7 +85,7 @@ class GAS(tsm.TSM):
         else:
             self._model = self._uncythonized_model
 
-        self.model_name = self.model_name2 + "(" + str(self.ar) + "," + str(self.integ) + "," + str(self.sc) + ")"
+        self.model_name = self.model_name2 + "GAS (" + str(self.ar) + "," + str(self.integ) + "," + str(self.sc) + ")"
 
         # Build any remaining latent variables that are specific to the family chosen
         for no, i in enumerate(self.family.build_latent_variables()):
@@ -115,13 +114,13 @@ class GAS(tsm.TSM):
         None (changes model attributes)
         """
 
-        self.latent_variables.add_z('Constant',ifr.Normal(0, 3, transform=None),dst.q_Normal(0, 3))
+        self.latent_variables.add_z('Constant', fam.Normal(0, 3, transform=None), fam.Normal(0, 3))
 
         for ar_term in range(self.ar):
-            self.latent_variables.add_z('AR(' + str(ar_term+1) + ')',ifr.Normal(0, 0.5, transform=None),dst.q_Normal(0, 3))
+            self.latent_variables.add_z('AR(' + str(ar_term+1) + ')', fam.Normal(0, 0.5, transform=None), fam.Normal(0, 3))
 
         for sc_term in range(self.sc):
-            self.latent_variables.add_z('SC(' + str(sc_term+1) + ')',ifr.Normal(0, 0.5, transform=None),dst.q_Normal(0, 3))
+            self.latent_variables.add_z('SC(' + str(sc_term+1) + ')', fam.Normal(0, 0.5, transform=None), fam.Normal(0, 3))
 
     def _get_scale_and_shape(self,parm):
         """ Obtains appropriate model scale and shape latent variables
@@ -180,7 +179,7 @@ class GAS(tsm.TSM):
 
         # Loop over time series
         theta, self.model_scores = self.recursion(parm, theta, self.model_scores, self.model_Y, self.ar, self.sc, self.model_Y.shape[0], model_scale, model_shape, model_skewness, self.max_lag)
-        return theta, self.model_Y, self.model_scores
+        return np.array(theta), self.model_Y, np.array(self.model_scores)
 
     def _uncythonized_model(self, beta):
         """ Creates the structure of the model
@@ -253,7 +252,7 @@ class GAS(tsm.TSM):
                 for k in range(1,self.sc+1):
                     new_value += t_params[k+self.ar]*scores_exp[-k]
 
-            if self.model_name2 == "Exponential GAS":
+            if self.model_name2 == "Exponential":
                 Y_exp = np.append(Y_exp, [1.0/self.link(new_value)])
             else:
                 Y_exp = np.append(Y_exp, [self.link(new_value)])
@@ -301,9 +300,7 @@ class GAS(tsm.TSM):
                 if proposal_likelihood < best_lik:
                     best_lik = proposal_likelihood
                     best_start = proposal_start.copy()
-
             return best_start
-
         else:
             return initials
 
@@ -356,7 +353,7 @@ class GAS(tsm.TSM):
                     for k in range(1, self.sc+1):
                         new_value += t_params[k+self.ar]*scores_exp[-k]
 
-                if self.model_name2 == "Exponential GAS":
+                if self.model_name2 == "Exponential":
                     rnd_value = self.family.draw_variable(1.0/self.link(new_value), model_scale, model_shape, model_skewness, 1)[0]
                 else:
                     rnd_value = self.family.draw_variable(self.link(new_value), model_scale, model_shape, model_skewness, 1)[0]
@@ -435,9 +432,9 @@ class GAS(tsm.TSM):
             plt.title("Model fit for " + self.data_name)
 
             # Catch specific family properties (imply different link functions/moments)
-            if self.model_name2 == "Exponential GAS":
+            if self.model_name2 == "Exponential":
                 values_to_plot = 1.0/self.link(mu)
-            elif self.model_name2 == "Skewt GAS":
+            elif self.model_name2 == "Skewt":
                 t_params = self.transform_z()
                 model_scale, model_shape, model_skewness = self._get_scale_and_shape(t_params)
                 m1 = (np.sqrt(model_shape)*sp.gamma((model_shape-1.0)/2.0))/(np.sqrt(np.pi)*sp.gamma(model_shape/2.0))
@@ -490,7 +487,7 @@ class GAS(tsm.TSM):
             # Get mean prediction and simulations (for errors)
             mean_values = self._mean_prediction(theta,Y,scores,h,t_params)
 
-            if self.model_name2 == "Skewt GAS":
+            if self.model_name2 == "Skewt":
                 model_scale, model_shape, model_skewness = self._get_scale_and_shape(t_params)
                 m1 = (np.sqrt(model_shape)*sp.gamma((model_shape-1.0)/2.0))/(np.sqrt(np.pi)*sp.gamma(model_shape/2.0))
                 mean_values += (model_skewness - (1.0/model_skewness))*model_scale*m1 
@@ -599,7 +596,7 @@ class GAS(tsm.TSM):
             t_params = self.transform_z()
             mean_values = self._mean_prediction(theta,Y,scores,h,t_params)
 
-            if self.model_name2 == "Skewt GAS":
+            if self.model_name2 == "Skewt":
                 model_scale, model_shape, model_skewness = self._get_scale_and_shape(t_params)
                 m1 = (np.sqrt(model_shape)*sp.gamma((model_shape-1.0)/2.0))/(np.sqrt(np.pi)*sp.gamma(model_shape/2.0))
                 forecasted_values = mean_values[-h:] + (model_skewness - (1.0/model_skewness))*model_scale*m1 

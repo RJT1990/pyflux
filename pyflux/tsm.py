@@ -1,6 +1,8 @@
 from math import exp, sqrt, log, tanh
 import copy
 import sys
+import warnings
+warnings.filterwarnings('ignore') # here to suppress nan-slice error warnings through optimization; not tackling root of problem...
 if sys.version_info < (3,):
     range = xrange
 
@@ -13,10 +15,10 @@ import numdifftools as nd
 import pandas as pd
 
 from .covariances import acf
-from .inference import BBVI, MetropolisHastings, norm_post_sim, Normal, InverseGamma, Uniform
+from .families import Normal
+from .inference import BBVI, MetropolisHastings, norm_post_sim
 from .output import TablePrinter
 from .tests import find_p_value
-from .distributions import q_Normal
 from .latent_variables import LatentVariable, LatentVariables
 from .results import BBVIResults, MLEResults, LaplaceResults, MCMCResults
 
@@ -130,13 +132,13 @@ class TSM(object):
         # Starting values for approximate distribution
         for i in range(len(self.latent_variables.z_list)):
             approx_dist = self.latent_variables.z_list[i].q
-            if isinstance(approx_dist, q_Normal):
+            if isinstance(approx_dist, Normal):
                 if start_ses is None:
-                    self.latent_variables.z_list[i].q.loc = start_loc[i]
-                    self.latent_variables.z_list[i].q.scale = -3.0
+                    self.latent_variables.z_list[i].q.mu0 = start_loc[i]
+                    self.latent_variables.z_list[i].q.sigma0 = np.exp(-3.0)
                 else:
-                    self.latent_variables.z_list[i].q.loc = start_loc[i]
-                    self.latent_variables.z_list[i].q.scale = start_ses[i]
+                    self.latent_variables.z_list[i].q.mu0 = start_loc[i]
+                    self.latent_variables.z_list[i].q.sigma0 = start_ses[i]
 
         q_list = [k.q for k in self.latent_variables.z_list]
         
@@ -356,30 +358,22 @@ class TSM(object):
             ihessian = np.linalg.inv(nd.Hessian(obj_type)(p.x))
             ses = np.power(np.abs(np.diag(ihessian)),0.5)
             self.latent_variables.set_z_values(p.x,method,ses,None)
-            # Change this in future
-            try:
-                latent_variables_store = self.latent_variables.copy()
-            except:
-                latent_variables_store = self.latent_variables
 
-            return MLEResults(data_name=self.data_name,X_names=X_names,model_name=self.model_name,
+        except:
+            ihessian = None
+            ses = None
+            self.latent_variables.set_z_values(p.x,method,None,None)
+
+        # Change this in future
+        try:
+            latent_variables_store = self.latent_variables.copy()
+        except:
+            latent_variables_store = self.latent_variables
+
+        return MLEResults(data_name=self.data_name,X_names=X_names,model_name=self.model_name,
                 model_type=self.model_type, latent_variables=latent_variables_store,results=p,data=Y, index=self.index,
                 multivariate_model=self.multivariate_model,objective_object=obj_type, 
                 method=method,ihessian=ihessian,signal=theta,scores=scores,
-                z_hide=self._z_hide,max_lag=self.max_lag,states=states,states_var=states_var)
-        except:
-            self.latent_variables.set_z_values(p.x,method,None,None)
- 
-            # Change this in future
-            try:
-                latent_variables_store = self.latent_variables.copy()
-            except:
-                latent_variables_store = self.latent_variables
-
-            return MLEResults(data_name=self.data_name,X_names=X_names,model_name=self.model_name,
-                model_type=self.model_type,latent_variables=latent_variables_store,results=p,data=Y, index=self.index,
-                multivariate_model=self.multivariate_model,objective_object=obj_type, 
-                method=method,ihessian=None,signal=theta,scores=scores,
                 z_hide=self._z_hide,max_lag=self.max_lag,states=states,states_var=states_var)
 
     def fit(self, method=None, **kwargs):

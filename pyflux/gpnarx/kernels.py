@@ -1,8 +1,7 @@
 import sys
 import numpy as np
 
-from .. import distributions as dst
-from .. import inference as ifr
+from .. import families as fam
 
 from .kernel_routines import SE_K_matrix, SE_Kstar_matrix, SE_Kstarstar_matrix, SE_K_arbitrary_X_matrix
 from .kernel_routines import OU_K_matrix, OU_Kstar_matrix, OU_Kstarstar_matrix, OU_K_arbitrary_X_matrix
@@ -32,9 +31,9 @@ class SquaredExponential(object):
         - A list of lists (each sub-list contains latent variable information)
         """
         lvs_to_build = []
-        lvs_to_build.append(['Noise Sigma^2', ifr.Uniform(transform='exp'), dst.q_Normal(0,3), -1.0])
-        lvs_to_build.append(['l', ifr.Uniform(transform='exp'), dst.q_Normal(0,3), -1.0])
-        lvs_to_build.append(['tau', ifr.Uniform(transform='exp'), dst.q_Normal(0,3), -1.0])
+        lvs_to_build.append(['Noise Sigma^2', fam.Flat(transform='exp'), fam.Normal(0,3), -1.0])
+        lvs_to_build.append(['l', fam.Flat(transform='exp'), fam.Normal(0,3), -1.0])
+        lvs_to_build.append(['tau', fam.Flat(transform='exp'), fam.Normal(0,3), -1.0])
         return lvs_to_build
 
     def K(self, parm):
@@ -72,9 +71,9 @@ class OrnsteinUhlenbeck(object):
         - A list of lists (each sub-list contains latent variable information)
         """
         lvs_to_build = []
-        lvs_to_build.append(['Noise Sigma^2', ifr.Uniform(transform='exp'), dst.q_Normal(0,3), -1.0])
-        lvs_to_build.append(['l', ifr.Uniform(transform='exp'), dst.q_Normal(0,3), -1.0])
-        lvs_to_build.append(['tau', ifr.Uniform(transform='exp'), dst.q_Normal(0,3), -1.0])
+        lvs_to_build.append(['Noise Sigma^2', fam.Flat(transform='exp'), fam.Normal(0,3), -1.0])
+        lvs_to_build.append(['l', fam.Flat(transform='exp'), fam.Normal(0,3), -1.0])
+        lvs_to_build.append(['tau', fam.Flat(transform='exp'), fam.Normal(0,3), -1.0])
         return lvs_to_build
 
     def K(self, parm):
@@ -166,10 +165,10 @@ class ARD(object):
         - A list of lists (each sub-list contains latent variable information)
         """
         lvs_to_build = []
-        lvs_to_build.append(['Noise Sigma^2', ifr.Uniform(transform='exp'), dst.q_Normal(0,3), -1.0])
+        lvs_to_build.append(['Noise Sigma^2', fam.Flat(transform='exp'), fam.Normal(0,3), -1.0])
         for lag in range(self.X.shape[1]):
-            lvs_to_build.append(['l lag' + str(lag+1), ifr.Uniform(transform='exp'), dst.q_Normal(0,3), -1.0])
-        lvs_to_build.append(['tau', ifr.Uniform(transform='exp'), dst.q_Normal(0,3), -1.0])
+            lvs_to_build.append(['l lag' + str(lag+1), fam.FLat(transform='exp'), fam.Normal(0,3), -1.0])
+        lvs_to_build.append(['tau', fam.Flat(transform='exp'), fam.Normal(0,3), -1.0])
         return lvs_to_build
 
     def K(self, parm):
@@ -256,10 +255,10 @@ class RationalQuadratic(object):
 
     def build_latent_variables(self):
         lvs_to_build = []
-        lvs_to_build.append(['Noise Sigma^2', ifr.Uniform(transform='exp'), dst.q_Normal(0,3), -1.0])
-        lvs_to_build.append(['a', ifr.Uniform(transform='exp'), dst.q_Normal(0,3), -1.0])
-        lvs_to_build.append(['l', ifr.Uniform(transform='exp'), dst.q_Normal(0,3), -1.0])
-        lvs_to_build.append(['tau', ifr.Uniform(transform='exp'), dst.q_Normal(0,3), -1.0])
+        lvs_to_build.append(['Noise Sigma^2', fam.Flat(transform='exp'), fam.Normal(0,3), -1.0])
+        lvs_to_build.append(['a', fam.Flat(transform='exp'), fam.Normal(0,3), -1.0])
+        lvs_to_build.append(['l', fam.Flat(transform='exp'), fam.Normal(0,3), -1.0])
+        lvs_to_build.append(['tau', fam.Flat(transform='exp'), fam.Normal(0,3), -1.0])
         return lvs_to_build
 
     def K(self, parm):
@@ -352,9 +351,9 @@ class Periodic(object):
         - A list of lists (each sub-list contains latent variable information)
         """
         lvs_to_build = []
-        lvs_to_build.append(['Noise Sigma^2', ifr.Uniform(transform='exp'), dst.q_Normal(0,3), -1.0])
-        lvs_to_build.append(['l', ifr.Uniform(transform='exp'), dst.q_Normal(0,3), -1.0])
-        lvs_to_build.append(['tau', ifr.Uniform(transform='exp'), dst.q_Normal(0,3), -1.0])
+        lvs_to_build.append(['Noise Sigma^2', fam.Flat(transform='exp'), fam.Normal(0,3), -1.0])
+        lvs_to_build.append(['l', fam.Flat(transform='exp'), fam.Normal(0,3), -1.0])
+        lvs_to_build.append(['tau', fam.Flat(transform='exp'), fam.Normal(0,3), -1.0])
         return lvs_to_build
 
     def K(self, parm):

@@ -12,8 +12,6 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 
 from .. import arma
-from .. import inference as ifr
-from .. import distributions as dst
 from .. import output as op
 from .. import tests as tst
 from .. import tsm as tsm

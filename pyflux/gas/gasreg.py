@@ -10,9 +10,8 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 from patsy import dmatrices, dmatrix, demo_data
 
-from .. import inference as ifr
+from .. import families as fam
 from .. import tsm as tsm
-from .. import distributions as dst
 from .. import data_check as dc
 
 from .gas_recursions import gas_reg_recursion
@@ -80,7 +79,7 @@ class GASReg(tsm.TSM):
         else:
             self._model = self._uncythonized_model
 
-        self.model_name = self.model_name2 + " Regression"
+        self.model_name = self.model_name2 + " GAS Regression"
 
         # Build any remaining latent variables that are specific to the family chosen
         for no, i in enumerate(self.family.build_latent_variables()):
@@ -109,7 +108,7 @@ class GASReg(tsm.TSM):
         """
 
         for parm in range(self.z_no):
-            self.latent_variables.add_z('Scale ' + self.X_names[parm], ifr.Uniform(transform='exp'), dst.q_Normal(0, 3))
+            self.latent_variables.add_z('Scale ' + self.X_names[parm], fam.Flat(transform='exp'), fam.Normal(0, 3))
             self.latent_variables.z_list[parm].start = -5.0
         self.z_no = len(self.latent_variables.z_list)
 
@@ -171,7 +170,7 @@ class GASReg(tsm.TSM):
         # Loop over time series
         theta, self.model_scores, coefficients = self.recursion(parm, theta, self.X, coefficients, self.model_scores, self.model_Y, self.model_Y.shape[0], model_scale, model_shape, model_skewness)
 
-        return theta[:-1], self.model_Y, self.model_scores[:-1], coefficients
+        return np.array(theta[:-1]), self.model_Y, self.model_scores, coefficients
 
     def _uncythonized_model(self, beta):
         """ Creates the structure of the model
@@ -203,7 +202,7 @@ class GASReg(tsm.TSM):
         theta, self.model_scores, coefficients = gas_reg_recursion(parm, theta, self.X, coefficients, self.model_scores, self.model_Y, self.model_Y.shape[0], 
             self.family.reg_score_function, self.link, model_scale, model_shape, model_skewness, self.max_lag)
 
-        return theta[:-1], self.model_Y, self.model_scores[:-1], coefficients
+        return theta[:-1], self.model_Y, self.model_scores, coefficients
 
     def _preoptimize_model(self, initials, method):
         """ Preoptimizes the model by estimating a static model, then a quick search of good dynamic parameters

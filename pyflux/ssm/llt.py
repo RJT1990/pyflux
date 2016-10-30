@@ -9,8 +9,7 @@ import scipy.stats as ss
 import matplotlib.pyplot as plt
 import seaborn as sns
 
-from .. import inference as ifr
-from .. import distributions as dst
+from .. import families as fam
 from .. import tsm as tsm
 from .. import data_check as dc
 
@@ -69,9 +68,9 @@ class LLT(tsm.TSM):
         None (changes model attributes)
         """
 
-        self.latent_variables.add_z('Sigma^2 irregular',ifr.Uniform(transform='exp'),dst.q_Normal(0,3))
-        self.latent_variables.add_z('Sigma^2 level',ifr.Uniform(transform='exp'),dst.q_Normal(0,3))
-        self.latent_variables.add_z('Sigma^2 trend',ifr.Uniform(transform='exp'),dst.q_Normal(0,3))
+        self.latent_variables.add_z('Sigma^2 irregular', fam.Flat(transform='exp'), fam.Normal(0,3))
+        self.latent_variables.add_z('Sigma^2 level', fam.Flat(transform='exp'), fam.Normal(0,3))
+        self.latent_variables.add_z('Sigma^2 trend', fam.Flat(transform='exp'), fam.Normal(0,3))
 
     def _forecast_model(self,beta,h):
         """ Creates forecasted states and variances

@@ -10,8 +10,7 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 from patsy import dmatrices, dmatrix, demo_data
 
-from .. import inference as ifr
-from .. import distributions as dst
+from .. import families as fam
 from .. import tsm as tsm
 from .. import data_check as dc
 
@@ -92,12 +91,12 @@ class DAR(tsm.TSM):
         None (changes model attributes)
         """
 
-        self.latent_variables.add_z('Sigma^2 irregular',ifr.Uniform(transform='exp'),dst.q_Normal(0,3))
+        self.latent_variables.add_z('Sigma^2 irregular', fam.Flat(transform='exp'), fam.Normal(0,3))
 
-        self.latent_variables.add_z('Constant',ifr.Uniform(transform=None),dst.q_Normal(0,3))
+        self.latent_variables.add_z('Constant', fam.Flat(transform=None), fam.Normal(0,3))
 
         for parm in range(1,self.ar+1):
-            self.latent_variables.add_z('Sigma^2 AR(' + str(parm) + ')',ifr.Uniform(transform='exp'),dst.q_Normal(0,3))
+            self.latent_variables.add_z('Sigma^2 AR(' + str(parm) + ')', fam.Flat(transform='exp'), fam.Normal(0,3))
 
     def _forecast_model(self,beta,Z,h):
         """ Creates forecasted states and variances

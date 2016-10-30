@@ -1,6 +1,5 @@
 from .gas import GAS
 from .gasx import GASX
-from .gasmodels import GASPoisson, GASNormal, GASLaplace, GASt, GASSkewt, GASExponential
 from .gasrank import GASRank
 from .gasllm import GASLLEV
 from .gasllt import GASLLT

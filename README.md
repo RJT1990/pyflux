@@ -4,9 +4,9 @@
 [![Join the chat at https://gitter.im/RJT1990/pyflux](https://badges.gitter.im/RJT1990/pyflux.svg)](https://gitter.im/RJT1990/pyflux?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
 [![PyPI version](https://badge.fury.io/py/pyflux.svg)](https://badge.fury.io/py/pyflux)
 
-__PyFlux__ is an open source time series library for Python. The library has a vast array of modern time series models, as well as a flexible array of inference options (frequentist and Bayesian) that can be applied to these models. By combining breadth of models with breadth of inference, PyFlux allows for probabilistic time series modelling.
+__PyFlux__ is an open source time series library for Python. The library has a vast array of modern time series models and inference capabilities. The library is based on a probabilistic approach to time series, where the user chooses model priors and distributional assumptions.
 
-See some examples, model explanations and documentation at [PyFlux.com](http://www.pyflux.com/). PyFlux is still only alpha software and can become much better and faster with your contributions! - see [here](https://github.com/RJT1990/pyflux/wiki/Contribution-Guidelines) for guidelines on how you can get involved.
+See some examples, model explanations and documentation at [PyFlux.com](http://www.pyflux.com/). PyFlux is still only alpha software, and so results should be treated with care. The goal is to release a more stable beta version in 2017. 
 
 ## Models
 

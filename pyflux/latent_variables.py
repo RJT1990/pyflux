@@ -8,7 +8,7 @@ import seaborn as sns
 from .covariances import acf
 from .output import TablePrinter
 from .inference import *
-from .distributions import *
+from .families import Normal, t, TruncatedNormal, Cauchy, Skewt, InverseGamma, Flat, InverseWishart, Laplace
 
 class LatentVariables(object):
     """ Latent Variables Class
@@ -114,18 +114,32 @@ class LatentVariables(object):
             if isinstance(prior, Normal):
                 prior_names.append('Normal')
                 prior_z_names.append('mu0: ' + str(np.round(prior.mu0,4)) + ', sigma0: ' + str(np.round(prior.sigma0,4)))
+            elif isinstance(prior, Laplace):
+                prior_names.append('Laplace')
+                prior_z_names.append('loc0: ' + str(np.round(prior.loc0,4)) + ', scale0: ' + str(np.round(prior.scale0,4)))
             elif isinstance(prior, InverseGamma):
                 prior_names.append('Inverse Gamma')
                 prior_z_names.append('alpha: ' + str(np.round(prior.alpha,4)) + ', beta: ' + str(np.round(prior.beta,4)))
-            elif isinstance(prior, Uniform):
-                prior_names.append('Uniform')
+            elif isinstance(prior, Flat):
+                prior_names.append('Flat')
                 prior_z_names.append('n/a (non-informative)')
             elif isinstance(prior, InverseWishart):
                 prior_names.append('InverseWishart')
                 prior_z_names.append('v: ' + str(np.round(prior.v,4)) + ' and scale matrix')
+            elif isinstance(prior, t):
+                prior_names.append('t')
+                prior_z_names.append('loc0: ' + str(np.round(prior.loc0,4)) + ', scale0: ' + str(np.round(prior.scale0,4)) 
+                    + ', df0: ' + str(np.round(prior.df0,4))) 
+            elif isinstance(prior, Skewt):
+                prior_names.append('Skewt')
+                prior_z_names.append('loc0: ' + str(np.round(prior.loc0,4)) + ', scale0: ' + str(np.round(prior.scale0,4)) 
+                    + ', df0: ' + str(np.round(prior.df0,4)) + ', gamma0: ' + str(np.round(prior.gamma0,4))) 
+            elif isinstance(prior, Cauchy):
+                prior_names.append('Cauchy')
+                prior_z_names.append('loc0: ' + str(np.round(prior.loc0,4)) + ', scale0: ' + str(np.round(prior.scale0,4)))
             elif isinstance(prior, TruncatedNormal):
                 prior_names.append('TruncatedNormal')
-                prior_z_names.append('mu0: ' + str(np.round(prior.mu0,4)) + ', sigma0: ' + str(np.round(prior.sigma0,4)))                
+                prior_z_names.append('mu0: ' + str(np.round(prior.mu0,4)) + ', sigma0: ' + str(np.round(prior.sigma0,4)))                 
             else:
                 raise ValueError("Prior distribution not detected!")
         return prior_names, prior_z_names
@@ -178,14 +192,8 @@ class LatentVariables(object):
         q_list = []
 
         for approx in approx_dists:
-            if isinstance(approx, q_Normal):
+            if isinstance(approx, Normal):
                 q_list.append('Normal')
-            elif isinstance(approx, q_InverseGamma):
-                q_list.append('Inverse Gamma')
-            elif isinstance(approx, q_Uniform):
-                q_list.append('Uniform')
-            elif isinstance(approx, q.InverseWishart):
-                q_list.append('InverseWishart')
             else:
                 raise Exception("Approximate distribution not detected!")
         return q_list
@@ -288,8 +296,8 @@ class LatentVariable(object):
     prior : Prior object
         The prior for the latent variable, e.g. Normal(0,1)
 
-    q : dst.q_[dist] object
-        The variational distribution for the latent variable, e.g. q_Normal(0,1)
+    q : fam.[dist] object
+        The variational distribution for the latent variable, e.g. Normal(0,1)
     """
 
     def __init__(self,name,index,prior,q):

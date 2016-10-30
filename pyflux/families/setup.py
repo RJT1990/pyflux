@@ -4,10 +4,12 @@ import os
 def configuration(parent_package='', top_path=None):
     from numpy.distutils.misc_util import Configuration
 
-    config = Configuration('gas', parent_package, top_path)
+    config = Configuration('families', parent_package, top_path)
 
     config.add_extension('gas_recursions',
                          sources=['gas_recursions.c'])
+    config.add_extension('poisson_kalman_recursions',
+                         sources=['poisson_kalman_recursions.c'])
 
     return config
 

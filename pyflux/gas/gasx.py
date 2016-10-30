@@ -10,9 +10,8 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 from patsy import dmatrices, dmatrix, demo_data
 
-from .. import inference as ifr
+from .. import families as fam
 from .. import tsm as tsm
-from .. import distributions as dst
 from .. import data_check as dc
 
 from .gasmodels import *
@@ -99,7 +98,7 @@ class GASX(tsm.TSM):
         else:
             self._model = self._uncythonized_model
 
-        self.model_name = self.model_name2 + "X(" + str(self.ar) + "," + str(self.integ) + "," + str(self.sc) + ")"
+        self.model_name = self.model_name2 + " GAS X(" + str(self.ar) + "," + str(self.integ) + "," + str(self.sc) + ")"
 
         # Build any remaining latent variables that are specific to the family chosen
         for no, i in enumerate(self.family.build_latent_variables()):
@@ -129,13 +128,13 @@ class GASX(tsm.TSM):
         """
 
         for ar_term in range(self.ar):
-            self.latent_variables.add_z('AR(' + str(ar_term+1) + ')',ifr.Normal(0,0.5,transform=None),dst.q_Normal(0,3))
+            self.latent_variables.add_z('AR(' + str(ar_term+1) + ')', fam.Normal(0,0.5,transform=None), fam.Normal(0,3))
 
         for sc_term in range(self.sc):
-            self.latent_variables.add_z('SC(' + str(sc_term+1) + ')',ifr.Normal(0,0.5,transform=None),dst.q_Normal(0,3))
+            self.latent_variables.add_z('SC(' + str(sc_term+1) + ')', fam.Normal(0,0.5,transform=None), fam.Normal(0,3))
 
         for parm in range(len(self.X_names)):
-            self.latent_variables.add_z('Beta ' + self.X_names[parm],ifr.Normal(0,3,transform=None),dst.q_Normal(0,3))
+            self.latent_variables.add_z('Beta ' + self.X_names[parm], fam.Normal(0,3,transform=None), fam.Normal(0,3))
 
     def _get_scale_and_shape(self, parm):
         """ Obtains appropriate model scale and shape latent variables
@@ -225,7 +224,7 @@ class GASX(tsm.TSM):
         theta, self.model_scores = gasx_recursion(parm, theta, self.model_scores, self.model_Y, self.ar, self.sc, self.model_Y.shape[0], self.family.score_function, 
             self.link, model_scale, model_shape, model_skewness, self.max_lag)
 
-        return theta, self.model_Y, self.model_scores
+        return np.array(theta), self.model_Y, self.model_scores
 
     def _mean_prediction(self, theta, Y, scores, h, t_params, X_oos):
         """ Creates a h-step ahead mean prediction

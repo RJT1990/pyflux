@@ -9,9 +9,8 @@ import scipy.special as sp
 import matplotlib.pyplot as plt
 import seaborn as sns
 
-from .. import inference as ifr
+from .. import families as fam
 from .. import tsm as tsm
-from .. import distributions as dst
 from .. import data_check as dc
 
 from .gasmodels import *
@@ -76,7 +75,7 @@ class GASLLT(tsm.TSM):
                 self.recursion = self.family.newtonllt_recursion() # second-order update
         else:
             self._model = self._uncythonized_model
-        self.model_name = self.model_name2 + " LLT"
+        self.model_name = self.model_name2 + " GAS LLT"
 
         # Build any remaining latent variables that are specific to the family chosen
         for no, i in enumerate(self.family.build_latent_variables()):
@@ -104,8 +103,8 @@ class GASLLT(tsm.TSM):
         None (changes model attributes)
         """
 
-        self.latent_variables.add_z('Level Scale', ifr.Normal(0, 0.5, transform=None), dst.q_Normal(0, 3))
-        self.latent_variables.add_z('Trend Scale', ifr.Normal(0, 0.5, transform=None), dst.q_Normal(0, 3))
+        self.latent_variables.add_z('Level Scale', fam.Normal(0, 0.5, transform=None), fam.Normal(0, 3))
+        self.latent_variables.add_z('Trend Scale', fam.Normal(0, 0.5, transform=None), fam.Normal(0, 3))
 
 
     def _get_scale_and_shape(self,parm):
@@ -167,7 +166,7 @@ class GASLLT(tsm.TSM):
         # Loop over time series
         theta, self.model_scores = self.recursion(parm, theta, theta_t, self.model_scores, self.model_Y, self.model_Y.shape[0], model_scale, model_shape, model_skewness, self.max_lag)
 
-        return theta, theta_t, self.model_Y, self.model_scores
+        return np.array(theta), theta_t, self.model_Y, np.array(self.model_scores)
 
     def _uncythonized_model(self, beta):
         """ Creates the structure of the model
@@ -238,7 +237,7 @@ class GASLLT(tsm.TSM):
         for t in range(0,h):
             new_value1 = theta_t_exp[-1] + theta_exp[-1] + t_params[0]*scores_exp[-1]
             new_value2 = theta_t_exp[-1] + t_params[1]*scores_exp[-1]
-            if self.model_name2 == "Exponential GAS":
+            if self.model_name2 == "Exponential":
                 Y_exp = np.append(Y_exp, [1.0/self.link(new_value1)])
             else:
                 Y_exp = np.append(Y_exp, [self.link(new_value1)])
@@ -325,7 +324,7 @@ class GASLLT(tsm.TSM):
                 new_value1 = theta_t_exp[-1] + theta_exp[-1] + t_params[0]*scores_exp[-1]
                 new_value2 = theta_t_exp[-1] + t_params[1]*scores_exp[-1]
 
-                if self.model_name2 == "Exponential GAS":
+                if self.model_name2 == "Exponential":
                     rnd_value = self.family.draw_variable(1.0/self.link(new_value1),model_scale,model_shape,model_skewness,1)[0]
                 else:
                     rnd_value = self.family.draw_variable(self.link(new_value1),model_scale,model_shape,model_skewness,1)[0]
@@ -405,9 +404,9 @@ class GASLLT(tsm.TSM):
             plt.title("Model fit for " + self.data_name)
 
             # Catch specific family properties (imply different link functions/moments)
-            if self.model_name2 == "Exponential GAS":
+            if self.model_name2 == "Exponential":
                 values_to_plot = 1.0/self.link(mu)
-            elif self.model_name2 == "Skewt GAS":
+            elif self.model_name2 == "Skewt":
                 t_params = self.transform_z()
                 model_scale, model_shape, model_skewness = self._get_scale_and_shape(t_params)
                 m1 = (np.sqrt(model_shape)*sp.gamma((model_shape-1.0)/2.0))/(np.sqrt(np.pi)*sp.gamma(model_shape/2.0))
@@ -465,7 +464,7 @@ class GASLLT(tsm.TSM):
             # Get mean prediction and simulations (for errors)
             mean_values = self._mean_prediction(theta,mu_t,Y,scores,h,t_params)
 
-            if self.model_name2 == "Skewt GAS":
+            if self.model_name2 == "Skewt":
                 model_scale, model_shape, model_skewness = self._get_scale_and_shape(t_params)
                 m1 = (np.sqrt(model_shape)*sp.gamma((model_shape-1.0)/2.0))/(np.sqrt(np.pi)*sp.gamma(model_shape/2.0))
                 mean_values += (model_skewness - (1.0/model_skewness))*model_scale*m1 
@@ -573,7 +572,7 @@ class GASLLT(tsm.TSM):
             t_params = self.transform_z()
 
             mean_values = self._mean_prediction(theta,mu_t,Y,scores,h,t_params)
-            if self.model_name2 == "Skewt GAS":
+            if self.model_name2 == "Skewt":
                 model_scale, model_shape, model_skewness = self._get_scale_and_shape(t_params)
                 m1 = (np.sqrt(model_shape)*sp.gamma((model_shape-1.0)/2.0))/(np.sqrt(np.pi)*sp.gamma(model_shape/2.0))
                 forecasted_values = mean_values[-h:] + (model_skewness - (1.0/model_skewness))*model_scale*m1 

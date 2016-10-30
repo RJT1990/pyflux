@@ -10,8 +10,7 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 from patsy import dmatrices, dmatrix, demo_data
 
-from .. import inference as ifr
-from .. import distributions as dst
+from .. import families as fam
 from .. import tsm as tsm
 from .. import data_check as dc
 
@@ -69,10 +68,10 @@ class DynReg(tsm.TSM):
         None (changes model attributes)
         """
 
-        self.latent_variables.add_z('Sigma^2 irregular',ifr.Uniform(transform='exp'),dst.q_Normal(0,3))
+        self.latent_variables.add_z('Sigma^2 irregular', fam.Flat(transform='exp'), fam.Normal(0,3))
 
         for parm in range(self.z_no-1):
-            self.latent_variables.add_z('Sigma^2 ' + self.X_names[parm],ifr.Uniform(transform='exp'),dst.q_Normal(0,3))
+            self.latent_variables.add_z('Sigma^2 ' + self.X_names[parm], fam.Flat(transform='exp'), fam.Normal(0,3))
 
     def _forecast_model(self,beta,Z,h):
         """ Creates forecasted states and variances

@@ -15,6 +15,7 @@ from .bbvi_routines import alpha_recursion, log_p_posterior
 class BBVI(object):
     """
     Black Box Variational Inference
+    
     Parameters
     ----------
     neg_posterior : function
@@ -29,7 +30,7 @@ class BBVI(object):
         How many iterations to run
     """
 
-    def __init__(self,neg_posterior,q,sims,optimizer='RMSProp',iterations=1000):
+    def __init__(self, neg_posterior, q, sims, optimizer='RMSProp', iterations=1000, learning_rate=0.001):
         self.neg_posterior = neg_posterior
         self.q = q
         self.sims = sims
@@ -37,6 +38,7 @@ class BBVI(object):
         self.approx_param_no = np.array([i.param_no for i in self.q])
         self.optimizer = optimizer
         self.printer = True
+        self.learning_rate = learning_rate
 
     def change_parameters(self,params):
         """
@@ -45,7 +47,7 @@ class BBVI(object):
         no_of_params = 0
         for core_param in range(len(self.q)):
             for approx_param in range(self.q[core_param].param_no):
-                self.q[core_param].change_param(approx_param,params[no_of_params])
+                self.q[core_param].vi_change_param(approx_param, params[no_of_params])
                 no_of_params += 1
 
     def create_normal_logq(self,z):
@@ -62,7 +64,7 @@ class BBVI(object):
         current = []
         for core_param in range(len(self.q)):
             for approx_param in range(self.q[core_param].param_no):
-                current.append(self.q[core_param].return_param(approx_param))
+                current.append(self.q[core_param].vi_return_param(approx_param))
         return np.array(current)
 
     def cv_gradient(self,z):
@@ -117,9 +119,9 @@ class BBVI(object):
         """
         Draw parameters from the approximating distributions
         """        
-        z = self.q[0].sim(self.sims)
+        z = self.q[0].draw_variable_local(self.sims)
         for i in range(1,len(self.q)):
-            z = np.vstack((z,self.q[i].sim(self.sims)))
+            z = np.vstack((z,self.q[i].draw_variable_local(self.sims)))
         return z
 
     def get_means_and_scales_from_q(self):
@@ -129,9 +131,9 @@ class BBVI(object):
         means = np.zeros(len(self.q))
         scale = np.zeros(len(self.q))
         for i in range(len(self.q)):
-            means[i] = self.q[i].loc
-            scale[i] = self.q[i].scale  
-        return means, np.exp(scale)
+            means[i] = self.q[i].mu0
+            scale[i] = self.q[i].sigma0 
+        return means, scale
 
     def get_means_and_scales(self):
         """
@@ -147,7 +149,7 @@ class BBVI(object):
         grad = np.zeros((np.sum(self.approx_param_no),self.sims))
         for core_param in range(len(self.q)):
             for approx_param in range(self.q[core_param].param_no):
-                grad[param_count] = self.q[core_param].score(z[core_param],approx_param)        
+                grad[param_count] = self.q[core_param].vi_score(z[core_param],approx_param)        
                 param_count += 1
         return grad
 
@@ -195,9 +197,9 @@ class BBVI(object):
 
         # Create optimizer
         if self.optimizer == 'ADAM':
-            self.optim = ADAM(final_parameters,variance,0.001,0.9,0.999)
+            self.optim = ADAM(final_parameters, variance, self.learning_rate, 0.9, 0.999)
         elif self.optimizer == 'RMSProp':
-            self.optim = RMSProp(final_parameters,variance,0.001,0.99)
+            self.optim = RMSProp(final_parameters, variance, self.learning_rate, 0.99)
         
         for i in range(self.iterations):
             x = self.draw_normal()
@@ -236,9 +238,9 @@ class BBVI(object):
 
         # Create optimizer
         if self.optimizer == 'ADAM':
-            self.optim = ADAM(final_parameters,variance,0.001,0.9,0.999)
+            self.optim = ADAM(final_parameters, variance, self.learning_rate, 0.9, 0.999)
         elif self.optimizer == 'RMSProp':
-            self.optim = RMSProp(final_parameters,variance,0.001,0.99)
+            self.optim = RMSProp(final_parameters, variance, self.learning_rate, 0.99)
 
         # Stored updates
         stored_means = np.zeros((self.iterations,len(final_parameters)/2))
@@ -272,15 +274,15 @@ class BBVI(object):
 
 class CBBVI(BBVI):
 
-    def __init__(self,neg_posterior,log_p_blanket,q,sims,optimizer='RMSProp',iterations=300000):
-        super(CBBVI,self).__init__(neg_posterior,q,sims,optimizer,iterations)
+    def __init__(self, neg_posterior, log_p_blanket, q, sims, optimizer='RMSProp',iterations=300000, learning_rate=0.001):
+        super(CBBVI, self).__init__(neg_posterior, q, sims, optimizer, iterations, learning_rate)
         self.log_p_blanket = log_p_blanket
 
     def log_p(self,z):
         """
         The unnormalized log posterior components (the quantity we want to approximate)
         RAO-BLACKWELLIZED!
-        """        
+        """      
         return np.array([self.log_p_blanket(i) for i in z])
 
     def normal_log_q(self,z):
@@ -299,7 +301,7 @@ class CBBVI(BBVI):
         means, scale = self.get_means_and_scales_from_q()
         return ss.norm.logpdf(z,loc=means,scale=scale)
 
-    def cv_gradient(self,z):
+    def cv_gradient(self, z):
         """
         The control variate augmented Monte Carlo gradient estimate
         RAO-BLACKWELLIZED!
