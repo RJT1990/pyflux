@@ -10,9 +10,6 @@ See some examples, model explanations and documentation at [PyFlux.com](http://w
 
 **Update** : November release is incoming; scheduled release date is November 13. Many new features and models, increased stability, rewrite of the distribution API, new documentation and tutorials, and plenty more unit tests...
 
-
-plus a rewrite of the documentation.
-
 ## Models
 
 - [ARIMA models](http://www.pyflux.com/arima-models)
