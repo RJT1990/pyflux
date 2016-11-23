@@ -8,7 +8,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>GP-NARX models &mdash; PyFlux 0.3.7 documentation</title>
+  <title>GP-NARX models &mdash; PyFlux 0.4.0 documentation</title>
   
 
   
@@ -30,9 +30,9 @@
   
 
   
-    <link rel="top" title="PyFlux 0.3.7 documentation" href="index.html"/>
+    <link rel="top" title="PyFlux 0.4.0 documentation" href="index.html"/>
         <link rel="next" title="Gaussian State Space models" href="ssm.html"/>
-        <link rel="prev" title="GAS Regression models" href="gasreg.html"/> 
+        <link rel="prev" title="GASX models" href="gasx.html"/> 
 
   
   <script src="_static/js/modernizr.min.js"></script>
@@ -60,7 +60,7 @@
             
             
               <div class="version">
-                0.3
+                0.4
               </div>
             
           
@@ -84,6 +84,7 @@
                 <ul class="current">
 <li class="toctree-l1"><a class="reference internal" href="arima.html">ARIMA models</a></li>
 <li class="toctree-l1"><a class="reference internal" href="arimax.html">ARIMAX models</a></li>
+<li class="toctree-l1"><a class="reference internal" href="dar.html">DAR models</a></li>
 <li class="toctree-l1"><a class="reference internal" href="egarch.html">Beta-t-EGARCH models</a></li>
 <li class="toctree-l1"><a class="reference internal" href="egarchm.html">Beta-t-EGARCH in-mean models</a></li>
 <li class="toctree-l1"><a class="reference internal" href="egarchmreg.html">Beta-t-EGARCH-in-mean regression models</a></li>
@@ -93,6 +94,8 @@
 <li class="toctree-l1"><a class="reference internal" href="segarchm.html">Skew-t EGARCH in-mean models</a></li>
 <li class="toctree-l1"><a class="reference internal" href="gas.html">GAS models</a></li>
 <li class="toctree-l1"><a class="reference internal" href="gasreg.html">GAS Regression models</a></li>
+<li class="toctree-l1"><a class="reference internal" href="gasssm.html">GAS State Space models</a></li>
+<li class="toctree-l1"><a class="reference internal" href="gasx.html">GASX models</a></li>
 <li class="toctree-l1 current"><a class="current reference internal" href="#">GP-NARX models</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="#example">Example</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#class-arguments">Class Arguments</a></li>
@@ -164,7 +167,7 @@
 <span class="kn">import</span> <span class="nn">pyflux</span> <span class="kn">as</span> <span class="nn">pf</span>
 
 <span class="n">USgrowth</span> <span class="o">=</span> <span class="c1">#somequarterlyGDPgrowthdatahere</span>
-<span class="n">model</span> <span class="o">=</span> <span class="n">pf</span><span class="o">.</span><span class="n">GPNARX</span><span class="p">(</span><span class="n">USgrowth</span><span class="p">,</span><span class="n">ar</span><span class="o">=</span><span class="mi">4</span><span class="p">,</span><span class="n">kernel_type</span><span class="o">=</span><span class="s1">&#39;OU&#39;</span><span class="p">)</span>
+<span class="n">model</span> <span class="o">=</span> <span class="n">pf</span><span class="o">.</span><span class="n">GPNARX</span><span class="p">(</span><span class="n">USgrowth</span><span class="p">,</span> <span class="n">ar</span><span class="o">=</span><span class="mi">4</span><span class="p">,</span> <span class="n">kernel_type</span><span class="o">=</span><span class="s1">&#39;OU&#39;</span><span class="p">)</span>
 </pre></div>
 </td></tr></table></div>
 </div>
@@ -188,7 +191,7 @@
 <dl class="attribute">
 <dt id="GPNARX.kernel_type">
 <code class="descname">kernel_type</code><a class="headerlink" href="#GPNARX.kernel_type" title="Permalink to this definition">¶</a></dt>
-<dd><p>string : the type of kernel; one of [&#8216;SE&#8217;,&#8217;RQ&#8217;,&#8217;OU&#8217;,&#8217;ARD&#8217;]</p>
+<dd><p>string : the type of kernel; one of [&#8216;SE&#8217;,&#8217;RQ&#8217;,&#8217;OU&#8217;,&#8217;Periodic&#8217;,&#8217;ARD&#8217;]</p>
 </dd></dl>
 
 <dl class="attribute">
@@ -229,7 +232,7 @@
 <dl class="function">
 <dt id="fit">
 <code class="descname">fit</code><span class="sig-paren">(</span><em>method</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="headerlink" href="#fit" title="Permalink to this definition">¶</a></dt>
-<dd><p>Estimates parameters for the model. Returns a Results object. <strong>method</strong> is an inference/estimation option; see Bayesian Inference and Classical Inference sections for options. If no <strong>method</strong> is provided then a default will be used.</p>
+<dd><p>Estimates latent variables for the model. Returns a Results object. <strong>method</strong> is an inference/estimation option; see Bayesian Inference and Classical Inference sections for options. If no <strong>method</strong> is provided then a default will be used.</p>
 <p>Optional arguments are specific to the <strong>method</strong> you choose - see the documentation for these methods for more detail.</p>
 </dd></dl>
 
@@ -251,9 +254,9 @@
 </dd></dl>
 
 <dl class="function">
-<dt id="plot_parameters">
-<code class="descname">plot_parameters</code><span class="sig-paren">(</span><em>indices</em>, <em>figsize</em><span class="sig-paren">)</span><a class="headerlink" href="#plot_parameters" title="Permalink to this definition">¶</a></dt>
-<dd><p>Returns a plot of the parameters and their associated uncertainty. <strong>indices</strong> is a list referring to the parameter indices that you want ot plot. Figsize specifies how big the plot will be.</p>
+<dt id="plot_z">
+<code class="descname">plot_z</code><span class="sig-paren">(</span><em>indices</em>, <em>figsize</em><span class="sig-paren">)</span><a class="headerlink" href="#plot_z" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns a plot of the latent variables and their associated uncertainty. <strong>indices</strong> is a list referring to the latent variable indices that you want ot plot. Figsize specifies how big the plot will be.</p>
 </dd></dl>
 
 <dl class="function">
@@ -265,8 +268,8 @@
 
 <dl class="function">
 <dt id="plot_predict_is">
-<code class="descname">plot_predict_is</code><span class="sig-paren">(</span><em>h</em>, <em>past_values</em>, <em>intervals</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="headerlink" href="#plot_predict_is" title="Permalink to this definition">¶</a></dt>
-<dd><p>Plots in-sample rolling predictions for the model. <strong>h</strong> is an int of how many previous steps to simulate performance on. <strong>past_values</strong> is an int of how many past values of the series to plot. <strong>intervals</strong> is a bool on whether to include confidence/credibility intervals or not.</p>
+<code class="descname">plot_predict_is</code><span class="sig-paren">(</span><em>h</em>, <em>fit_once</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="headerlink" href="#plot_predict_is" title="Permalink to this definition">¶</a></dt>
+<dd><p>Plots in-sample rolling predictions for the model. <strong>h</strong> is an int of how many previous steps to simulate performance on. <strong>fit_once</strong> is a boolean specifying whether to fit the model once at the beginning of the period (True), or whether to fit after every step (False).</p>
 <p>Optional arguments include <strong>figsize</strong> - the dimensions of the figure to plot.</p>
 </dd></dl>
 
@@ -278,8 +281,8 @@
 
 <dl class="function">
 <dt id="predict_is">
-<code class="descname">predict_is</code><span class="sig-paren">(</span><em>h</em><span class="sig-paren">)</span><a class="headerlink" href="#predict_is" title="Permalink to this definition">¶</a></dt>
-<dd><p>Returns DataFrame of in-sample rolling predictions for the model. <strong>h</strong> is an int of how many previous steps to simulate performance on.</p>
+<code class="descname">predict_is</code><span class="sig-paren">(</span><em>h</em>, <em>fit_once</em><span class="sig-paren">)</span><a class="headerlink" href="#predict_is" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns DataFrame of in-sample rolling predictions for the model. <strong>h</strong> is an int of how many previous steps to simulate performance on. <strong>fit_once</strong> is a boolean specifying whether to fit the model once at the beginning of the period (True), or whether to fit after every step (False).</p>
 </dd></dl>
 
 </div>
@@ -295,7 +298,7 @@
         <a href="ssm.html" class="btn btn-neutral float-right" title="Gaussian State Space models" accesskey="n">Next <span class="fa fa-arrow-circle-right"></span></a>
       
       
-        <a href="gasreg.html" class="btn btn-neutral" title="GAS Regression models" accesskey="p"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+        <a href="gasx.html" class="btn btn-neutral" title="GASX models" accesskey="p"><span class="fa fa-arrow-circle-left"></span> Previous</a>
       
     </div>
   
@@ -326,7 +329,7 @@
     <script type="text/javascript">
         var DOCUMENTATION_OPTIONS = {
             URL_ROOT:'./',
-            VERSION:'0.3.7',
+            VERSION:'0.4.0',
             COLLAPSE_INDEX:false,
             FILE_SUFFIX:'.html',
             HAS_SOURCE:  true

@@ -1,0 +1,391 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>Getting Started with Time Series &mdash; PyFlux 0.4.0 documentation</title>
+  
+
+  
+  
+
+  
+
+  
+  
+    
+
+  
+
+  
+  
+    <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
+  
+
+  
+
+  
+    <link rel="top" title="PyFlux 0.4.0 documentation" href="index.html"/>
+        <link rel="next" title="ARIMA models" href="arima.html"/>
+        <link rel="prev" title="Introduction" href="index.html"/> 
+
+  
+  <script src="_static/js/modernizr.min.js"></script>
+
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search">
+          
+
+          
+            <a href="index.html" class="icon icon-home"> PyFlux
+          
+
+          
+          </a>
+
+          
+            
+            
+              <div class="version">
+                0.4
+              </div>
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+                <ul class="current">
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Getting Started with Time Series</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#introduction">Introduction</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#step-one-visualize-the-data">Step One: Visualize the Data</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#step-two-propose-a-model">Step Two: Propose a Model</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#step-three-perform-inference">Step Three: Perform Inference</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#step-four-evaluate-model-fit">Step Four: Evaluate Model Fit</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#step-five-analyse-and-predict">Step Five: Analyse and Predict</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#references">References</a></li>
+</ul>
+</li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="arima.html">ARIMA models</a></li>
+<li class="toctree-l1"><a class="reference internal" href="arimax.html">ARIMAX models</a></li>
+<li class="toctree-l1"><a class="reference internal" href="dar.html">DAR models</a></li>
+<li class="toctree-l1"><a class="reference internal" href="egarch.html">Beta-t-EGARCH models</a></li>
+<li class="toctree-l1"><a class="reference internal" href="egarchm.html">Beta-t-EGARCH in-mean models</a></li>
+<li class="toctree-l1"><a class="reference internal" href="egarchmreg.html">Beta-t-EGARCH-in-mean regression models</a></li>
+<li class="toctree-l1"><a class="reference internal" href="lmegarch.html">Beta-t-EGARCH Long Memory models</a></li>
+<li class="toctree-l1"><a class="reference internal" href="garch.html">GARCH models</a></li>
+<li class="toctree-l1"><a class="reference internal" href="segarch.html">Skew-t EGARCH models</a></li>
+<li class="toctree-l1"><a class="reference internal" href="segarchm.html">Skew-t EGARCH in-mean models</a></li>
+<li class="toctree-l1"><a class="reference internal" href="gas.html">GAS models</a></li>
+<li class="toctree-l1"><a class="reference internal" href="gasreg.html">GAS Regression models</a></li>
+<li class="toctree-l1"><a class="reference internal" href="gasssm.html">GAS State Space models</a></li>
+<li class="toctree-l1"><a class="reference internal" href="gasx.html">GASX models</a></li>
+<li class="toctree-l1"><a class="reference internal" href="gpnar.html">GP-NARX models</a></li>
+<li class="toctree-l1"><a class="reference internal" href="ssm.html">Gaussian State Space models</a></li>
+<li class="toctree-l1"><a class="reference internal" href="ngssm.html">Non-Gaussian State Space models</a></li>
+<li class="toctree-l1"><a class="reference internal" href="var.html">VAR models</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="bayes.html">Bayesian Inference</a></li>
+<li class="toctree-l1"><a class="reference internal" href="classical.html">Classical Inference</a></li>
+</ul>
+
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" role="navigation" aria-label="top navigation">
+        <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+        <a href="index.html">PyFlux</a>
+      </nav>
+
+
+      
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          
+
+ 
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href="index.html">Docs</a> &raquo;</li>
+      
+    <li>Getting Started with Time Series</li>
+      <li class="wy-breadcrumbs-aside">
+        
+          
+            <a href="_sources/getting_started.txt" rel="nofollow"> View page source</a>
+          
+        
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <div class="section" id="getting-started-with-time-series">
+<h1>Getting Started with Time Series<a class="headerlink" href="#getting-started-with-time-series" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="introduction">
+<h2>Introduction<a class="headerlink" href="#introduction" title="Permalink to this headline">¶</a></h2>
+<p>Time series analysis is a subfield of statistics and econometrics. Time series data <span class="math">\(y_{t}\)</span> is indexed by time <span class="math">\(t\)</span> and ordered sequentially. This presents unique challenges including autocorrelation within the data, non-exchangeability of data points, and non-stationarity of data and parameters. Because of the sequential nature of the data, time series analysis has particular goals. We can summarize these goals into one of <strong>description</strong>  of a time series in terms of latent components or features of interest, and <strong>prediction</strong>, which aims to produce reasonable forecasts of the future (Harvey, 1990).</p>
+<p>From start to finish, we can place time series modelling in a framework in the spirit of <strong>Box&#8217;s Loop</strong> (Blei, D.M. 2014). In particular, we:</p>
+<ol class="arabic simple">
+<li>Build a model for the time series data</li>
+<li>Perform inference on the model</li>
+<li>Check the model fit, performing evaluation &amp; criticism</li>
+<li>Revise the model, repeat until happy</li>
+<li>Perform retrospection and prediction with the model</li>
+</ol>
+<p>Below we outline an example model building process for JPMorgan Chase stock data, where the index is daily. Consider this time series data:</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">pandas</span> <span class="k">as</span> <span class="nn">pd</span>
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="kn">from</span> <span class="nn">pandas_datareader.data</span> <span class="k">import</span> <span class="n">DataReader</span>
+<span class="kn">from</span> <span class="nn">datetime</span> <span class="k">import</span> <span class="n">datetime</span>
+
+<span class="n">a</span> <span class="o">=</span> <span class="n">DataReader</span><span class="p">(</span><span class="s1">&#39;JPM&#39;</span><span class="p">,</span>  <span class="s1">&#39;yahoo&#39;</span><span class="p">,</span> <span class="n">datetime</span><span class="p">(</span><span class="mi">2006</span><span class="p">,</span><span class="mi">6</span><span class="p">,</span><span class="mi">1</span><span class="p">),</span> <span class="n">datetime</span><span class="p">(</span><span class="mi">2016</span><span class="p">,</span><span class="mi">6</span><span class="p">,</span><span class="mi">1</span><span class="p">))</span>
+<span class="n">a_returns</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">diff</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="n">a</span><span class="p">[</span><span class="s1">&#39;Adj Close&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">values</span><span class="p">)))</span>
+<span class="n">a_returns</span><span class="o">.</span><span class="n">index</span> <span class="o">=</span> <span class="n">a</span><span class="o">.</span><span class="n">index</span><span class="o">.</span><span class="n">values</span><span class="p">[</span><span class="mi">1</span><span class="p">:</span><span class="n">a</span><span class="o">.</span><span class="n">index</span><span class="o">.</span><span class="n">values</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]]</span>
+<span class="n">a_returns</span><span class="o">.</span><span class="n">columns</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;JPM Returns&quot;</span><span class="p">]</span>
+
+<span class="n">a_returns</span><span class="o">.</span><span class="n">head</span><span class="p">()</span>
+</pre></div>
+</div>
+<div>
+<table border="1" class="dataframe", background='#FFFFFF'>
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>JPM Returns</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>2006-06-02</th>
+      <td>0.005264</td>
+    </tr>
+    <tr>
+      <th>2006-06-05</th>
+      <td>-0.019360</td>
+    </tr>
+    <tr>
+      <th>2006-06-06</th>
+      <td>-0.013826</td>
+    </tr>
+    <tr>
+      <th>2006-06-07</th>
+      <td>-0.003072</td>
+    </tr>
+    <tr>
+      <th>2006-06-08</th>
+      <td>0.002364</td>
+    </tr>
+  </tbody>
+</table>
+</div>
+<br><p>The index of the data is meaningful for this data; we cannot simply &#8216;shuffle the deck&#8217; otherwise we could lose meaningful dependencies such as seasonality, trends, cycles and other components.</p>
+</div>
+<div class="section" id="step-one-visualize-the-data">
+<h2>Step One: Visualize the Data<a class="headerlink" href="#step-one-visualize-the-data" title="Permalink to this headline">¶</a></h2>
+<p>Because time series is sequential, plotting the data allows us to obtain an idea of its properties. We can also plot autocorrelation plots of the data (and transformations of the data) to understand if autocorrelation exists in the series. Lastly, in this stage, we can reason about potential features that might explain variation in the series.</p>
+<p>For our stock market data, we can first plot the data:</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="n">plt</span><span class="o">.</span><span class="n">figure</span><span class="p">(</span><span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">15</span><span class="p">,</span> <span class="mi">5</span><span class="p">))</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">ylabel</span><span class="p">(</span><span class="s2">&quot;Returns&quot;</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">a_returns</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
+</pre></div>
+</div>
+<img alt="http://www.pyflux.com/welcome_pack/introduction/output_2_0.png" src="http://www.pyflux.com/welcome_pack/introduction/output_2_0.png" />
+<p>It appears that the volatility of the series changes over time, and is clustering in periods of market turbulence, such as in the financial crisis of 2008. We can obtain more insight by plotting autocorrelation functions of the returns and squared returns:</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">pyflux</span> <span class="k">as</span> <span class="nn">pf</span>
+<span class="kn">import</span> <span class="nn">matplotlib.pyplot</span> <span class="k">as</span> <span class="nn">plt</span>
+<span class="n">pf</span><span class="o">.</span><span class="n">acf_plot</span><span class="p">(</span><span class="n">a_returns</span><span class="o">.</span><span class="n">values</span><span class="o">.</span><span class="n">T</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+<span class="n">pf</span><span class="o">.</span><span class="n">acf_plot</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">square</span><span class="p">(</span><span class="n">a_returns</span><span class="o">.</span><span class="n">values</span><span class="o">.</span><span class="n">T</span><span class="p">[</span><span class="mi">0</span><span class="p">]))</span>
+</pre></div>
+</div>
+<img alt="http://www.pyflux.com/welcome_pack/introduction/output_3_0.png" src="http://www.pyflux.com/welcome_pack/introduction/output_3_0.png" />
+<img alt="http://www.pyflux.com/welcome_pack/introduction/output_3_1.png" src="http://www.pyflux.com/welcome_pack/introduction/output_3_1.png" />
+<p>The squared returns demonstrate strong evidence of autocorrelation. The fact that autocorrelation persists and decays over multiply lags is evidence of an autoregressive effect within volatility. For returns, there is less strong evidence of autocorrelation, although the first lag is significant.</p>
+</div>
+<div class="section" id="step-two-propose-a-model">
+<h2>Step Two: Propose a Model<a class="headerlink" href="#step-two-propose-a-model" title="Permalink to this headline">¶</a></h2>
+<p>We reason about a model that can explain the variation in the data and we specify any prior beliefs we have about the model parameters. We saw evidence of volatility clustering. One way to model this effect is through a GARCH model for volatility (Bollerslev, T. 1986).</p>
+<div class="math">
+\[y_{t} \sim N\left(\mu,\sigma_{t}\right)\]</div>
+<div class="math">
+\[\sigma_{t}^{2} = \omega + \alpha\epsilon_{t}^{2} + \beta{\sigma_{t-1}^{2}}\]</div>
+<p>We will perform Bayesian inference on this model, and so we will specify some priors. We will ensure <span class="math">\(\omega &gt; 0\)</span> through a log transform, and we will use a Truncated Normal prior on <span class="math">\(\alpha, \beta\)</span>:</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="n">my_model</span> <span class="o">=</span> <span class="n">pf</span><span class="o">.</span><span class="n">GARCH</span><span class="p">(</span><span class="n">p</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">q</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">data</span><span class="o">=</span><span class="n">a_returns</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">my_model</span><span class="o">.</span><span class="n">latent_variables</span><span class="p">)</span>
+
+  <span class="n">Index</span>    <span class="n">Latent</span> <span class="n">Variable</span>     <span class="n">Prior</span>           <span class="n">Prior</span> <span class="n">Hyperparameters</span>   <span class="n">V</span><span class="o">.</span><span class="n">I</span><span class="o">.</span> <span class="n">Dist</span>  <span class="n">Transform</span>
+  <span class="o">========</span> <span class="o">===================</span> <span class="o">===============</span> <span class="o">=======================</span> <span class="o">==========</span> <span class="o">==========</span>
+  <span class="mi">0</span>        <span class="n">Vol</span> <span class="n">Constant</span>        <span class="n">Normal</span>          <span class="n">mu0</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span> <span class="n">sigma0</span><span class="p">:</span> <span class="mi">3</span>       <span class="n">Normal</span>     <span class="n">exp</span>
+  <span class="mi">1</span>        <span class="n">q</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>                <span class="n">Normal</span>          <span class="n">mu0</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span> <span class="n">sigma0</span><span class="p">:</span> <span class="mf">0.5</span>     <span class="n">Normal</span>     <span class="n">logit</span>
+  <span class="mi">2</span>        <span class="n">p</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>                <span class="n">Normal</span>          <span class="n">mu0</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span> <span class="n">sigma0</span><span class="p">:</span> <span class="mf">0.5</span>     <span class="n">Normal</span>     <span class="n">logit</span>
+  <span class="mi">3</span>        <span class="n">Returns</span> <span class="n">Constant</span>    <span class="n">Normal</span>          <span class="n">mu0</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span> <span class="n">sigma0</span><span class="p">:</span> <span class="mi">3</span>       <span class="n">Normal</span>     <span class="kc">None</span>
+
+<span class="n">my_model</span><span class="o">.</span><span class="n">adjust_prior</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">pf</span><span class="o">.</span><span class="n">TruncatedNormal</span><span class="p">(</span><span class="mf">0.01</span><span class="p">,</span> <span class="mf">0.5</span><span class="p">,</span> <span class="n">lower</span><span class="o">=</span><span class="mf">0.0</span><span class="p">,</span> <span class="n">upper</span><span class="o">=</span><span class="mf">1.0</span><span class="p">))</span>
+<span class="n">my_model</span><span class="o">.</span><span class="n">adjust_prior</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="n">pf</span><span class="o">.</span><span class="n">TruncatedNormal</span><span class="p">(</span><span class="mf">0.97</span><span class="p">,</span> <span class="mf">0.5</span><span class="p">,</span> <span class="n">lower</span><span class="o">=</span><span class="mf">0.0</span><span class="p">,</span> <span class="n">upper</span><span class="o">=</span><span class="mf">1.0</span><span class="p">))</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="step-three-perform-inference">
+<h2>Step Three: Perform Inference<a class="headerlink" href="#step-three-perform-inference" title="Permalink to this headline">¶</a></h2>
+<p>As a third step we need to decide how to perform inference for the model. Below we use
+Metropolis-Hastings for approximate inference on our GARCH model. We also plot the latent variables <span class="math">\(\alpha\)</span> and <span class="math">\(\beta\)</span>:</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span>result = my_model.fit(&#39;M-H&#39;, nsims=20000)
+
+Tuning complete! Now sampling.
+Acceptance rate of Metropolis-Hastings is 0.33865
+
+my_model.plot_z([1,2])
+</pre></div>
+</div>
+<img alt="http://www.pyflux.com/welcome_pack/introduction/output_7_0.png" src="http://www.pyflux.com/welcome_pack/introduction/output_7_0.png" />
+</div>
+<div class="section" id="step-four-evaluate-model-fit">
+<h2>Step Four: Evaluate Model Fit<a class="headerlink" href="#step-four-evaluate-model-fit" title="Permalink to this headline">¶</a></h2>
+<p>We next evaluate the fit of the model and establish whether we can improve the model further. For time series, the simplest way to visualize fit is to plot the series against its predicted values; we can also check out-of-sample performance. If we seek further model improvements, we go back to <strong>step two</strong> and proceed. Once we are happy we go to <strong>step five</strong>.</p>
+<p>Below we plot the fit of the GARCH model and observe that it picking up volatility clustering in the series:</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="n">my_model</span><span class="o">.</span><span class="n">plot_fit</span><span class="p">(</span><span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">15</span><span class="p">,</span><span class="mi">5</span><span class="p">))</span>
+</pre></div>
+</div>
+<img alt="http://www.pyflux.com/welcome_pack/introduction/output_8_0.png" src="http://www.pyflux.com/welcome_pack/introduction/output_8_0.png" />
+<p>We can also plot samples from the posterior predictive density:</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="n">my_model</span><span class="o">.</span><span class="n">plot_sample</span><span class="p">(</span><span class="n">nsims</span><span class="o">=</span><span class="mi">10</span><span class="p">,</span> <span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">15</span><span class="p">,</span><span class="mi">7</span><span class="p">))</span>
+</pre></div>
+</div>
+<img alt="http://www.pyflux.com/welcome_pack/introduction/plot_sample.png" src="http://www.pyflux.com/welcome_pack/introduction/plot_sample.png" />
+<p>We can see that the samples (colored) appaer to be picking up variation in the data (the square datapoints).</p>
+<p>We can also perform a posterior predictive check (PPC) on features of the generated series, for example the kurtosis:</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">scipy.stats</span> <span class="k">import</span> <span class="n">kurtosis</span>
+<span class="n">my_model</span><span class="o">.</span><span class="n">plot_ppc</span><span class="p">(</span><span class="n">T</span><span class="o">=</span><span class="n">kurtosis</span><span class="p">)</span>
+</pre></div>
+</div>
+<img alt="http://www.pyflux.com/welcome_pack/introduction/plot_ppc.png" src="http://www.pyflux.com/welcome_pack/introduction/plot_ppc.png" />
+<p>It appears our generated data underestimates kurtosis in the series. This is not surprising as we are assuming normally distributed returns, so we may want to consider alternative volatility models.</p>
+</div>
+<div class="section" id="step-five-analyse-and-predict">
+<h2>Step Five: Analyse and Predict<a class="headerlink" href="#step-five-analyse-and-predict" title="Permalink to this headline">¶</a></h2>
+<p>Once we are happy with our model, we can use it to analyze the historical time series and make predictions. For our GARCH model, we can see from the previous fit plot that the main periods of volatility picked up are during the financial crisis of 2007-2008, and during the Eurozone crisis in late 2011. We can also obtain forward predictions with the model:</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="n">my_model</span><span class="o">.</span><span class="n">plot_predict</span><span class="p">(</span><span class="n">h</span><span class="o">=</span><span class="mi">30</span><span class="p">,</span> <span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">15</span><span class="p">,</span><span class="mi">5</span><span class="p">))</span>
+</pre></div>
+</div>
+<img alt="http://www.pyflux.com/welcome_pack/introduction/plot_predict.png" src="http://www.pyflux.com/welcome_pack/introduction/plot_predict.png" />
+</div>
+<div class="section" id="references">
+<h2>References<a class="headerlink" href="#references" title="Permalink to this headline">¶</a></h2>
+<p>Blei, D. M. (2014). Build, compute, critique, repeat: Data analysis with latent variable models. Annual Review of Statistics and Its Application, 1, 203–232.</p>
+<p>Bollerslev, T. (1986). Generalized Autoregressive Conditional Heteroskedasticity. Journal
+of Econometrics. April, 31:3, pp. 307–27.</p>
+<p>Harvey A. C. (1990). Forecasting, Structural Time Series Models and the Kalman Filter. Cambridge University Press.</p>
+</div>
+</div>
+
+
+           </div>
+          </div>
+          <footer>
+  
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+      
+        <a href="arima.html" class="btn btn-neutral float-right" title="ARIMA models" accesskey="n">Next <span class="fa fa-arrow-circle-right"></span></a>
+      
+      
+        <a href="index.html" class="btn btn-neutral" title="Introduction" accesskey="p"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+      
+    </div>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2016, Ross Taylor.
+
+    </p>
+  </div>
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/snide/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  
+
+    <script type="text/javascript">
+        var DOCUMENTATION_OPTIONS = {
+            URL_ROOT:'./',
+            VERSION:'0.4.0',
+            COLLAPSE_INDEX:false,
+            FILE_SUFFIX:'.html',
+            HAS_SOURCE:  true
+        };
+    </script>
+      <script type="text/javascript" src="_static/jquery.js"></script>
+      <script type="text/javascript" src="_static/underscore.js"></script>
+      <script type="text/javascript" src="_static/doctools.js"></script>
+      <script type="text/javascript" src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+
+  
+
+  
+  
+    <script type="text/javascript" src="_static/js/theme.js"></script>
+  
+
+  
+  
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.StickyNav.enable();
+      });
+  </script>
+   
+
+</body>
+</html>

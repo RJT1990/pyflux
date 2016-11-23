@@ -19,6 +19,7 @@ class LatentVariables(object):
         self.model_name = model_name
         self.z_list = []
         self.estimated = False
+        self.estimation_method = None
 
     def __str__(self):
         z_row = []
@@ -32,7 +33,7 @@ class LatentVariables(object):
             ('Index','z_index',8),      
             ('Latent Variable','z_name',25),
             ('Prior','z_prior',15),
-            ('Prior Latent Vars','z_hyper',25),
+            ('Prior Hyperparameters','z_hyper',25),
             ('V.I. Dist','z_vardist',10),
             ('Transform','z_transform',10)
             ]       
@@ -85,12 +86,20 @@ class LatentVariables(object):
                 if item < 0 or item > (len(self.z_list)-1) or not isinstance(item, int):
                     raise ValueError("Oops - the latent variable index " + str(item) + " you have entered is invalid!")
                 else:
-                    self.z_list[item].prior = prior             
+                    self.z_list[item].prior = prior 
+                    if hasattr(self.z_list[item].prior, 'mu0'):
+                        self.z_list[item].start = self.z_list[item].prior.mu0    
+                    elif hasattr(self.z_list[item].prior, 'loc0'):
+                        self.z_list[item].start = self.z_list[item].prior.loc0
         else:
             if index < 0 or index > (len(self.z_list)-1) or not isinstance(index, int):
                 raise ValueError("Oops - the latent variable index " + str(index) + " you have entered is invalid!")
             else:
                 self.z_list[index].prior = prior
+                if hasattr(self.z_list[index].prior, 'mu0'):
+                    self.z_list[index].start = self.z_list[index].prior.mu0  
+                elif hasattr(self.z_list[index].prior, 'loc0'):
+                    self.z_list[index].start = self.z_list[index].prior.loc0  
 
     def get_z_names(self):
         names = []
@@ -224,7 +233,7 @@ class LatentVariables(object):
                 continue
             else:
                 if hasattr(self.z_list[z-1], 'sample'):
-                    sns.distplot(self.z_list[z-1].sample, rug=False, hist=False,label=self.z_list[z-1].method + ' estimate of ' + self.z_list[z-1].name)
+                    sns.distplot(self.z_list[z-1].prior.transform(self.z_list[z-1].sample), rug=False, hist=False,label=self.z_list[z-1].method + ' estimate of ' + self.z_list[z-1].name)
 
                 elif hasattr(self.z_list[z-1], 'value') and hasattr(self.z_list[z-1], 'std'): 
 
@@ -265,16 +274,16 @@ class LatentVariables(object):
                     iteration = j*4 + k + 1
                     ax = fig.add_subplot(len(self.z_list),4,iteration)
                     if iteration in range(1,len(self.z_list)*4 + 1,4):
-                        a = sns.distplot(chain, rug=False, hist=False,color=palette[j])
+                        a = sns.distplot(self.z_list[j].prior.transform(chain), rug=False, hist=False,color=palette[j])
                         a.set_ylabel(self.z_list[j].name)
                         if iteration == 1:
                             a.set_title('Density Estimate')
                     elif iteration in range(2,len(self.z_list)*4 + 1,4):
-                        a = plt.plot(chain,color=palette[j])
+                        a = plt.plot(self.z_list[j].prior.transform(chain),color=palette[j])
                         if iteration == 2:
                             plt.title('Trace Plot')
                     elif iteration in range(3,len(self.z_list)*4 + 1,4): 
-                        plt.plot(np.cumsum(chain)/np.array(range(1,len(chain)+1)),color=palette[j])
+                        plt.plot(np.cumsum(self.z_list[j].prior.transform(chain))/np.array(range(1,len(chain)+1)),color=palette[j])
                         if iteration == 3:
                             plt.title('Cumulative Average')                 
                     elif iteration in range(4,len(self.z_list)*4 + 1,4):
@@ -316,7 +325,7 @@ class LatentVariable(object):
         import matplotlib.pyplot as plt
 
         if hasattr(self, 'sample'):
-            sns.distplot(self.sample, rug=False, hist=False,label=self.method + ' estimate of ' + self.name)
+            sns.distplot(self.prior.transform(self.sample), rug=False, hist=False,label=self.method + ' estimate of ' + self.name)
 
         elif hasattr(self, 'value') and hasattr(self, 'std'):
             x = np.linspace(self.value-self.std*3.5,self.value+self.std*3.5,100)

@@ -8,7 +8,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>GARCH models &mdash; PyFlux 0.3.7 documentation</title>
+  <title>GARCH models &mdash; PyFlux 0.4.0 documentation</title>
   
 
   
@@ -30,9 +30,9 @@
   
 
   
-    <link rel="top" title="PyFlux 0.3.7 documentation" href="index.html"/>
-        <link rel="next" title="Skew-t EGARCH models" href="segarch.html"/>
-        <link rel="prev" title="Beta-t-EGARCH Long Memory models" href="lmegarch.html"/> 
+    <link rel="top" title="PyFlux 0.4.0 documentation" href="index.html"/>
+        <link rel="next" title="Beta Skew-t GARCH models" href="segarch.html"/>
+        <link rel="prev" title="Long memory Beta-t-EGARCH models" href="lmegarch.html"/> 
 
   
   <script src="_static/js/modernizr.min.js"></script>
@@ -60,7 +60,7 @@
             
             
               <div class="version">
-                0.3
+                0.4
               </div>
             
           
@@ -81,23 +81,30 @@
           
             
             
-                <ul class="current">
+                <ul>
+<li class="toctree-l1"><a class="reference internal" href="getting_started.html">Getting Started with Time Series</a></li>
+</ul>
+<ul class="current">
 <li class="toctree-l1"><a class="reference internal" href="arima.html">ARIMA models</a></li>
 <li class="toctree-l1"><a class="reference internal" href="arimax.html">ARIMAX models</a></li>
+<li class="toctree-l1"><a class="reference internal" href="dar.html">DAR models</a></li>
 <li class="toctree-l1"><a class="reference internal" href="egarch.html">Beta-t-EGARCH models</a></li>
 <li class="toctree-l1"><a class="reference internal" href="egarchm.html">Beta-t-EGARCH in-mean models</a></li>
-<li class="toctree-l1"><a class="reference internal" href="egarchmreg.html">Beta-t-EGARCH-in-mean regression models</a></li>
-<li class="toctree-l1"><a class="reference internal" href="lmegarch.html">Beta-t-EGARCH Long Memory models</a></li>
+<li class="toctree-l1"><a class="reference internal" href="egarchmreg.html">Beta-t-EGARCH in-mean regression models</a></li>
+<li class="toctree-l1"><a class="reference internal" href="lmegarch.html">Long memory Beta-t-EGARCH models</a></li>
 <li class="toctree-l1 current"><a class="current reference internal" href="#">GARCH models</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#introduction">Introduction</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#example">Example</a></li>
-<li class="toctree-l2"><a class="reference internal" href="#class-arguments">Class Arguments</a></li>
-<li class="toctree-l2"><a class="reference internal" href="#class-methods">Class Methods</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#class-description">Class Description</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#references">References</a></li>
 </ul>
 </li>
-<li class="toctree-l1"><a class="reference internal" href="segarch.html">Skew-t EGARCH models</a></li>
-<li class="toctree-l1"><a class="reference internal" href="segarchm.html">Skew-t EGARCH in-mean models</a></li>
+<li class="toctree-l1"><a class="reference internal" href="segarch.html">Beta Skew-t GARCH models</a></li>
+<li class="toctree-l1"><a class="reference internal" href="segarchm.html">Beta Skew-t in-mean GARCH models</a></li>
 <li class="toctree-l1"><a class="reference internal" href="gas.html">GAS models</a></li>
 <li class="toctree-l1"><a class="reference internal" href="gasreg.html">GAS Regression models</a></li>
+<li class="toctree-l1"><a class="reference internal" href="gasssm.html">GAS State Space models</a></li>
+<li class="toctree-l1"><a class="reference internal" href="gasx.html">GASX models</a></li>
 <li class="toctree-l1"><a class="reference internal" href="gpnar.html">GP-NARX models</a></li>
 <li class="toctree-l1"><a class="reference internal" href="ssm.html">Gaussian State Space models</a></li>
 <li class="toctree-l1"><a class="reference internal" href="ngssm.html">Non-Gaussian State Space models</a></li>
@@ -152,134 +159,517 @@
             
   <div class="section" id="garch-models">
 <h1>GARCH models<a class="headerlink" href="#garch-models" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="introduction">
+<h2>Introduction<a class="headerlink" href="#introduction" title="Permalink to this headline">¶</a></h2>
+<p>Generalized autoregressive conditional heteroskedasticity (GARCH) models aim to model the conditional volatility of a time series. Let <span class="math">\(r_{t}\)</span> be the dependent variable, for example the returns of a stock in time <span class="math">\(t\)</span>. We can model this series as:</p>
+<div class="math">
+\[r_{t} = \mu + \sigma_{t}\epsilon_{t}\]</div>
+<p>Here mu is the expected value of <span class="math">\(r_{t}\)</span>, <span class="math">\(\sigma_{t}\)</span> is the standard deviation of <span class="math">\(r_{t}\)</span> in time <span class="math">\(t\)</span>, and <span class="math">\(\epsilon_{t}\)</span> is an error term for time <span class="math">\(t\)</span>.</p>
+<p>GARCH models are motivated by the desire to model <span class="math">\(\sigma_{t}\)</span> conditional on past information. A primitive model might be a rolling standard deviation - e.g. a 30 day window - or an exponentially weighted standard deviation. A windowed model imposes an arbitrary cutoff which does not seem desirable. An EWMA is slightly more attractive, but how to select the weighting parameter <span class="math">\(\lambda\)</span> is not immediate.</p>
+<p>ARCH/GARCH models are an alterative model which allow for parameters to be estimated in a likelihood-based model. The basic driver of the model is a weighted average of past squared residuals. These lagged squared residuals are known as ARCH terms. Bollerslev (1986) extended the model by including lagged conditional volatility terms, creating GARCH models. Below is the formulation of a GARCH model:</p>
+<div class="math">
+\[y_{t} \sim N\left(\mu,\sigma_{t}^{2}\right)\]</div>
+<div class="math">
+\[\sigma_{t}^{2} = \omega + \alpha\epsilon_{t}^{2} + \beta{\sigma_{t-1}^{2}}\]</div>
+<p>We need to impose constraints on this model to ensure the volatility is over 1, in particular <span class="math">\(\omega, \alpha, \beta &gt; 0\)</span>. If we want to ensure stationarity, we also need to ensure <span class="math">\(\alpha + \beta &lt; 1\)</span>.</p>
+<p>Once we have estimated parameters for the model, we can perform retrospective analysis on volatility, as well as make forecasts for future conditional volatility.</p>
+</div>
 <div class="section" id="example">
 <h2>Example<a class="headerlink" href="#example" title="Permalink to this headline">¶</a></h2>
-<div class="highlight-python"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre>1
-2
-3
-4
-5
-6
-7
-8</pre></div></td><td class="code"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">numpy</span> <span class="kn">as</span> <span class="nn">np</span>
+<p>First let us load some financial time series data from Yahoo Finance:</p>
+<div class="highlight-python"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">numpy</span> <span class="kn">as</span> <span class="nn">np</span>
 <span class="kn">import</span> <span class="nn">pyflux</span> <span class="kn">as</span> <span class="nn">pf</span>
+<span class="kn">import</span> <span class="nn">pandas</span> <span class="kn">as</span> <span class="nn">pd</span>
 <span class="kn">from</span> <span class="nn">pandas.io.data</span> <span class="kn">import</span> <span class="n">DataReader</span>
 <span class="kn">from</span> <span class="nn">datetime</span> <span class="kn">import</span> <span class="n">datetime</span>
+<span class="kn">import</span> <span class="nn">matplotlib.pyplot</span> <span class="kn">as</span> <span class="nn">plt</span>
+<span class="o">%</span><span class="n">matplotlib</span> <span class="n">inline</span>
 
-<span class="n">ibm</span> <span class="o">=</span> <span class="n">DataReader</span><span class="p">(</span><span class="s1">&#39;IBM&#39;</span><span class="p">,</span>  <span class="s1">&#39;yahoo&#39;</span><span class="p">,</span> <span class="n">datetime</span><span class="p">(</span><span class="mi">2000</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">),</span> <span class="n">datetime</span><span class="p">(</span><span class="mi">2016</span><span class="p">,</span><span class="mi">3</span><span class="p">,</span><span class="mi">10</span><span class="p">))</span>
-<span class="n">ibm</span><span class="p">[</span><span class="s1">&#39;Logged Open&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="n">ibm</span><span class="p">[</span><span class="s1">&#39;Open&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">values</span><span class="p">)</span>
-<span class="n">model</span> <span class="o">=</span> <span class="n">pf</span><span class="o">.</span><span class="n">GARCH</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">diff</span><span class="p">(</span><span class="n">ibm</span><span class="p">[</span><span class="s1">&#39;Logged Open&#39;</span><span class="p">]),</span> <span class="n">p</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">q</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+<span class="n">jpm</span> <span class="o">=</span> <span class="n">DataReader</span><span class="p">(</span><span class="s1">&#39;JPM&#39;</span><span class="p">,</span>  <span class="s1">&#39;yahoo&#39;</span><span class="p">,</span> <span class="n">datetime</span><span class="p">(</span><span class="mi">2006</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">),</span> <span class="n">datetime</span><span class="p">(</span><span class="mi">2016</span><span class="p">,</span><span class="mi">3</span><span class="p">,</span><span class="mi">10</span><span class="p">))</span>
+<span class="n">returns</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">diff</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="n">jpm</span><span class="p">[</span><span class="s1">&#39;Adj Close&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">values</span><span class="p">)))</span>
+<span class="n">returns</span><span class="o">.</span><span class="n">index</span> <span class="o">=</span> <span class="n">jpm</span><span class="o">.</span><span class="n">index</span><span class="o">.</span><span class="n">values</span><span class="p">[</span><span class="mi">1</span><span class="p">:</span><span class="n">jpm</span><span class="o">.</span><span class="n">index</span><span class="o">.</span><span class="n">values</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]]</span>
+<span class="n">returns</span><span class="o">.</span><span class="n">columns</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;JPM Returns&#39;</span><span class="p">]</span>
+
+<span class="n">plt</span><span class="o">.</span><span class="n">figure</span><span class="p">(</span><span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">15</span><span class="p">,</span><span class="mi">5</span><span class="p">));</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">returns</span><span class="o">.</span><span class="n">index</span><span class="p">,</span><span class="n">returns</span><span class="p">);</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">ylabel</span><span class="p">(</span><span class="s1">&#39;Returns&#39;</span><span class="p">);</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">title</span><span class="p">(</span><span class="s1">&#39;JPM Returns&#39;</span><span class="p">);</span>
 </pre></div>
-</td></tr></table></div>
 </div>
-<div class="section" id="class-arguments">
-<h2>Class Arguments<a class="headerlink" href="#class-arguments" title="Permalink to this headline">¶</a></h2>
+<img alt="http://www.pyflux.com/notebooks/GARCH/output_12_12.png" src="http://www.pyflux.com/notebooks/GARCH/output_12_12.png" />
+<p>One way to visualize the underlying volatility of the series is to plot the absolute returns <span class="math">\(\mid{y}\mid\)</span>:</p>
+<div class="highlight-python"><div class="highlight"><pre><span></span><span class="n">plt</span><span class="o">.</span><span class="n">figure</span><span class="p">(</span><span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">15</span><span class="p">,</span><span class="mi">5</span><span class="p">))</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">returns</span><span class="o">.</span><span class="n">index</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">returns</span><span class="p">))</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">ylabel</span><span class="p">(</span><span class="s1">&#39;Absolute Returns&#39;</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">title</span><span class="p">(</span><span class="s1">&#39;JP Morgan Absolute Returns&#39;</span><span class="p">);</span>
+</pre></div>
+</div>
+<img alt="http://www.pyflux.com/notebooks/GARCH/output_14_02.png" src="http://www.pyflux.com/notebooks/GARCH/output_14_02.png" />
+<p>There appears to be some evidence of volatility clustering over this period. Let’s fit a GARCH(1,1) model using a point mass estimate <span class="math">\(z^{MLE}\)</span>:</p>
+<div class="highlight-python"><div class="highlight"><pre><span></span><span class="n">model</span> <span class="o">=</span> <span class="n">pf</span><span class="o">.</span><span class="n">GARCH</span><span class="p">(</span><span class="n">returns</span><span class="p">,</span><span class="n">p</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span><span class="n">q</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+<span class="n">x</span> <span class="o">=</span> <span class="n">model</span><span class="o">.</span><span class="n">fit</span><span class="p">()</span>
+<span class="n">x</span><span class="o">.</span><span class="n">summary</span><span class="p">()</span>
+
+<span class="n">GARCH</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">)</span>
+<span class="o">========================================</span> <span class="o">=================================================</span>
+<span class="n">Dependent</span> <span class="n">Variable</span><span class="p">:</span> <span class="n">JPM</span> <span class="n">Returns</span>          <span class="n">Method</span><span class="p">:</span> <span class="n">MLE</span>
+<span class="n">Start</span> <span class="n">Date</span><span class="p">:</span> <span class="mi">2006</span><span class="o">-</span><span class="mo">01</span><span class="o">-</span><span class="mo">05</span> <span class="mo">00</span><span class="p">:</span><span class="mo">00</span><span class="p">:</span><span class="mo">00</span>          <span class="n">Log</span> <span class="n">Likelihood</span><span class="p">:</span> <span class="mf">6594.7911</span>
+<span class="n">End</span> <span class="n">Date</span><span class="p">:</span> <span class="mi">2016</span><span class="o">-</span><span class="mo">03</span><span class="o">-</span><span class="mi">10</span> <span class="mo">00</span><span class="p">:</span><span class="mo">00</span><span class="p">:</span><span class="mo">00</span>            <span class="n">AIC</span><span class="p">:</span> <span class="o">-</span><span class="mf">13181.5822</span>
+<span class="n">Number</span> <span class="n">of</span> <span class="n">observations</span><span class="p">:</span> <span class="mi">2562</span>             <span class="n">BIC</span><span class="p">:</span> <span class="o">-</span><span class="mf">13158.188</span>
+<span class="o">==========================================================================================</span>
+<span class="n">Latent</span> <span class="n">Variable</span>           <span class="n">Estimate</span>   <span class="n">Std</span> <span class="n">Error</span>  <span class="n">z</span>        <span class="n">P</span><span class="o">&gt;|</span><span class="n">z</span><span class="o">|</span>    <span class="mi">95</span><span class="o">%</span> <span class="n">C</span><span class="o">.</span><span class="n">I</span><span class="o">.</span>
+<span class="o">=========================</span> <span class="o">==========</span> <span class="o">==========</span> <span class="o">========</span> <span class="o">========</span> <span class="o">========================</span>
+<span class="n">Vol</span> <span class="n">Constant</span>              <span class="mf">0.0</span>
+<span class="n">q</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>                      <span class="mf">0.0933</span>
+<span class="n">p</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>                      <span class="mf">0.9013</span>
+<span class="n">Returns</span> <span class="n">Constant</span>          <span class="mf">0.0009</span>     <span class="mf">0.0065</span>     <span class="mf">0.1359</span>   <span class="mf">0.8919</span>   <span class="p">(</span><span class="o">-</span><span class="mf">0.0119</span> <span class="o">|</span> <span class="mf">0.0137</span><span class="p">)</span>
+<span class="o">==========================================================================================</span>
+</pre></div>
+</div>
+<p>The standard errors are not shown for transformed variables. You can pass through a <code class="docutils literal"><span class="pre">transformed=False</span></code> argument to <code class="docutils literal"><span class="pre">summary</span></code> to obtain this information for untransformed variables.</p>
+<p>We can plot the GARCH latent variables with <code class="xref py py-func docutils literal"><span class="pre">plot_z()</span></code>:</p>
+<div class="highlight-python"><div class="highlight"><pre><span></span><span class="n">model</span><span class="o">.</span><span class="n">plot_z</span><span class="p">(</span><span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">15</span><span class="p">,</span><span class="mi">5</span><span class="p">))</span>
+</pre></div>
+</div>
+<img alt="http://www.pyflux.com/notebooks/GARCH/output_18_12.png" src="http://www.pyflux.com/notebooks/GARCH/output_18_12.png" />
+<p>We can plot the fit with <code class="xref py py-func docutils literal"><span class="pre">plot_fit()</span></code>:</p>
+<img alt="http://www.pyflux.com/notebooks/GARCH/output_20_02.png" src="http://www.pyflux.com/notebooks/GARCH/output_20_02.png" />
+<p>And plot predictions of future conditional volatility with <code class="xref py py-func docutils literal"><span class="pre">plot_predict()</span></code>:</p>
+<div class="highlight-python"><div class="highlight"><pre><span></span><span class="n">model</span><span class="o">.</span><span class="n">plot_predict</span><span class="p">(</span><span class="n">h</span><span class="o">=</span><span class="mi">10</span><span class="p">)</span>
+</pre></div>
+</div>
+<img alt="http://www.pyflux.com/notebooks/GARCH/plot_predict_garch.png" src="http://www.pyflux.com/notebooks/GARCH/plot_predict_garch.png" />
+<p>If we had wanted predictions in DataFrame form, we could have used <code class="xref py py-func docutils literal"><span class="pre">predict()</span></code>:.</p>
+<p>We can view how well we predicted using in-sample rolling prediction with <code class="xref py py-func docutils literal"><span class="pre">plot_predict_is()</span></code>:</p>
+<div class="highlight-python"><div class="highlight"><pre><span></span><span class="n">model</span><span class="o">.</span><span class="n">plot_predict_is</span><span class="p">(</span><span class="n">h</span><span class="o">=</span><span class="mi">50</span><span class="p">,</span><span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">15</span><span class="p">,</span><span class="mi">5</span><span class="p">))</span>
+</pre></div>
+</div>
+<img alt="http://www.pyflux.com/notebooks/GARCH/plot_predict_is_garch.png" src="http://www.pyflux.com/notebooks/GARCH/plot_predict_is_garch.png" />
+</div>
+<div class="section" id="class-description">
+<h2>Class Description<a class="headerlink" href="#class-description" title="Permalink to this headline">¶</a></h2>
 <dl class="class">
 <dt id="GARCH">
 <em class="property">class </em><code class="descname">GARCH</code><span class="sig-paren">(</span><em>data</em>, <em>p</em>, <em>q</em>, <em>target</em><span class="sig-paren">)</span><a class="headerlink" href="#GARCH" title="Permalink to this definition">¶</a></dt>
-<dd><dl class="attribute">
-<dt id="GARCH.data">
-<code class="descname">data</code><a class="headerlink" href="#GARCH.data" title="Permalink to this definition">¶</a></dt>
-<dd><p>pd.DataFrame or array-like : the time-series data</p>
+<dd><p><strong>Generalized Autoregressive Conditional Heteroskedasticity Models (GARCH)</strong></p>
+<table border="1" class="docutils">
+<colgroup>
+<col width="18%" />
+<col width="31%" />
+<col width="51%" />
+</colgroup>
+<thead valign="bottom">
+<tr class="row-odd"><th class="head">Parameter</th>
+<th class="head">Type</th>
+<th class="head">Description</th>
+</tr>
+</thead>
+<tbody valign="top">
+<tr class="row-even"><td>data</td>
+<td>pd.DataFrame or np.ndarray</td>
+<td>Contains the univariate time series</td>
+</tr>
+<tr class="row-odd"><td>p</td>
+<td>int</td>
+<td>The number of autoregressive lags <span class="math">\(\sigma^{2}\)</span></td>
+</tr>
+<tr class="row-even"><td>q</td>
+<td>int</td>
+<td>The number of ARCH terms <span class="math">\(\epsilon^{2}\)</span></td>
+</tr>
+<tr class="row-odd"><td>target</td>
+<td>string or int</td>
+<td>Which column of DataFrame/array to use.</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Attributes</strong></p>
+<dl class="attribute">
+<dt id="GARCH.latent_variables">
+<code class="descname">latent_variables</code><a class="headerlink" href="#GARCH.latent_variables" title="Permalink to this definition">¶</a></dt>
+<dd><p>A pf.LatentVariables() object containing information on the model latent variables,
+prior settings. any fitted values, starting values, and other latent variable
+information. When a model is fitted, this is where the latent variables are updated/stored.
+Please see the documentation on Latent Variables for information on attributes within this
+object, as well as methods for accessing the latent variable information.</p>
 </dd></dl>
 
-<dl class="attribute">
-<dt id="GARCH.p">
-<code class="descname">p</code><a class="headerlink" href="#GARCH.p" title="Permalink to this definition">¶</a></dt>
-<dd><p>int : the number of GARCH terms</p>
+<p><strong>Methods</strong></p>
+<dl class="method">
+<dt id="GARCH.adjust_prior">
+<code class="descname">adjust_prior</code><span class="sig-paren">(</span><em>index</em>, <em>prior</em><span class="sig-paren">)</span><a class="headerlink" href="#GARCH.adjust_prior" title="Permalink to this definition">¶</a></dt>
+<dd><p>Adjusts the priors for the model latent variables. The latent variables and their indices
+can be viewed by printing the <code class="docutils literal"><span class="pre">latent_variables</span></code> attribute attached to the model instance.</p>
+<table border="1" class="docutils">
+<colgroup>
+<col width="22%" />
+<col width="29%" />
+<col width="49%" />
+</colgroup>
+<thead valign="bottom">
+<tr class="row-odd"><th class="head">Parameter</th>
+<th class="head">Type</th>
+<th class="head">Description</th>
+</tr>
+</thead>
+<tbody valign="top">
+<tr class="row-even"><td>index</td>
+<td>int</td>
+<td>Index of the latent variable to change</td>
+</tr>
+<tr class="row-odd"><td>prior</td>
+<td>pf.Family instance</td>
+<td>Prior distribution, e.g. <code class="docutils literal"><span class="pre">pf.Normal()</span></code></td>
+</tr>
+</tbody>
+</table>
+<p><strong>Returns</strong>: void - changes the model <code class="docutils literal"><span class="pre">latent_variables</span></code> attribute</p>
 </dd></dl>
 
-<dl class="attribute">
-<dt id="GARCH.q">
-<code class="descname">q</code><a class="headerlink" href="#GARCH.q" title="Permalink to this definition">¶</a></dt>
-<dd><p>int : the number of ARCH terms</p>
+<dl class="method">
+<dt id="GARCH.fit">
+<code class="descname">fit</code><span class="sig-paren">(</span><em>method</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="headerlink" href="#GARCH.fit" title="Permalink to this definition">¶</a></dt>
+<dd><p>Estimates latent variables for the model. User chooses an inference option and the
+method returns a results object, as well as updating the model&#8217;s <code class="docutils literal"><span class="pre">latent_variables</span></code>
+attribute.</p>
+<table border="1" class="docutils">
+<colgroup>
+<col width="23%" />
+<col width="30%" />
+<col width="48%" />
+</colgroup>
+<thead valign="bottom">
+<tr class="row-odd"><th class="head">Parameter</th>
+<th class="head">Type</th>
+<th class="head">Description</th>
+</tr>
+</thead>
+<tbody valign="top">
+<tr class="row-even"><td>method</td>
+<td>str</td>
+<td>Inference option: e.g. &#8216;M-H&#8217; or &#8216;MLE&#8217;</td>
+</tr>
+</tbody>
+</table>
+<p>See Bayesian Inference and Classical Inference sections of the documentation for the
+full list of inference options. Optional parameters can be entered that are relevant
+to the particular mode of inference chosen.</p>
+<p><strong>Returns</strong>: pf.Results instance with information for the estimated latent variables</p>
 </dd></dl>
 
-<dl class="attribute">
-<dt id="GARCH.target">
-<code class="descname">target</code><a class="headerlink" href="#GARCH.target" title="Permalink to this definition">¶</a></dt>
-<dd><p>string (data is DataFrame) or int (data is np.array) : which column to use as the time series. If None, the first column will be chosen as the data.</p>
+<dl class="method">
+<dt id="GARCH.plot_fit">
+<code class="descname">plot_fit</code><span class="sig-paren">(</span><em>**kwargs</em><span class="sig-paren">)</span><a class="headerlink" href="#GARCH.plot_fit" title="Permalink to this definition">¶</a></dt>
+<dd><p>Plots the fit of the model against the data. Optional arguments include <em>figsize</em>,
+the dimensions of the figure to plot.</p>
+<p><strong>Returns</strong> : void - shows a matplotlib plot</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="GARCH.plot_ppc">
+<code class="descname">plot_ppc</code><span class="sig-paren">(</span><em>T</em>, <em>nsims</em><span class="sig-paren">)</span><a class="headerlink" href="#GARCH.plot_ppc" title="Permalink to this definition">¶</a></dt>
+<dd><p>Plots a histogram for a posterior predictive check with a discrepancy measure of the
+user&#8217;s choosing. This method only works if you have fitted using Bayesian inference.</p>
+<table border="1" class="docutils">
+<colgroup>
+<col width="21%" />
+<col width="28%" />
+<col width="51%" />
+</colgroup>
+<thead valign="bottom">
+<tr class="row-odd"><th class="head">Parameter</th>
+<th class="head">Type</th>
+<th class="head">Description</th>
+</tr>
+</thead>
+<tbody valign="top">
+<tr class="row-even"><td>T</td>
+<td>function</td>
+<td>Discrepancy, e.g. <code class="docutils literal"><span class="pre">np.mean</span></code> or <code class="docutils literal"><span class="pre">np.max</span></code></td>
+</tr>
+<tr class="row-odd"><td>nsims</td>
+<td>int</td>
+<td>How many simulations for the PPC</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Returns</strong>: void - shows a matplotlib plot</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="GARCH.plot_predict">
+<code class="descname">plot_predict</code><span class="sig-paren">(</span><em>h</em>, <em>past_values</em>, <em>intervals</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="headerlink" href="#GARCH.plot_predict" title="Permalink to this definition">¶</a></dt>
+<dd><p>Plots predictions of the model, along with intervals.</p>
+<table border="1" class="docutils">
+<colgroup>
+<col width="23%" />
+<col width="30%" />
+<col width="48%" />
+</colgroup>
+<thead valign="bottom">
+<tr class="row-odd"><th class="head">Parameter</th>
+<th class="head">Type</th>
+<th class="head">Description</th>
+</tr>
+</thead>
+<tbody valign="top">
+<tr class="row-even"><td>h</td>
+<td>int</td>
+<td>How many steps to forecast ahead</td>
+</tr>
+<tr class="row-odd"><td>past_values</td>
+<td>int</td>
+<td>How many past datapoints to plot</td>
+</tr>
+<tr class="row-even"><td>intervals</td>
+<td>boolean</td>
+<td>Whether to plot intervals or not</td>
+</tr>
+</tbody>
+</table>
+<p>Optional arguments include <em>figsize</em> - the dimensions of the figure to plot. Please note
+that if you use Maximum Likelihood or Variational Inference, the intervals shown will not
+reflect latent variable uncertainty. Only Metropolis-Hastings will give you fully Bayesian
+prediction intervals. Bayesian intervals with variational inference are not shown because
+of the limitation of mean-field inference in not accounting for posterior correlations.</p>
+<p><strong>Returns</strong> : void - shows a matplotlib plot</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="GARCH.plot_predict_is">
+<code class="descname">plot_predict_is</code><span class="sig-paren">(</span><em>h</em>, <em>fit_once</em>, <em>fit_method</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="headerlink" href="#GARCH.plot_predict_is" title="Permalink to this definition">¶</a></dt>
+<dd><p>Plots in-sample rolling predictions for the model. This means that the user pretends a
+last subsection of data is out-of-sample, and forecasts after each period and assesses
+how well they did. The user can choose whether to fit parameters once at the beginning
+or every time step.</p>
+<table border="1" class="docutils">
+<colgroup>
+<col width="23%" />
+<col width="30%" />
+<col width="48%" />
+</colgroup>
+<thead valign="bottom">
+<tr class="row-odd"><th class="head">Parameter</th>
+<th class="head">Type</th>
+<th class="head">Description</th>
+</tr>
+</thead>
+<tbody valign="top">
+<tr class="row-even"><td>h</td>
+<td>int</td>
+<td>How many previous timesteps to use</td>
+</tr>
+<tr class="row-odd"><td>fit_once</td>
+<td>boolean</td>
+<td>Whether to fit once, or every timestep</td>
+</tr>
+<tr class="row-even"><td>fit_method</td>
+<td>str</td>
+<td>Which inference option, e.g. &#8216;MLE&#8217;</td>
+</tr>
+</tbody>
+</table>
+<p>Optional arguments include <em>figsize</em> - the dimensions of the figure to plot. <strong>h</strong> is an int of how many previous steps to simulate performance on.</p>
+<p><strong>Returns</strong> : void - shows a matplotlib plot</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="GARCH.plot_sample">
+<code class="descname">plot_sample</code><span class="sig-paren">(</span><em>nsims</em>, <em>plot_data=True</em><span class="sig-paren">)</span><a class="headerlink" href="#GARCH.plot_sample" title="Permalink to this definition">¶</a></dt>
+<dd><p>Plots samples from the posterior predictive density of the model. This method only works
+if you fitted the model using Bayesian inference.</p>
+<table border="1" class="docutils">
+<colgroup>
+<col width="23%" />
+<col width="30%" />
+<col width="48%" />
+</colgroup>
+<thead valign="bottom">
+<tr class="row-odd"><th class="head">Parameter</th>
+<th class="head">Type</th>
+<th class="head">Description</th>
+</tr>
+</thead>
+<tbody valign="top">
+<tr class="row-even"><td>nsims</td>
+<td>int</td>
+<td>How many samples to draw</td>
+</tr>
+<tr class="row-odd"><td>plot_data</td>
+<td>boolean</td>
+<td>Whether to plot the real data as well</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Returns</strong> : void - shows a matplotlib plot</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="GARCH.plot_z">
+<code class="descname">plot_z</code><span class="sig-paren">(</span><em>indices</em>, <em>figsize</em><span class="sig-paren">)</span><a class="headerlink" href="#GARCH.plot_z" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns a plot of the latent variables and their associated uncertainty.</p>
+<table border="1" class="docutils">
+<colgroup>
+<col width="23%" />
+<col width="30%" />
+<col width="48%" />
+</colgroup>
+<thead valign="bottom">
+<tr class="row-odd"><th class="head">Parameter</th>
+<th class="head">Type</th>
+<th class="head">Description</th>
+</tr>
+</thead>
+<tbody valign="top">
+<tr class="row-even"><td>indices</td>
+<td>int or list</td>
+<td>Which latent variable indices to plot</td>
+</tr>
+<tr class="row-odd"><td>figsize</td>
+<td>tuple</td>
+<td>Size of the matplotlib figure</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Returns</strong> : void - shows a matplotlib plot</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="GARCH.ppc">
+<code class="descname">ppc</code><span class="sig-paren">(</span><em>T</em>, <em>nsims</em><span class="sig-paren">)</span><a class="headerlink" href="#GARCH.ppc" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns a p-value for a posterior predictive check. This method only works if you have
+fitted using Bayesian inference.</p>
+<table border="1" class="docutils">
+<colgroup>
+<col width="21%" />
+<col width="28%" />
+<col width="51%" />
+</colgroup>
+<thead valign="bottom">
+<tr class="row-odd"><th class="head">Parameter</th>
+<th class="head">Type</th>
+<th class="head">Description</th>
+</tr>
+</thead>
+<tbody valign="top">
+<tr class="row-even"><td>T</td>
+<td>function</td>
+<td>Discrepancy, e.g. <code class="docutils literal"><span class="pre">np.mean</span></code> or <code class="docutils literal"><span class="pre">np.max</span></code></td>
+</tr>
+<tr class="row-odd"><td>nsims</td>
+<td>int</td>
+<td>How many simulations for the PPC</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Returns</strong>: int - the p-value for the discrepancy test</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="GARCH.predict">
+<code class="descname">predict</code><span class="sig-paren">(</span><em>h</em>, <em>intervals=False</em><span class="sig-paren">)</span><a class="headerlink" href="#GARCH.predict" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns a DataFrame of model predictions.</p>
+<table border="1" class="docutils">
+<colgroup>
+<col width="23%" />
+<col width="30%" />
+<col width="48%" />
+</colgroup>
+<thead valign="bottom">
+<tr class="row-odd"><th class="head">Parameter</th>
+<th class="head">Type</th>
+<th class="head">Description</th>
+</tr>
+</thead>
+<tbody valign="top">
+<tr class="row-even"><td>h</td>
+<td>int</td>
+<td>How many steps to forecast ahead</td>
+</tr>
+<tr class="row-odd"><td>intervals</td>
+<td>boolean</td>
+<td>Whether to return prediction intervals</td>
+</tr>
+</tbody>
+</table>
+<p>Please note that if you use Maximum Likelihood or Variational Inference, the intervals shown
+will not reflect latent variable uncertainty. Only Metropolis-Hastings will give you fully
+Bayesian prediction intervals. Bayesian intervals with variational inference are not shown
+because of the limitation of mean-field inference in not accounting for posterior correlations.</p>
+<p><strong>Returns</strong> : pd.DataFrame - the model predictions</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="GARCH.predict_is">
+<code class="descname">predict_is</code><span class="sig-paren">(</span><em>h</em>, <em>fit_once</em>, <em>fit_method</em><span class="sig-paren">)</span><a class="headerlink" href="#GARCH.predict_is" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns DataFrame of in-sample rolling predictions for the model.</p>
+<table border="1" class="docutils">
+<colgroup>
+<col width="23%" />
+<col width="30%" />
+<col width="48%" />
+</colgroup>
+<thead valign="bottom">
+<tr class="row-odd"><th class="head">Parameter</th>
+<th class="head">Type</th>
+<th class="head">Description</th>
+</tr>
+</thead>
+<tbody valign="top">
+<tr class="row-even"><td>h</td>
+<td>int</td>
+<td>How many previous timesteps to use</td>
+</tr>
+<tr class="row-odd"><td>fit_once</td>
+<td>boolean</td>
+<td>Whether to fit once, or every timestep</td>
+</tr>
+<tr class="row-even"><td>fit_method</td>
+<td>str</td>
+<td>Which inference option, e.g. &#8216;MLE&#8217;</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Returns</strong> : pd.DataFrame - the model predictions</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="GARCH.sample">
+<code class="descname">sample</code><span class="sig-paren">(</span><em>nsims</em><span class="sig-paren">)</span><a class="headerlink" href="#GARCH.sample" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns np.ndarray of draws of the data from the posterior predictive density. This
+method only works if you have fitted the model using Bayesian inference.</p>
+<table border="1" class="docutils">
+<colgroup>
+<col width="23%" />
+<col width="30%" />
+<col width="48%" />
+</colgroup>
+<thead valign="bottom">
+<tr class="row-odd"><th class="head">Parameter</th>
+<th class="head">Type</th>
+<th class="head">Description</th>
+</tr>
+</thead>
+<tbody valign="top">
+<tr class="row-even"><td>nsims</td>
+<td>int</td>
+<td>How many posterior draws to take</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Returns</strong> : np.ndarray - samples from the posterior predictive density.</p>
 </dd></dl>
 
 </dd></dl>
 
 </div>
-<div class="section" id="class-methods">
-<h2>Class Methods<a class="headerlink" href="#class-methods" title="Permalink to this headline">¶</a></h2>
-<dl class="function">
-<dt id="adjust_prior">
-<code class="descname">adjust_prior</code><span class="sig-paren">(</span><em>index</em>, <em>prior</em><span class="sig-paren">)</span><a class="headerlink" href="#adjust_prior" title="Permalink to this definition">¶</a></dt>
-<dd><p>Adjusts the priors of the model. <strong>index</strong> can be an int or a list. <strong>prior</strong> is a prior object, such as Normal(0,3).</p>
-</dd></dl>
-
-<p>Here is example usage for <a class="reference internal" href="var.html#adjust_prior" title="adjust_prior"><code class="xref py py-func docutils literal"><span class="pre">adjust_prior()</span></code></a>:</p>
-<div class="highlight-python"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre>1
-2
-3
-4
-5</pre></div></td><td class="code"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">pyflux</span> <span class="kn">as</span> <span class="nn">pf</span>
-
-<span class="c1"># model = ... (specify a model)</span>
-<span class="n">model</span><span class="o">.</span><span class="n">list_priors</span><span class="p">()</span>
-<span class="n">model</span><span class="o">.</span><span class="n">adjust_prior</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="n">pf</span><span class="o">.</span><span class="n">Normal</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">))</span>
-</pre></div>
-</td></tr></table></div>
-<dl class="function">
-<dt id="fit">
-<code class="descname">fit</code><span class="sig-paren">(</span><em>method</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="headerlink" href="#fit" title="Permalink to this definition">¶</a></dt>
-<dd><p>Estimates latent variables for the model. Returns a Results object. <strong>method</strong> is an inference/estimation option; see Bayesian Inference and Classical Inference sections for options. If no <strong>method</strong> is provided then a default will be used.</p>
-<p>Optional arguments are specific to the <strong>method</strong> you choose - see the documentation for these methods for more detail.</p>
-</dd></dl>
-
-<p>Here is example usage for <a class="reference internal" href="var.html#fit" title="fit"><code class="xref py py-func docutils literal"><span class="pre">fit()</span></code></a>:</p>
-<div class="highlight-python"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre>1
-2
-3
-4</pre></div></td><td class="code"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">pyflux</span> <span class="kn">as</span> <span class="nn">pf</span>
-
-<span class="c1"># model = ... (specify a model)</span>
-<span class="n">model</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="s2">&quot;M-H&quot;</span><span class="p">,</span> <span class="n">nsims</span><span class="o">=</span><span class="mi">20000</span><span class="p">)</span>
-</pre></div>
-</td></tr></table></div>
-<dl class="function">
-<dt id="plot_fit">
-<code class="descname">plot_fit</code><span class="sig-paren">(</span><em>**kwargs</em><span class="sig-paren">)</span><a class="headerlink" href="#plot_fit" title="Permalink to this definition">¶</a></dt>
-<dd><p>Graphs the fit of the model.</p>
-<p>Optional arguments include <strong>figsize</strong> - the dimensions of the figure to plot.</p>
-</dd></dl>
-
-<dl class="function">
-<dt id="plot_z">
-<code class="descname">plot_z</code><span class="sig-paren">(</span><em>indices</em>, <em>figsize</em><span class="sig-paren">)</span><a class="headerlink" href="#plot_z" title="Permalink to this definition">¶</a></dt>
-<dd><p>Returns a plot of the latent variables and their associated uncertainty. <strong>indices</strong> is a list referring to the latent variables indices that you want ot plot. Figsize specifies how big the plot will be.</p>
-</dd></dl>
-
-<dl class="function">
-<dt id="plot_predict">
-<code class="descname">plot_predict</code><span class="sig-paren">(</span><em>h</em>, <em>past_values</em>, <em>intervals</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="headerlink" href="#plot_predict" title="Permalink to this definition">¶</a></dt>
-<dd><p>Plots predictions of the model. <strong>h</strong> is an int of how many steps ahead to predict. <strong>past_values</strong> is an int of how many past values of the series to plot. <strong>intervals</strong> is a bool on whether to include confidence/credibility intervals or not.</p>
-<p>Optional arguments include <strong>figsize</strong> - the dimensions of the figure to plot.</p>
-</dd></dl>
-
-<dl class="function">
-<dt id="plot_predict_is">
-<code class="descname">plot_predict_is</code><span class="sig-paren">(</span><em>h</em>, <em>past_values</em>, <em>intervals</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="headerlink" href="#plot_predict_is" title="Permalink to this definition">¶</a></dt>
-<dd><p>Plots in-sample rolling predictions for the model. <strong>h</strong> is an int of how many previous steps to simulate performance on. <strong>past_values</strong> is an int of how many past values of the series to plot. <strong>intervals</strong> is a bool on whether to include confidence/credibility intervals or not.</p>
-<p>Optional arguments include <strong>figsize</strong> - the dimensions of the figure to plot.</p>
-</dd></dl>
-
-<dl class="function">
-<dt id="predict">
-<code class="descname">predict</code><span class="sig-paren">(</span><em>h</em><span class="sig-paren">)</span><a class="headerlink" href="#predict" title="Permalink to this definition">¶</a></dt>
-<dd><p>Returns DataFrame of model predictions. <strong>h</strong> is an int of how many steps ahead to predict.</p>
-</dd></dl>
-
-<dl class="function">
-<dt id="predict_is">
-<code class="descname">predict_is</code><span class="sig-paren">(</span><em>h</em><span class="sig-paren">)</span><a class="headerlink" href="#predict_is" title="Permalink to this definition">¶</a></dt>
-<dd><p>Returns DataFrame of in-sample rolling predictions for the model. <strong>h</strong> is an int of how many previous steps to simulate performance on.</p>
-</dd></dl>
-
+<div class="section" id="references">
+<h2>References<a class="headerlink" href="#references" title="Permalink to this headline">¶</a></h2>
+<p>Bollerslev, T. (1986). Generalized Autoregressive Conditional Heteroskedasticity. Journal
+of Econometrics. April, 31:3, pp. 307–27.</p>
+<p>Engle, R.F. (1982). Autoregressive Conditional Heteroscedasticity with
+Estimates of the Variance of United Kingdom Inflation. Econometrica.
+50(4), 987-1007.</p>
 </div>
 </div>
 
@@ -290,10 +680,10 @@
   
     <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
       
-        <a href="segarch.html" class="btn btn-neutral float-right" title="Skew-t EGARCH models" accesskey="n">Next <span class="fa fa-arrow-circle-right"></span></a>
+        <a href="segarch.html" class="btn btn-neutral float-right" title="Beta Skew-t GARCH models" accesskey="n">Next <span class="fa fa-arrow-circle-right"></span></a>
       
       
-        <a href="lmegarch.html" class="btn btn-neutral" title="Beta-t-EGARCH Long Memory models" accesskey="p"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+        <a href="lmegarch.html" class="btn btn-neutral" title="Long memory Beta-t-EGARCH models" accesskey="p"><span class="fa fa-arrow-circle-left"></span> Previous</a>
       
     </div>
   
@@ -324,7 +714,7 @@
     <script type="text/javascript">
         var DOCUMENTATION_OPTIONS = {
             URL_ROOT:'./',
-            VERSION:'0.3.7',
+            VERSION:'0.4.0',
             COLLAPSE_INDEX:false,
             FILE_SUFFIX:'.html',
             HAS_SOURCE:  true

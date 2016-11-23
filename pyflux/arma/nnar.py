@@ -14,6 +14,8 @@ from .. import tests as tst
 from .. import tsm as tsm
 from .. import data_check as dc
 
+from .nn_architecture import neural_network_tanh
+
 class NNAR(tsm.TSM):
     """ Inherits time series methods from TSM parent class.
 
@@ -198,39 +200,45 @@ class NNAR(tsm.TSM):
             Contains the length-adjusted time series (accounting for lags)
         """     
 
+
         Y = np.array(self.data[self.max_lag:])
 
         # Transform latent variables
         z = np.array([self.latent_variables.z_list[k].prior.transform(beta[k]) for k in range(beta.shape[0])])
 
-        # Input layer
-        first_layer_output = np.zeros((self.X.shape[1], self.units))
-        for unit in range(self.units):
-            first_layer_output[:,unit] = self.activation(np.matmul(np.transpose(self.X), z[unit*(self.ar+1):((unit+1)*(self.ar+1))]))
+        return neural_network_tanh(Y, self.X, z, self.units, self.layers, self.ar), Y
 
-        params_used = ((self.units)*(self.ar+1))
+    def _mb_model(self, beta, mini_batch):
+        """ Creates the structure of the model (model matrices etc) for mini batch model
 
-        # Hidden layers
-        hidden_layer_output = np.zeros((self.X.shape[1], self.units, self.layers-1))
-        for layer in range(1, self.layers):
-            for unit in range(self.units):
-                if layer == 1:
-                    hidden_layer_output[:, unit,layer-1] = self.activation(np.matmul(first_layer_output,
-                        z[params_used+unit*(self.units)+((layer-1)*self.units**2):((params_used+(unit+1)*self.units)+((layer-1)*self.units**2))]))
-                else:
-                    hidden_layer_output[:, unit,layer-1] = self.activation(np.matmul(hidden_layer_output[:,:,layer-1],
-                        z[params_used+unit*(self.units)+((layer-1)*self.units**2):((params_used+(unit+1)*self.units)+((layer-1)*self.units**2))]))
+        Parameters
+        ----------
+        beta : np.ndarray
+            Contains untransformed starting values for the latent variables
 
-        params_used = params_used + (self.layers-1)*self.units**2
+        mini_batch : int
+            Mini batch size for the data sampling
 
-        # Output layer
-        if self.layers == 1:
-            mu = np.matmul(first_layer_output, z[params_used:params_used+self.units])
-        else:
-            mu = np.matmul(hidden_layer_output[:,:,-1], z[params_used:params_used+self.units])
+        Returns
+        ----------
+        mu : np.ndarray
+            Contains the predicted values (location) for the time series
 
-        return mu, Y 
+        Y : np.ndarray
+            Contains the length-adjusted time series (accounting for lags)
+        """     
 
+        Y = np.array(self.data[self.max_lag:])
+
+        sample = np.random.choice(len(Y), mini_batch, replace=False)
+
+        Y = Y[sample]
+        X = self.X[:, sample]
+
+        # Transform latent variables
+        z = np.array([self.latent_variables.z_list[k].prior.transform(beta[k]) for k in range(beta.shape[0])])
+
+        return neural_network_tanh(Y, X, z, self.units, self.layers, self.ar), Y
 
     def predict_new(self, X, z):
 
@@ -402,6 +410,28 @@ class NNAR(tsm.TSM):
         """     
 
         mu, Y = self._model(beta)
+        parm = np.array([self.latent_variables.z_list[k].prior.transform(beta[k]) for k in range(beta.shape[0])])
+        #TODO: Replace above with transformation that only acts on scale, shape, skewness in future (speed-up)
+        model_scale, model_shape, model_skewness = self._get_scale_and_shape(parm)
+        return self.family.neg_loglikelihood(Y, self.link(mu), model_scale, model_shape, model_skewness)
+
+    def mb_neg_loglik(self, beta, mini_batch):
+        """ Calculates the negative log-likelihood of the model for a minibatch
+
+        Parameters
+        ----------
+        beta : np.ndarray
+            Contains untransformed starting values for latent variables
+
+        mini_batch : int
+            Size of each mini batch of data
+
+        Returns
+        ----------
+        The negative logliklihood of the model
+        """     
+
+        mu, Y = self._mb_model(beta, mini_batch)
         parm = np.array([self.latent_variables.z_list[k].prior.transform(beta[k]) for k in range(beta.shape[0])])
         #TODO: Replace above with transformation that only acts on scale, shape, skewness in future (speed-up)
         model_scale, model_shape, model_skewness = self._get_scale_and_shape(parm)

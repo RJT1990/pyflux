@@ -1,4 +1,4 @@
-GAS Regression models
+GAS State Space models
 ==================================
 
 Example
@@ -10,43 +10,54 @@ Example
    import numpy as np
    import pyflux as pf
    import pandas as pd
-   from pandas_datareader.data import DataReader
-   from datetime import datetime
 
-   a = DataReader('AMZN',  'yahoo', datetime(2012,1,1), datetime(2016,6,1))
-   a_returns = pd.DataFrame(np.diff(np.log(a['Adj Close'].values)))
-   a_returns.index = a.index.values[1:a.index.values.shape[0]]
-   a_returns.columns = ["Amazon Returns"]
+   nile = pd.read_csv('https://vincentarelbundock.github.io/Rdatasets/csv/datasets/Nile.csv')
+   nile.index = pd.to_datetime(nile['time'].values,format='%Y')
 
-   spy = DataReader('SPY',  'yahoo', datetime(2012,1,1), datetime(2016,6,1))
-   spy_returns = pd.DataFrame(np.diff(np.log(spy['Adj Close'].values)))
-   spy_returns.index = spy.index.values[1:spy.index.values.shape[0]]
-   spy_returns.columns = ['S&P500 Returns']
+   model = pf.GASLLEV(data=nile, target='Nile', family=pf.GASt()) # local level
 
-   one_mon = DataReader('DGS1MO', 'fred',datetime(2012,1,1), datetime(2016,6,1))
-   one_day = np.log(1+one_mon)/365
+   USgrowth = pd.DataFrame(np.log(growthdata['VALUE']))
+   USgrowth.index = pd.to_datetime(growthdata['DATE'])
+   USgrowth.columns = ['Logged US Real GDP']
 
-   returns = pd.concat([one_day,a_returns,spy_returns],axis=1).dropna()
-   excess_m = returns["Amazon Returns"].values - returns['DGS1MO'].values
-   excess_spy = returns["S&P500 Returns"].values - returns['DGS1MO'].values
-   final_returns = pd.DataFrame(np.transpose([excess_m,excess_spy, returns['DGS1MO'].values]))
-   final_returns.columns=["Amazon","SP500","Risk-free rate"]
-   final_returns.index = returns.index
-
-   model = pf.GASReg('Amazon ~ SP500',data=final_returns, family=pf.GASt()) # dynamic beta model
+   model2 = pf.GASLLT(data=USgrowth, family=pf.GASt()) # local linear trend model
 
 Class Arguments
 ----------
 
-.. py:class:: GASReg(formula, data, family)
+The GAS local level (**GASLLEV**) and GAS local linear trend (**GASLLT**) models are of the following form:
 
-   .. py:attribute:: formula
-
-      patsy notation string describing the regression
+.. py:class:: GASLLEV(data, integ, target, family)
 
    .. py:attribute:: data
 
       pd.DataFrame or array-like : the time-series data
+
+   .. py:attribute:: integ
+
+      int : how many times to difference the time series (default: 0)
+
+   .. py:attribute:: target
+
+      string (data is DataFrame) or int (data is np.array) : which column to use as the time series. If None, the first column will be chosen as the data.
+
+   .. py:attribute:: family
+
+      a GAS family object; choices include GASExponential(), GASLaplace(), GASNormal(), GASPoisson(), GASSkewt(), GASt()
+
+.. py:class:: GASLLT(data, integ, target, family)
+
+   .. py:attribute:: data
+
+      pd.DataFrame or array-like : the time-series data
+
+   .. py:attribute:: integ
+
+      int : how many times to difference the time series (default: 0)
+
+   .. py:attribute:: target
+
+      string (data is DataFrame) or int (data is np.array) : which column to use as the time series. If None, the first column will be chosen as the data.
 
    .. py:attribute:: family
 
@@ -86,19 +97,19 @@ Here is example usage for :py:func:`fit`:
    # model = ... (specify a model)
    model.fit("M-H",nsims=20000)
 
-.. py:function:: plot_fit(**kwargs)
+.. py:function:: plot_fit(intervals,**kwargs)
    
-   Graphs the fit of the model and the dynamic betas.
+   Graphs the fit of the model. **intervals** is a boolean; if true shows 95% C.I. intervals for the states.
 
-   Optional arguments include **figsize** - the dimensions of the figure to plot.
+   Optional arguments include **figsize** - the dimensions of the figure to plot - and **series_type** which has two options: *Filtered* or *Smoothed*.
 
 .. py:function:: plot_z(indices, figsize)
 
    Returns a plot of the latent variables and their associated uncertainty. **indices** is a list referring to the latent variable indices that you want ot plot. Figsize specifies how big the plot will be.
 
-.. py:function:: plot_predict(h, past_values, intervals, oos_data, **kwargs)
+.. py:function:: plot_predict(h, past_values, intervals, **kwargs)
    
-   Plots predictions of the model. **h** is an int of how many steps ahead to predict. **past_values** is an int of how many past values of the series to plot. **intervals** is a bool on whether to include confidence/credibility intervals or not. **oos_data** is a DataFrame in the same format as the original DataFrame and has data for the explanatory variables to be used for prediction.
+   Plots predictions of the model. **h** is an int of how many steps ahead to predict. **past_values** is an int of how many past values of the series to plot. **intervals** is a bool on whether to include confidence/credibility intervals or not.
 
    Optional arguments include **figsize** - the dimensions of the figure to plot.
 
@@ -108,9 +119,9 @@ Here is example usage for :py:func:`fit`:
 
    Optional arguments include **figsize** - the dimensions of the figure to plot.
 
-.. py:function:: predict(h, oos_data)
+.. py:function:: predict(h)
    
-   Returns DataFrame of model predictions. **h** is an int of how many steps ahead to predict. **oos_data** is a DataFrame in the same format as the original DataFrame and has data for the explanatory variables to be used for prediction.
+   Returns DataFrame of model predictions. **h** is an int of how many steps ahead to predict. 
 
 .. py:function:: predict_is(h, fit_once)
    

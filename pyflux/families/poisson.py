@@ -289,7 +289,7 @@ class Poisson(Family):
         ----------
         - Negative loglikelihood of the Poisson family
         """
-        return -np.sum(ss.poisson.logpmf(y, mean))
+        return -np.sum(-mean + np.log(mean)*y - sp.gammaln(y + 1))
 
     def pdf(self, mu):
         """

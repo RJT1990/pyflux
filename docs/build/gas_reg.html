@@ -1,0 +1,737 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>GAS regression models &mdash; PyFlux 0.4.0 documentation</title>
+  
+
+  
+  
+
+  
+
+  
+  
+    
+
+  
+
+  
+  
+    <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
+  
+
+  
+
+  
+    <link rel="top" title="PyFlux 0.4.0 documentation" href="index.html"/> 
+
+  
+  <script src="_static/js/modernizr.min.js"></script>
+
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search">
+          
+
+          
+            <a href="index.html" class="icon icon-home"> PyFlux
+          
+
+          
+          </a>
+
+          
+            
+            
+              <div class="version">
+                0.4
+              </div>
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+                <ul>
+<li class="toctree-l1"><a class="reference internal" href="getting_started.html">Getting Started with Time Series</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="arima.html">ARIMA models</a></li>
+<li class="toctree-l1"><a class="reference internal" href="arimax.html">ARIMAX models</a></li>
+<li class="toctree-l1"><a class="reference internal" href="dar.html">DAR models</a></li>
+<li class="toctree-l1"><a class="reference internal" href="egarch.html">Beta-t-EGARCH models</a></li>
+<li class="toctree-l1"><a class="reference internal" href="egarchm.html">Beta-t-EGARCH in-mean models</a></li>
+<li class="toctree-l1"><a class="reference internal" href="egarchmreg.html">Beta-t-EGARCH in-mean regression models</a></li>
+<li class="toctree-l1"><a class="reference internal" href="lmegarch.html">Beta-t-EGARCH long memory models</a></li>
+<li class="toctree-l1"><a class="reference internal" href="garch.html">GARCH models</a></li>
+<li class="toctree-l1"><a class="reference internal" href="segarch.html">Beta Skew-t GARCH models</a></li>
+<li class="toctree-l1"><a class="reference internal" href="segarchm.html">Beta Skew-t in-mean GARCH models</a></li>
+<li class="toctree-l1"><a class="reference internal" href="gas.html">GAS models</a></li>
+<li class="toctree-l1"><a class="reference internal" href="gasreg.html">GAS Regression models</a></li>
+<li class="toctree-l1"><a class="reference internal" href="gas_llm.html">GAS local level models</a></li>
+<li class="toctree-l1"><a class="reference internal" href="gas_llt.html">GAS local linear trend models</a></li>
+<li class="toctree-l1"><a class="reference internal" href="gasx.html">GASX models</a></li>
+<li class="toctree-l1"><a class="reference internal" href="gpnar.html">GP-NARX models</a></li>
+<li class="toctree-l1"><a class="reference internal" href="ssm.html">Gaussian State Space models</a></li>
+<li class="toctree-l1"><a class="reference internal" href="ngssm.html">Non-Gaussian State Space models</a></li>
+<li class="toctree-l1"><a class="reference internal" href="var.html">VAR models</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="bayes.html">Bayesian Inference</a></li>
+<li class="toctree-l1"><a class="reference internal" href="classical.html">Classical Inference</a></li>
+</ul>
+
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" role="navigation" aria-label="top navigation">
+        <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+        <a href="index.html">PyFlux</a>
+      </nav>
+
+
+      
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          
+
+ 
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href="index.html">Docs</a> &raquo;</li>
+      
+    <li>GAS regression models</li>
+      <li class="wy-breadcrumbs-aside">
+        
+          
+            <a href="_sources/gas_reg.txt" rel="nofollow"> View page source</a>
+          
+        
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <div class="section" id="gas-regression-models">
+<h1>GAS regression models<a class="headerlink" href="#gas-regression-models" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="introduction">
+<h2>Introduction<a class="headerlink" href="#introduction" title="Permalink to this headline">¶</a></h2>
+<p>The principle behind score-driven models is that the linear update <span class="math">\(y_{t} - \theta_{t}\)</span>, that the Kalman filter relies upon, can be robustified by replacing it with the conditional score of a non-normal distribution. For this reason, any class of traditional state space model has a score-driven equivalent.</p>
+<p>For example, consider a dynamic regression model in this framework:</p>
+<div class="math">
+\[p\left(y_{t}\mid\theta_{t}\right)\]</div>
+<div class="math">
+\[\theta_{t} = \boldsymbol{x}_{t}^{'}\boldsymbol{\beta}_{t}\]</div>
+<div class="math">
+\[\boldsymbol{\beta}_{t} =  \boldsymbol{\beta}_{t-1} + \boldsymbol{\eta}H_{t-1}^{-1}S_{t-1}\]</div>
+<p>Here <span class="math">\(\eta\)</span> represents the learning rates or scaling terms, and are the latent variables which are estimated in the model.</p>
+</div>
+<div class="section" id="example">
+<h2>Example<a class="headerlink" href="#example" title="Permalink to this headline">¶</a></h2>
+<p>We will use a dynamic t regression to extract a dynamic <span class="math">\(\beta\)</span> for a stock. Using t-distributed errors is more robust than a normality assumption, that could be obtained with a Kalman filter. The <span class="math">\(\beta\)</span> captures the amount of systematic risk in the stock - i.e. the stock&#8217;s relationship with the market.</p>
+<div class="highlight-python"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">pandas.io.data</span> <span class="kn">import</span> <span class="n">DataReader</span>
+<span class="kn">from</span> <span class="nn">datetime</span> <span class="kn">import</span> <span class="n">datetime</span>
+
+<span class="n">a</span> <span class="o">=</span> <span class="n">DataReader</span><span class="p">(</span><span class="s1">&#39;AMZN&#39;</span><span class="p">,</span>  <span class="s1">&#39;yahoo&#39;</span><span class="p">,</span> <span class="n">datetime</span><span class="p">(</span><span class="mi">2012</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">),</span> <span class="n">datetime</span><span class="p">(</span><span class="mi">2016</span><span class="p">,</span><span class="mi">6</span><span class="p">,</span><span class="mi">1</span><span class="p">))</span>
+<span class="n">a_returns</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">diff</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="n">a</span><span class="p">[</span><span class="s1">&#39;Adj Close&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">values</span><span class="p">)))</span>
+<span class="n">a_returns</span><span class="o">.</span><span class="n">index</span> <span class="o">=</span> <span class="n">a</span><span class="o">.</span><span class="n">index</span><span class="o">.</span><span class="n">values</span><span class="p">[</span><span class="mi">1</span><span class="p">:</span><span class="n">a</span><span class="o">.</span><span class="n">index</span><span class="o">.</span><span class="n">values</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]]</span>
+<span class="n">a_returns</span><span class="o">.</span><span class="n">columns</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;Amazon Returns&quot;</span><span class="p">]</span>
+
+<span class="n">spy</span> <span class="o">=</span> <span class="n">DataReader</span><span class="p">(</span><span class="s1">&#39;SPY&#39;</span><span class="p">,</span>  <span class="s1">&#39;yahoo&#39;</span><span class="p">,</span> <span class="n">datetime</span><span class="p">(</span><span class="mi">2012</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">),</span> <span class="n">datetime</span><span class="p">(</span><span class="mi">2016</span><span class="p">,</span><span class="mi">6</span><span class="p">,</span><span class="mi">1</span><span class="p">))</span>
+<span class="n">spy_returns</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">diff</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="n">spy</span><span class="p">[</span><span class="s1">&#39;Adj Close&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">values</span><span class="p">)))</span>
+<span class="n">spy_returns</span><span class="o">.</span><span class="n">index</span> <span class="o">=</span> <span class="n">spy</span><span class="o">.</span><span class="n">index</span><span class="o">.</span><span class="n">values</span><span class="p">[</span><span class="mi">1</span><span class="p">:</span><span class="n">spy</span><span class="o">.</span><span class="n">index</span><span class="o">.</span><span class="n">values</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]]</span>
+<span class="n">spy_returns</span><span class="o">.</span><span class="n">columns</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;S&amp;P500 Returns&#39;</span><span class="p">]</span>
+
+<span class="n">one_mon</span> <span class="o">=</span> <span class="n">DataReader</span><span class="p">(</span><span class="s1">&#39;DGS1MO&#39;</span><span class="p">,</span> <span class="s1">&#39;fred&#39;</span><span class="p">,</span><span class="n">datetime</span><span class="p">(</span><span class="mi">2012</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">),</span> <span class="n">datetime</span><span class="p">(</span><span class="mi">2016</span><span class="p">,</span><span class="mi">6</span><span class="p">,</span><span class="mi">1</span><span class="p">))</span>
+<span class="n">one_day</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="mi">1</span><span class="o">+</span><span class="n">one_mon</span><span class="p">)</span><span class="o">/</span><span class="mi">365</span>
+
+<span class="n">returns</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">concat</span><span class="p">([</span><span class="n">one_day</span><span class="p">,</span><span class="n">a_returns</span><span class="p">,</span><span class="n">spy_returns</span><span class="p">],</span><span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span><span class="o">.</span><span class="n">dropna</span><span class="p">()</span>
+<span class="n">excess_m</span> <span class="o">=</span> <span class="n">returns</span><span class="p">[</span><span class="s2">&quot;Amazon Returns&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">values</span> <span class="o">-</span> <span class="n">returns</span><span class="p">[</span><span class="s1">&#39;DGS1MO&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">values</span>
+<span class="n">excess_spy</span> <span class="o">=</span> <span class="n">returns</span><span class="p">[</span><span class="s2">&quot;S&amp;P500 Returns&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">values</span> <span class="o">-</span> <span class="n">returns</span><span class="p">[</span><span class="s1">&#39;DGS1MO&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">values</span>
+<span class="n">final_returns</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">transpose</span><span class="p">([</span><span class="n">excess_m</span><span class="p">,</span><span class="n">excess_spy</span><span class="p">,</span> <span class="n">returns</span><span class="p">[</span><span class="s1">&#39;DGS1MO&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">values</span><span class="p">]))</span>
+<span class="n">final_returns</span><span class="o">.</span><span class="n">columns</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;Amazon&quot;</span><span class="p">,</span><span class="s2">&quot;SP500&quot;</span><span class="p">,</span><span class="s2">&quot;Risk-free rate&quot;</span><span class="p">]</span>
+<span class="n">final_returns</span><span class="o">.</span><span class="n">index</span> <span class="o">=</span> <span class="n">returns</span><span class="o">.</span><span class="n">index</span>
+
+<span class="n">plt</span><span class="o">.</span><span class="n">figure</span><span class="p">(</span><span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">15</span><span class="p">,</span><span class="mi">5</span><span class="p">))</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">title</span><span class="p">(</span><span class="s2">&quot;Excess Returns&quot;</span><span class="p">)</span>
+<span class="n">x</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">final_returns</span><span class="p">);</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">legend</span><span class="p">(</span><span class="nb">iter</span><span class="p">(</span><span class="n">x</span><span class="p">),</span> <span class="n">final_returns</span><span class="o">.</span><span class="n">columns</span><span class="p">);</span>
+</pre></div>
+</div>
+<img alt="http://www.pyflux.com/notebooks/GASStateSpace/output_31_1.png" src="http://www.pyflux.com/notebooks/GASStateSpace/output_31_1.png" />
+<p>We can fit a GAS Regression model with a <code class="docutils literal"><span class="pre">t()</span></code> family:</p>
+<div class="highlight-python"><div class="highlight"><pre><span></span><span class="n">model</span> <span class="o">=</span> <span class="n">pf</span><span class="o">.</span><span class="n">GASReg</span><span class="p">(</span><span class="s1">&#39;Amazon ~ SP500&#39;</span><span class="p">,</span> <span class="n">data</span><span class="o">=</span><span class="n">final_returns</span><span class="p">,</span> <span class="n">family</span><span class="o">=</span><span class="n">pf</span><span class="o">.</span><span class="n">t</span><span class="p">())</span>
+</pre></div>
+</div>
+<p>Next we estimate the latent variables. For this example we will use a Maximum Likelihood estimate <span class="math">\(z^{MLE}\)</span>:</p>
+<div class="highlight-python"><div class="highlight"><pre><span></span><span class="n">x</span> <span class="o">=</span> <span class="n">model3</span><span class="o">.</span><span class="n">fit</span><span class="p">()</span>
+<span class="n">x</span><span class="o">.</span><span class="n">summary</span><span class="p">()</span>
+
+<span class="n">t</span> <span class="n">GAS</span> <span class="n">Regression</span>
+<span class="o">========================================</span> <span class="o">=================================================</span>
+<span class="n">Dependent</span> <span class="n">Variable</span><span class="p">:</span> <span class="n">Amazon</span>               <span class="n">Method</span><span class="p">:</span> <span class="n">MLE</span>
+<span class="n">Start</span> <span class="n">Date</span><span class="p">:</span> <span class="mi">2012</span><span class="o">-</span><span class="mo">01</span><span class="o">-</span><span class="mo">04</span> <span class="mo">00</span><span class="p">:</span><span class="mo">00</span><span class="p">:</span><span class="mo">00</span>          <span class="n">Log</span> <span class="n">Likelihood</span><span class="p">:</span> <span class="mf">3158.435</span>
+<span class="n">End</span> <span class="n">Date</span><span class="p">:</span> <span class="mi">2016</span><span class="o">-</span><span class="mo">06</span><span class="o">-</span><span class="mo">01</span> <span class="mo">00</span><span class="p">:</span><span class="mo">00</span><span class="p">:</span><span class="mo">00</span>            <span class="n">AIC</span><span class="p">:</span> <span class="o">-</span><span class="mf">6308.87</span>
+<span class="n">Number</span> <span class="n">of</span> <span class="n">observations</span><span class="p">:</span> <span class="mi">1101</span>             <span class="n">BIC</span><span class="p">:</span> <span class="o">-</span><span class="mf">6288.8541</span>
+<span class="o">==========================================================================================</span>
+<span class="n">Latent</span> <span class="n">Variable</span>           <span class="n">Estimate</span>   <span class="n">Std</span> <span class="n">Error</span>  <span class="n">z</span>        <span class="n">P</span><span class="o">&gt;|</span><span class="n">z</span><span class="o">|</span>    <span class="mi">95</span><span class="o">%</span> <span class="n">C</span><span class="o">.</span><span class="n">I</span><span class="o">.</span>
+<span class="o">=========================</span> <span class="o">==========</span> <span class="o">==========</span> <span class="o">========</span> <span class="o">========</span> <span class="o">========================</span>
+<span class="n">Scale</span> <span class="mi">1</span>                   <span class="mf">0.0</span>
+<span class="n">Scale</span> <span class="n">SP500</span>               <span class="mf">0.0474</span>
+<span class="n">t</span> <span class="n">Scale</span>                   <span class="mf">0.0095</span>
+<span class="n">v</span>                         <span class="mf">2.8518</span>
+<span class="o">==========================================================================================</span>
+</pre></div>
+</div>
+<p>We can plot the fit with <code class="xref py py-func docutils literal"><span class="pre">plot_fit()</span></code>:</p>
+<div class="highlight-python"><div class="highlight"><pre><span></span><span class="n">model</span><span class="o">.</span><span class="n">plot_fit</span><span class="p">(</span><span class="n">intervals</span><span class="o">=</span><span class="bp">False</span><span class="p">,</span><span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">15</span><span class="p">,</span><span class="mi">15</span><span class="p">))</span>
+</pre></div>
+</div>
+<img alt="http://www.pyflux.com/notebooks/GASStateSpace/output_36_0.png" src="http://www.pyflux.com/notebooks/GASStateSpace/output_36_0.png" />
+<p>One of the advantages of using a GASRegression rather than a Kalman filtered Dynamic Linear Regression is that the GASRegression with t errors is more robust to outliers. We do not produce the whole analysis here, but for the same data, the filtered estimates are compared below:</p>
+<img alt="http://www.pyflux.com/notebooks/GASStateSpace/gaskalman.png" src="http://www.pyflux.com/notebooks/GASStateSpace/gaskalman.png" />
+</div>
+<div class="section" id="class-description">
+<h2>Class Description<a class="headerlink" href="#class-description" title="Permalink to this headline">¶</a></h2>
+<dl class="class">
+<dt id="GASReg">
+<em class="property">class </em><code class="descname">GASReg</code><span class="sig-paren">(</span><em>data</em>, <em>formula</em>, <em>target</em>, <em>family</em><span class="sig-paren">)</span><a class="headerlink" href="#GASReg" title="Permalink to this definition">¶</a></dt>
+<dd><p><strong>Generalized Autoregressive Score Regression Models (GASReg).</strong></p>
+<table border="1" class="docutils">
+<colgroup>
+<col width="20%" />
+<col width="35%" />
+<col width="45%" />
+</colgroup>
+<thead valign="bottom">
+<tr class="row-odd"><th class="head">Parameter</th>
+<th class="head">Type</th>
+<th class="head">Description</th>
+</tr>
+</thead>
+<tbody valign="top">
+<tr class="row-even"><td>data</td>
+<td>pd.DataFrame or np.ndarray</td>
+<td>Contains the univariate time series</td>
+</tr>
+<tr class="row-odd"><td>formula</td>
+<td>string</td>
+<td>Patsy notation specifying the regression</td>
+</tr>
+<tr class="row-even"><td>target</td>
+<td>string or int</td>
+<td>Which column of DataFrame/array to use.</td>
+</tr>
+<tr class="row-odd"><td>family</td>
+<td>pf.Family instance</td>
+<td>The distribution for the time series,
+e.g <code class="docutils literal"><span class="pre">pf.Normal()</span></code></td>
+</tr>
+</tbody>
+</table>
+<p><strong>Attributes</strong></p>
+<dl class="attribute">
+<dt id="GASReg.latent_variables">
+<code class="descname">latent_variables</code><a class="headerlink" href="#GASReg.latent_variables" title="Permalink to this definition">¶</a></dt>
+<dd><p>A pf.LatentVariables() object containing information on the model latent variables,
+prior settings. any fitted values, starting values, and other latent variable
+information. When a model is fitted, this is where the latent variables are updated/stored.
+Please see the documentation on Latent Variables for information on attributes within this
+object, as well as methods for accessing the latent variable information.</p>
+</dd></dl>
+
+<p><strong>Methods</strong></p>
+<dl class="method">
+<dt id="GASReg.adjust_prior">
+<code class="descname">adjust_prior</code><span class="sig-paren">(</span><em>index</em>, <em>prior</em><span class="sig-paren">)</span><a class="headerlink" href="#GASReg.adjust_prior" title="Permalink to this definition">¶</a></dt>
+<dd><p>Adjusts the priors for the model latent variables. The latent variables and their indices
+can be viewed by printing the <code class="docutils literal"><span class="pre">latent_variables</span></code> attribute attached to the model instance.</p>
+<table border="1" class="docutils">
+<colgroup>
+<col width="22%" />
+<col width="29%" />
+<col width="49%" />
+</colgroup>
+<thead valign="bottom">
+<tr class="row-odd"><th class="head">Parameter</th>
+<th class="head">Type</th>
+<th class="head">Description</th>
+</tr>
+</thead>
+<tbody valign="top">
+<tr class="row-even"><td>index</td>
+<td>int</td>
+<td>Index of the latent variable to change</td>
+</tr>
+<tr class="row-odd"><td>prior</td>
+<td>pf.Family instance</td>
+<td>Prior distribution, e.g. <code class="docutils literal"><span class="pre">pf.Normal()</span></code></td>
+</tr>
+</tbody>
+</table>
+<p><strong>Returns</strong>: void - changes the model <code class="docutils literal"><span class="pre">latent_variables</span></code> attribute</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="GASReg.fit">
+<code class="descname">fit</code><span class="sig-paren">(</span><em>method</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="headerlink" href="#GASReg.fit" title="Permalink to this definition">¶</a></dt>
+<dd><p>Estimates latent variables for the model. User chooses an inference option and the
+method returns a results object, as well as updating the model&#8217;s <code class="docutils literal"><span class="pre">latent_variables</span></code>
+attribute.</p>
+<table border="1" class="docutils">
+<colgroup>
+<col width="23%" />
+<col width="30%" />
+<col width="48%" />
+</colgroup>
+<thead valign="bottom">
+<tr class="row-odd"><th class="head">Parameter</th>
+<th class="head">Type</th>
+<th class="head">Description</th>
+</tr>
+</thead>
+<tbody valign="top">
+<tr class="row-even"><td>method</td>
+<td>str</td>
+<td>Inference option: e.g. &#8216;M-H&#8217; or &#8216;MLE&#8217;</td>
+</tr>
+</tbody>
+</table>
+<p>See Bayesian Inference and Classical Inference sections of the documentation for the
+full list of inference options. Optional parameters can be entered that are relevant
+to the particular mode of inference chosen.</p>
+<p><strong>Returns</strong>: pf.Results instance with information for the estimated latent variables</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="GASReg.plot_fit">
+<code class="descname">plot_fit</code><span class="sig-paren">(</span><em>**kwargs</em><span class="sig-paren">)</span><a class="headerlink" href="#GASReg.plot_fit" title="Permalink to this definition">¶</a></dt>
+<dd><p>Plots the fit of the model against the data. Optional arguments include <em>figsize</em>,
+the dimensions of the figure to plot.</p>
+<p><strong>Returns</strong> : void - shows a matplotlib plot</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="GASReg.plot_ppc">
+<code class="descname">plot_ppc</code><span class="sig-paren">(</span><em>T</em>, <em>nsims</em><span class="sig-paren">)</span><a class="headerlink" href="#GASReg.plot_ppc" title="Permalink to this definition">¶</a></dt>
+<dd><p>Plots a histogram for a posterior predictive check with a discrepancy measure of the
+user&#8217;s choosing. This method only works if you have fitted using Bayesian inference.</p>
+<table border="1" class="docutils">
+<colgroup>
+<col width="21%" />
+<col width="28%" />
+<col width="51%" />
+</colgroup>
+<thead valign="bottom">
+<tr class="row-odd"><th class="head">Parameter</th>
+<th class="head">Type</th>
+<th class="head">Description</th>
+</tr>
+</thead>
+<tbody valign="top">
+<tr class="row-even"><td>T</td>
+<td>function</td>
+<td>Discrepancy, e.g. <code class="docutils literal"><span class="pre">np.mean</span></code> or <code class="docutils literal"><span class="pre">np.max</span></code></td>
+</tr>
+<tr class="row-odd"><td>nsims</td>
+<td>int</td>
+<td>How many simulations for the PPC</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Returns</strong>: void - shows a matplotlib plot</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="GASReg.plot_predict">
+<code class="descname">plot_predict</code><span class="sig-paren">(</span><em>h</em>, <em>oos_data</em>, <em>past_values</em>, <em>intervals</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="headerlink" href="#GASReg.plot_predict" title="Permalink to this definition">¶</a></dt>
+<dd><p>Plots predictions of the model, along with intervals.</p>
+<table border="1" class="docutils">
+<colgroup>
+<col width="21%" />
+<col width="29%" />
+<col width="50%" />
+</colgroup>
+<thead valign="bottom">
+<tr class="row-odd"><th class="head">Parameter</th>
+<th class="head">Type</th>
+<th class="head">Description</th>
+</tr>
+</thead>
+<tbody valign="top">
+<tr class="row-even"><td>h</td>
+<td>int</td>
+<td>How many steps to forecast ahead</td>
+</tr>
+<tr class="row-odd"><td>oos_data</td>
+<td>pd.DataFrame</td>
+<td>Exogenous variables in a frame for h steps</td>
+</tr>
+<tr class="row-even"><td>past_values</td>
+<td>int</td>
+<td>How many past datapoints to plot</td>
+</tr>
+<tr class="row-odd"><td>intervals</td>
+<td>boolean</td>
+<td>Whether to plot intervals or not</td>
+</tr>
+</tbody>
+</table>
+<p>To be clear, the <em>oos_data</em> argument should be a DataFrame in the same format as the initial
+dataframe used to initialize the model instance. The reason is that to predict future values,
+you need to specify assumptions about exogenous variables for the future. For example, if you
+predict <em>h</em> steps ahead, the method will take the 5 first rows from <em>oos_data</em> and take the
+values for the exogenous variables that you specified as exogenous variables in the patsy formula.</p>
+<p>Optional arguments include <em>figsize</em> - the dimensions of the figure to plot. Please note
+that if you use Maximum Likelihood or Variational Inference, the intervals shown will not
+reflect latent variable uncertainty. Only Metropolis-Hastings will give you fully Bayesian
+prediction intervals. Bayesian intervals with variational inference are not shown because
+of the limitation of mean-field inference in not accounting for posterior correlations.</p>
+<p><strong>Returns</strong> : void - shows a matplotlib plot</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="GASReg.plot_predict_is">
+<code class="descname">plot_predict_is</code><span class="sig-paren">(</span><em>h</em>, <em>fit_once</em>, <em>fit_method</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="headerlink" href="#GASReg.plot_predict_is" title="Permalink to this definition">¶</a></dt>
+<dd><p>Plots in-sample rolling predictions for the model. This means that the user pretends a
+last subsection of data is out-of-sample, and forecasts after each period and assesses
+how well they did. The user can choose whether to fit parameters once at the beginning
+or every time step.</p>
+<table border="1" class="docutils">
+<colgroup>
+<col width="23%" />
+<col width="30%" />
+<col width="48%" />
+</colgroup>
+<thead valign="bottom">
+<tr class="row-odd"><th class="head">Parameter</th>
+<th class="head">Type</th>
+<th class="head">Description</th>
+</tr>
+</thead>
+<tbody valign="top">
+<tr class="row-even"><td>h</td>
+<td>int</td>
+<td>How many previous timesteps to use</td>
+</tr>
+<tr class="row-odd"><td>fit_once</td>
+<td>boolean</td>
+<td>Whether to fit once, or every timestep</td>
+</tr>
+<tr class="row-even"><td>fit_method</td>
+<td>str</td>
+<td>Which inference option, e.g. &#8216;MLE&#8217;</td>
+</tr>
+</tbody>
+</table>
+<p>Optional arguments include <em>figsize</em> - the dimensions of the figure to plot. <strong>h</strong> is an int of how many previous steps to simulate performance on.</p>
+<p><strong>Returns</strong> : void - shows a matplotlib plot</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="GASReg.plot_sample">
+<code class="descname">plot_sample</code><span class="sig-paren">(</span><em>nsims</em>, <em>plot_data=True</em><span class="sig-paren">)</span><a class="headerlink" href="#GASReg.plot_sample" title="Permalink to this definition">¶</a></dt>
+<dd><p>Plots samples from the posterior predictive density of the model. This method only works
+if you fitted the model using Bayesian inference.</p>
+<table border="1" class="docutils">
+<colgroup>
+<col width="23%" />
+<col width="30%" />
+<col width="48%" />
+</colgroup>
+<thead valign="bottom">
+<tr class="row-odd"><th class="head">Parameter</th>
+<th class="head">Type</th>
+<th class="head">Description</th>
+</tr>
+</thead>
+<tbody valign="top">
+<tr class="row-even"><td>nsims</td>
+<td>int</td>
+<td>How many samples to draw</td>
+</tr>
+<tr class="row-odd"><td>plot_data</td>
+<td>boolean</td>
+<td>Whether to plot the real data as well</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Returns</strong> : void - shows a matplotlib plot</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="GASReg.plot_z">
+<code class="descname">plot_z</code><span class="sig-paren">(</span><em>indices</em>, <em>figsize</em><span class="sig-paren">)</span><a class="headerlink" href="#GASReg.plot_z" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns a plot of the latent variables and their associated uncertainty.</p>
+<table border="1" class="docutils">
+<colgroup>
+<col width="23%" />
+<col width="30%" />
+<col width="48%" />
+</colgroup>
+<thead valign="bottom">
+<tr class="row-odd"><th class="head">Parameter</th>
+<th class="head">Type</th>
+<th class="head">Description</th>
+</tr>
+</thead>
+<tbody valign="top">
+<tr class="row-even"><td>indices</td>
+<td>int or list</td>
+<td>Which latent variable indices to plot</td>
+</tr>
+<tr class="row-odd"><td>figsize</td>
+<td>tuple</td>
+<td>Size of the matplotlib figure</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Returns</strong> : void - shows a matplotlib plot</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="GASReg.ppc">
+<code class="descname">ppc</code><span class="sig-paren">(</span><em>T</em>, <em>nsims</em><span class="sig-paren">)</span><a class="headerlink" href="#GASReg.ppc" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns a p-value for a posterior predictive check. This method only works if you have
+fitted using Bayesian inference.</p>
+<table border="1" class="docutils">
+<colgroup>
+<col width="21%" />
+<col width="28%" />
+<col width="51%" />
+</colgroup>
+<thead valign="bottom">
+<tr class="row-odd"><th class="head">Parameter</th>
+<th class="head">Type</th>
+<th class="head">Description</th>
+</tr>
+</thead>
+<tbody valign="top">
+<tr class="row-even"><td>T</td>
+<td>function</td>
+<td>Discrepancy, e.g. <code class="docutils literal"><span class="pre">np.mean</span></code> or <code class="docutils literal"><span class="pre">np.max</span></code></td>
+</tr>
+<tr class="row-odd"><td>nsims</td>
+<td>int</td>
+<td>How many simulations for the PPC</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Returns</strong>: int - the p-value for the discrepancy test</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="GASReg.predict">
+<code class="descname">predict</code><span class="sig-paren">(</span><em>h</em>, <em>oos_data</em>, <em>intervals=False</em><span class="sig-paren">)</span><a class="headerlink" href="#GASReg.predict" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns a DataFrame of model predictions.</p>
+<table border="1" class="docutils">
+<colgroup>
+<col width="21%" />
+<col width="29%" />
+<col width="50%" />
+</colgroup>
+<thead valign="bottom">
+<tr class="row-odd"><th class="head">Parameter</th>
+<th class="head">Type</th>
+<th class="head">Description</th>
+</tr>
+</thead>
+<tbody valign="top">
+<tr class="row-even"><td>h</td>
+<td>int</td>
+<td>How many steps to forecast ahead</td>
+</tr>
+<tr class="row-odd"><td>oos_data</td>
+<td>pd.DataFrame</td>
+<td>Exogenous variables in a frame for h steps</td>
+</tr>
+<tr class="row-even"><td>intervals</td>
+<td>boolean</td>
+<td>Whether to return prediction intervals</td>
+</tr>
+</tbody>
+</table>
+<p>To be clear, the <em>oos_data</em> argument should be a DataFrame in the same format as the initial
+dataframe used to initialize the model instance. The reason is that to predict future values,
+you need to specify assumptions about exogenous variables for the future. For example, if you
+predict <em>h</em> steps ahead, the method will take the 5 first rows from <em>oos_data</em> and take the
+values for the exogenous variables that you specified as exogenous variables in the patsy formula.</p>
+<p>Please note that if you use Maximum Likelihood or Variational Inference, the intervals shown
+will not reflect latent variable uncertainty. Only Metropolis-Hastings will give you fully
+Bayesian prediction intervals. Bayesian intervals with variational inference are not shown
+because of the limitation of mean-field inference in not accounting for posterior correlations.</p>
+<p><strong>Returns</strong> : pd.DataFrame - the model predictions</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="GASReg.predict_is">
+<code class="descname">predict_is</code><span class="sig-paren">(</span><em>h</em>, <em>fit_once</em>, <em>fit_method</em><span class="sig-paren">)</span><a class="headerlink" href="#GASReg.predict_is" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns DataFrame of in-sample rolling predictions for the model.</p>
+<table border="1" class="docutils">
+<colgroup>
+<col width="23%" />
+<col width="30%" />
+<col width="48%" />
+</colgroup>
+<thead valign="bottom">
+<tr class="row-odd"><th class="head">Parameter</th>
+<th class="head">Type</th>
+<th class="head">Description</th>
+</tr>
+</thead>
+<tbody valign="top">
+<tr class="row-even"><td>h</td>
+<td>int</td>
+<td>How many previous timesteps to use</td>
+</tr>
+<tr class="row-odd"><td>fit_once</td>
+<td>boolean</td>
+<td>Whether to fit once, or every timestep</td>
+</tr>
+<tr class="row-even"><td>fit_method</td>
+<td>str</td>
+<td>Which inference option, e.g. &#8216;MLE&#8217;</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Returns</strong> : pd.DataFrame - the model predictions</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="GASReg.sample">
+<code class="descname">sample</code><span class="sig-paren">(</span><em>nsims</em><span class="sig-paren">)</span><a class="headerlink" href="#GASReg.sample" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns np.ndarray of draws of the data from the posterior predictive density. This
+method only works if you have fitted the model using Bayesian inference.</p>
+<table border="1" class="docutils">
+<colgroup>
+<col width="23%" />
+<col width="30%" />
+<col width="48%" />
+</colgroup>
+<thead valign="bottom">
+<tr class="row-odd"><th class="head">Parameter</th>
+<th class="head">Type</th>
+<th class="head">Description</th>
+</tr>
+</thead>
+<tbody valign="top">
+<tr class="row-even"><td>nsims</td>
+<td>int</td>
+<td>How many posterior draws to take</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Returns</strong> : np.ndarray - samples from the posterior predictive density.</p>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+<div class="section" id="references">
+<h2>References<a class="headerlink" href="#references" title="Permalink to this headline">¶</a></h2>
+<p>Creal, D; Koopman, S.J.; Lucas, A. (2013). Generalized Autoregressive Score Models with
+Applications. Journal of Applied Econometrics, 28(5), 777–795. doi:10.1002/jae.1279.</p>
+<p>Harvey, A.C. (2013). Dynamic Models for Volatility and Heavy Tails: With Applications to
+Financial and Economic Time Series. Cambridge University Press.</p>
+</div>
+</div>
+
+
+           </div>
+          </div>
+          <footer>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2016, Ross Taylor.
+
+    </p>
+  </div>
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/snide/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  
+
+    <script type="text/javascript">
+        var DOCUMENTATION_OPTIONS = {
+            URL_ROOT:'./',
+            VERSION:'0.4.0',
+            COLLAPSE_INDEX:false,
+            FILE_SUFFIX:'.html',
+            HAS_SOURCE:  true
+        };
+    </script>
+      <script type="text/javascript" src="_static/jquery.js"></script>
+      <script type="text/javascript" src="_static/underscore.js"></script>
+      <script type="text/javascript" src="_static/doctools.js"></script>
+      <script type="text/javascript" src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+
+  
+
+  
+  
+    <script type="text/javascript" src="_static/js/theme.js"></script>
+  
+
+  
+  
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.StickyNav.enable();
+      });
+  </script>
+   
+
+</body>
+</html>

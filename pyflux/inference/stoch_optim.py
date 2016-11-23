@@ -16,7 +16,8 @@ class RMSProp(object):
 
     def update(self, gradient):
         self.variance = self.ewma*self.variance + (1-self.ewma)*np.power(gradient,2)
-        self.parameters += (self.learning_rate+(self.learning_rate*15.0*(0.990**self.t)))*(gradient/np.sqrt(self.variance+self.epsilon))  
+        if self.t > 5:
+            self.parameters += (self.learning_rate+(self.learning_rate*15.0*(0.990**self.t)))*(gradient/np.sqrt(self.variance+self.epsilon))  
         self.t += 1
         return self.parameters
 
@@ -42,6 +43,7 @@ class ADAM(object):
         f_gradient_hat = self.f_gradient / (1-np.power(self.ewma_1,self.t))
         self.variance = self.ewma_2*self.variance + (1-self.ewma_2)*np.power(gradient,2)
         variance_hat = self.variance / (1-np.power(self.ewma_2,self.t))
-        self.parameters += (self.learning_rate+(self.learning_rate*15.0*(0.990**self.t)))*(f_gradient_hat/(np.sqrt(variance_hat)+self.epsilon))  
+        if self.t > 5:
+            self.parameters += (self.learning_rate+(self.learning_rate*15.0*(0.990**self.t)))*(f_gradient_hat/(np.sqrt(variance_hat)+self.epsilon))  
         self.t += 1
         return self.parameters

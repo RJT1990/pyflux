@@ -7,7 +7,7 @@ import scipy.stats as ss
 
 from .stoch_optim import RMSProp, ADAM
 
-from .bbvi_routines import alpha_recursion, log_p_posterior
+from .bbvi_routines import alpha_recursion, log_p_posterior, mb_log_p_posterior
 
 
 class BBVI(object):
@@ -18,17 +18,24 @@ class BBVI(object):
     ----------
     neg_posterior : function
         posterior function
+
     q : List
         list holding distribution objects
+    
     sims : int
         Number of Monte Carlo sims for the gradient
+    
     step : float
         Step size for RMSProp
+    
     iterations: int
         How many iterations to run
+
+    record_elbo : boolean
+        Whether to record the ELBO at every iteration
     """
 
-    def __init__(self, neg_posterior, q, sims, optimizer='RMSProp', iterations=1000, learning_rate=0.001):
+    def __init__(self, neg_posterior, q, sims, optimizer='RMSProp', iterations=1000, learning_rate=0.001, record_elbo=False):
         self.neg_posterior = neg_posterior
         self.q = q
         self.sims = sims
@@ -37,6 +44,7 @@ class BBVI(object):
         self.optimizer = optimizer
         self.printer = True
         self.learning_rate = learning_rate
+        self.record_elbo = record_elbo
 
     def change_parameters(self,params):
         """
@@ -177,8 +185,16 @@ class BBVI(object):
         """
         for split in range(1,11):
             if i == (round(self.iterations/10*split)-1):
-                print(str(split) + "0% done : ELBO is " + str(-self.neg_posterior(current_params)-self.create_normal_logq(current_params)) + ", p(y,z) is " + str(-self.neg_posterior(current_params)) 
-                    + ", q(z) is " + str(self.create_normal_logq(current_params)))
+                post = -self.neg_posterior(current_params)
+                approx = self.create_normal_logq(current_params)
+                diff = post - approx
+                print(str(split) + "0% done : ELBO is " + str(diff) + ", p(y,z) is " + str(post) + ", q(z) is " + str(approx))
+
+    def get_elbo(self, current_params):
+        """
+        Obtains the ELBO for the current set of parameters
+        """
+        return -self.neg_posterior(current_params) - self.create_normal_logq(current_params)
 
     def run(self):
         """
@@ -189,7 +205,7 @@ class BBVI(object):
         z = self.draw_normal_initial()
         gradient = self.cv_gradient_initial(z)
         gradient[np.isnan(gradient)] = 0
-        variance = np.power(gradient,2)       
+        variance = np.power(gradient, 2)       
         final_parameters = self.current_parameters()
         final_samples = 1
 
@@ -198,7 +214,13 @@ class BBVI(object):
             self.optim = ADAM(final_parameters, variance, self.learning_rate, 0.9, 0.999)
         elif self.optimizer == 'RMSProp':
             self.optim = RMSProp(final_parameters, variance, self.learning_rate, 0.99)
-        
+
+        # Record elbo
+        if self.record_elbo is True:
+            elbo_records = np.zeros(self.iterations)
+        else:
+            elbo_records = None
+
         for i in range(self.iterations):
             x = self.draw_normal()
             gradient = self.cv_gradient(x)
@@ -206,20 +228,24 @@ class BBVI(object):
             self.change_parameters(self.optim.update(gradient))
 
             if self.printer is True:
-                self.print_progress(i,self.optim.parameters[::2])
+                self.print_progress(i, self.optim.parameters[::2])
 
             # Construct final parameters using final 10% of samples
             if i > self.iterations-round(self.iterations/10):
                 final_samples += 1
                 final_parameters = final_parameters+self.optim.parameters
 
+            if self.record_elbo is True:
+                elbo_records[i] = self.get_elbo(self.optim.parameters[::2])
+
         final_parameters = final_parameters/float(final_samples)
+        self.change_parameters(final_parameters)
         final_means = np.array([final_parameters[el] for el in range(len(final_parameters)) if el%2==0])
         final_ses = np.array([final_parameters[el] for el in range(len(final_parameters)) if el%2!=0])
         if self.printer is True:
             print("")
             print("Final model ELBO is " + str(-self.neg_posterior(final_means)-self.create_normal_logq(final_means)))
-        return self.q, final_means, final_ses
+        return self.q, final_means, final_ses, elbo_records
 
     def run_and_store(self):
         """
@@ -244,6 +270,12 @@ class BBVI(object):
         stored_means = np.zeros((self.iterations,len(final_parameters)/2))
         stored_predictive_likelihood = np.zeros(self.iterations)
 
+        # Record elbo
+        if self.record_elbo is True:
+            elbo_records = np.zeros(self.iterations)
+        else:
+            elbo_records = None
+
         for i in range(self.iterations):
             gradient = self.cv_gradient(self.draw_normal())
             gradient[np.isnan(gradient)] = 0
@@ -261,19 +293,24 @@ class BBVI(object):
                 final_samples += 1
                 final_parameters = final_parameters+self.optim.parameters
 
+            if self.record_elbo is True:
+                elbo_records[i] = self.get_elbo(self.optim.parameters[::2])
+
         final_parameters = final_parameters/float(final_samples)
+        self.change_parameters(final_parameters)
         final_means = np.array([final_parameters[el] for el in range(len(final_parameters)) if el%2==0])
         final_ses = np.array([final_parameters[el] for el in range(len(final_parameters)) if el%2!=0])
 
         if self.printer is True:
             print("")
             print("Final model ELBO is " + str(-self.neg_posterior(final_means)-self.create_normal_logq(final_means)))
-        return self.q, final_means, final_ses, stored_means, stored_predictive_likelihood
+        return self.q, final_means, final_ses, stored_means, stored_predictive_likelihood, elbo_records
 
 class CBBVI(BBVI):
 
-    def __init__(self, neg_posterior, log_p_blanket, q, sims, optimizer='RMSProp',iterations=300000, learning_rate=0.001):
-        super(CBBVI, self).__init__(neg_posterior, q, sims, optimizer, iterations, learning_rate)
+    def __init__(self, neg_posterior, log_p_blanket, q, sims, optimizer='RMSProp',iterations=300000, 
+        learning_rate=0.001, record_elbo=False):
+        super(CBBVI, self).__init__(neg_posterior, q, sims, optimizer, iterations, learning_rate, record_elbo)
         self.log_p_blanket = log_p_blanket
 
     def log_p(self,z):
@@ -332,3 +369,179 @@ class CBBVI(BBVI):
         vectorized = gradient - ((alpha0/np.var(grad_log_q,axis=1))*grad_log_q.T).T
 
         return np.mean(vectorized,axis=1)
+
+
+class BBVIM(BBVI):
+    """
+    Black Box Variational Inference - minibatch
+    
+    Parameters
+    ----------
+    neg_posterior : function
+        posterior function
+
+    full_neg_posterior : function
+        posterior function
+
+    q : List
+        list holding distribution objects
+
+    sims : int
+        Number of Monte Carlo sims for the gradient
+
+    step : float
+        Step size for RMSProp
+
+    iterations: int
+        How many iterations to run
+
+    mini_batch : int
+        Mini batch size
+    """
+
+    def __init__(self, neg_posterior, full_neg_posterior, q, sims, optimizer='RMSProp', 
+        iterations=1000, learning_rate=0.001, mini_batch=2, record_elbo=False):
+        self.neg_posterior = neg_posterior
+        self.full_neg_posterior = full_neg_posterior
+        self.q = q
+        self.sims = sims
+        self.iterations = iterations
+        self.approx_param_no = np.array([i.param_no for i in self.q])
+        self.optimizer = optimizer
+        self.printer = True
+        self.learning_rate = learning_rate
+        self.mini_batch = mini_batch
+        self.record_elbo = record_elbo
+
+    def log_p(self,z):
+        """
+        The unnormalized log posterior components (the quantity we want to approximate)
+        """
+        return mb_log_p_posterior(z, self.neg_posterior, self.mini_batch)
+
+    def get_elbo(self, current_params):
+        """
+        Obtains the ELBO for the current set of parameters
+        """
+        return -self.full_neg_posterior(current_params) - self.create_normal_logq(current_params)
+
+    def print_progress(self, i, current_params):
+        """
+        Prints the current ELBO at every decile of total iterations
+        """
+        for split in range(1,11):
+            if i == (round(self.iterations/10*split)-1):
+                post = -self.full_neg_posterior(current_params)
+                approx = self.create_normal_logq(current_params)
+                diff = post - approx
+                print(str(split) + "0% done : ELBO is " + str(diff) + ", p(y,z) is " + str(post) + ", q(z) is " + str(approx))
+
+    def run(self):
+        """
+        The core BBVI routine - draws Monte Carlo gradients and uses a stochastic optimizer.
+        """
+
+        # Initialization assumptions
+        z = self.draw_normal_initial()
+        gradient = self.cv_gradient_initial(z)
+        gradient[np.isnan(gradient)] = 0
+        variance = np.power(gradient, 2)       
+        final_parameters = self.current_parameters()
+        final_samples = 1
+
+        # Create optimizer
+        if self.optimizer == 'ADAM':
+            self.optim = ADAM(final_parameters, variance, self.learning_rate, 0.9, 0.999)
+        elif self.optimizer == 'RMSProp':
+            self.optim = RMSProp(final_parameters, variance, self.learning_rate, 0.99)
+
+        # Record elbo
+        if self.record_elbo is True:
+            elbo_records = np.zeros(self.iterations)
+        else:
+            elbo_records = None
+
+        for i in range(self.iterations):
+            x = self.draw_normal()
+            gradient = self.cv_gradient(x)
+            gradient[np.isnan(gradient)] = 0
+            self.change_parameters(self.optim.update(gradient))
+
+            if self.printer is True:
+                self.print_progress(i, self.optim.parameters[::2])
+
+            # Construct final parameters using final 10% of samples
+            if i > self.iterations-round(self.iterations/10):
+                final_samples += 1
+                final_parameters = final_parameters+self.optim.parameters
+
+            if self.record_elbo is True:
+                elbo_records[i] = self.get_elbo(self.optim.parameters[::2])
+
+        final_parameters = final_parameters/float(final_samples)
+        self.change_parameters(final_parameters)
+        final_means = np.array([final_parameters[el] for el in range(len(final_parameters)) if el%2==0])
+        final_ses = np.array([final_parameters[el] for el in range(len(final_parameters)) if el%2!=0])
+        if self.printer is True:
+            print("")
+            print("Final model ELBO is " + str(-self.full_neg_posterior(final_means)-self.create_normal_logq(final_means)))
+        return self.q, final_means, final_ses, elbo_records
+
+    def run_and_store(self):
+        """
+        The core BBVI routine - draws Monte Carlo gradients and uses a stochastic optimizer. 
+        Stores rgw history of updates for the benefit of a pretty animation.
+        """
+        # Initialization assumptions
+        z = self.draw_normal_initial()
+        gradient = self.cv_gradient_initial(z)
+        gradient[np.isnan(gradient)] = 0
+        variance = np.power(gradient,2)       
+        final_parameters = self.current_parameters()
+        final_samples = 1
+
+        # Create optimizer
+        if self.optimizer == 'ADAM':
+            self.optim = ADAM(final_parameters, variance, self.learning_rate, 0.9, 0.999)
+        elif self.optimizer == 'RMSProp':
+            self.optim = RMSProp(final_parameters, variance, self.learning_rate, 0.99)
+
+        # Stored updates
+        stored_means = np.zeros((self.iterations,len(final_parameters)/2))
+        stored_predictive_likelihood = np.zeros(self.iterations)
+
+        # Record elbo
+        if self.record_elbo is True:
+            elbo_records = np.zeros(self.iterations)
+        else:
+            elbo_records = None
+
+        for i in range(self.iterations):
+            gradient = self.cv_gradient(self.draw_normal())
+            gradient[np.isnan(gradient)] = 0
+            new_parameters = self.optim.update(gradient)
+            self.change_parameters(new_parameters)
+
+            stored_means[i] = self.optim.parameters[::2]
+            stored_predictive_likelihood[i] = self.neg_posterior(stored_means[i])
+
+            if self.printer is True:
+                self.print_progress(i,self.optim.parameters[::2])
+
+            # Construct final parameters using final 10% of samples
+            if i > self.iterations-round(self.iterations/10):
+                final_samples += 1
+                final_parameters = final_parameters+self.optim.parameters
+
+            if self.record_elbo is True:
+                elbo_records[i] = self.get_elbo(self.optim.parameters[::2])
+
+        final_parameters = final_parameters/float(final_samples)
+        self.change_parameters(final_parameters)
+        final_means = np.array([final_parameters[el] for el in range(len(final_parameters)) if el%2==0])
+        final_ses = np.array([final_parameters[el] for el in range(len(final_parameters)) if el%2!=0])
+
+        if self.printer is True:
+            print("")
+            print("Final model ELBO is " + str(-self.full_neg_posterior(final_means)-self.create_normal_logq(final_means)))
+        return self.q, final_means, final_ses, stored_means, stored_predictive_likelihood, elbo_records

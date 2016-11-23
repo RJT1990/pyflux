@@ -32,7 +32,7 @@ class TruncatedNormal(Family):
             Whether to apply a transformation - e.g. 'exp' or 'logit'
         """
         super(TruncatedNormal, self).__init__(transform)
-        self.mu = mu
+        self.mu0 = mu
         self.sigma0 = sigma
         self.upper = upper
         self.lower = lower

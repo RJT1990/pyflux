@@ -8,7 +8,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>Gaussian State Space models &mdash; PyFlux 0.3.7 documentation</title>
+  <title>Gaussian State Space models &mdash; PyFlux 0.4.0 documentation</title>
   
 
   
@@ -30,7 +30,7 @@
   
 
   
-    <link rel="top" title="PyFlux 0.3.7 documentation" href="index.html"/>
+    <link rel="top" title="PyFlux 0.4.0 documentation" href="index.html"/>
         <link rel="next" title="Non-Gaussian State Space models" href="ngssm.html"/>
         <link rel="prev" title="GP-NARX models" href="gpnar.html"/> 
 
@@ -60,7 +60,7 @@
             
             
               <div class="version">
-                0.3
+                0.4
               </div>
             
           
@@ -84,6 +84,7 @@
                 <ul class="current">
 <li class="toctree-l1"><a class="reference internal" href="arima.html">ARIMA models</a></li>
 <li class="toctree-l1"><a class="reference internal" href="arimax.html">ARIMAX models</a></li>
+<li class="toctree-l1"><a class="reference internal" href="dar.html">DAR models</a></li>
 <li class="toctree-l1"><a class="reference internal" href="egarch.html">Beta-t-EGARCH models</a></li>
 <li class="toctree-l1"><a class="reference internal" href="egarchm.html">Beta-t-EGARCH in-mean models</a></li>
 <li class="toctree-l1"><a class="reference internal" href="egarchmreg.html">Beta-t-EGARCH-in-mean regression models</a></li>
@@ -93,6 +94,8 @@
 <li class="toctree-l1"><a class="reference internal" href="segarchm.html">Skew-t EGARCH in-mean models</a></li>
 <li class="toctree-l1"><a class="reference internal" href="gas.html">GAS models</a></li>
 <li class="toctree-l1"><a class="reference internal" href="gasreg.html">GAS Regression models</a></li>
+<li class="toctree-l1"><a class="reference internal" href="gasssm.html">GAS State Space models</a></li>
+<li class="toctree-l1"><a class="reference internal" href="gasx.html">GASX models</a></li>
 <li class="toctree-l1"><a class="reference internal" href="gpnar.html">GP-NARX models</a></li>
 <li class="toctree-l1 current"><a class="current reference internal" href="#">Gaussian State Space models</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="#example">Example</a></li>
@@ -233,19 +236,19 @@
 
 </dd></dl>
 
-<p>The dynamic linear regression (<strong>DynLin</strong>) model is of the form:</p>
+<p>The dynamic linear regression (<strong>DynReg</strong>) model is of the form:</p>
 <dl class="class">
-<dt id="DynLin">
-<em class="property">class </em><code class="descname">DynLin</code><span class="sig-paren">(</span><em>formula</em>, <em>data</em><span class="sig-paren">)</span><a class="headerlink" href="#DynLin" title="Permalink to this definition">¶</a></dt>
+<dt id="DynReg">
+<em class="property">class </em><code class="descname">DynReg</code><span class="sig-paren">(</span><em>formula</em>, <em>data</em><span class="sig-paren">)</span><a class="headerlink" href="#DynReg" title="Permalink to this definition">¶</a></dt>
 <dd><dl class="attribute">
-<dt id="DynLin.formula">
-<code class="descname">formula</code><a class="headerlink" href="#DynLin.formula" title="Permalink to this definition">¶</a></dt>
+<dt id="DynReg.formula">
+<code class="descname">formula</code><a class="headerlink" href="#DynReg.formula" title="Permalink to this definition">¶</a></dt>
 <dd><p>patsy notation string describing the regression</p>
 </dd></dl>
 
 <dl class="attribute">
-<dt id="DynLin.data">
-<code class="descname">data</code><a class="headerlink" href="#DynLin.data" title="Permalink to this definition">¶</a></dt>
+<dt id="DynReg.data">
+<code class="descname">data</code><a class="headerlink" href="#DynReg.data" title="Permalink to this definition">¶</a></dt>
 <dd><p>pd.DataFrame or array-like : the time-series data</p>
 </dd></dl>
 
@@ -378,7 +381,7 @@
     <script type="text/javascript">
         var DOCUMENTATION_OPTIONS = {
             URL_ROOT:'./',
-            VERSION:'0.3.7',
+            VERSION:'0.4.0',
             COLLAPSE_INDEX:false,
             FILE_SUFFIX:'.html',
             HAS_SOURCE:  true

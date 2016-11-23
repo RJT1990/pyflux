@@ -8,6 +8,8 @@ def configuration(parent_package='', top_path=None):
 
     config.add_extension('arma_recursions',
                          sources=['arma_recursions.c'])
+    config.add_extension('nn_architecture',
+                         sources=['nn_architecture.c'])
 
     return config
 

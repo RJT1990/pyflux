@@ -19,7 +19,7 @@ class MetropolisHastings(object):
         The scale for the random walk
 
     nsims : int
-        The number of simulations to perform
+        The number of iterations to perform
 
     initials : np.array
         Where to start the MCMC chain
@@ -27,29 +27,39 @@ class MetropolisHastings(object):
     cov_matrix : np.array
         (optional) A covariance matrix for the random walk
     
+    thinning : int
+        By how much to thin the chains (2 means drop every other point)
+
+    warm_up_period : boolean
+        Whether to discard first half of the chain as 'warm-up'
+
     model_object : TSM object
         A model object (for use in SPDK sampling)
     """
 
-    def __init__(self,posterior,scale,nsims,initials,cov_matrix=None,model_object=None):
+    def __init__(self, posterior, scale, nsims, initials, 
+        cov_matrix=None, thinning=2, warm_up_period=True, model_object=None):
         self.posterior = posterior
         self.scale = scale
-        self.nsims = nsims
+        self.nsims = (1+warm_up_period)*nsims*thinning
         self.initials = initials
         self.param_no = self.initials.shape[0]
-        self.phi = np.zeros([nsims,self.param_no])
-        self.phi[0] = self.initials
+        self.phi = np.zeros([self.nsims,self.param_no])
+        self.phi[0] = self.initials # point from which to start the Metropolis-Hasting algorithm
         
         if cov_matrix is None:
-            self.cov_matrix = np.identity(self.param_no)
+            self.cov_matrix = np.identity(self.param_no) * np.abs(self.initials)
         else:
             self.cov_matrix = cov_matrix
+
+        self.thinning = thinning
+        self.warm_up_period = warm_up_period
 
         if model_object is not None:
             self.model = model_object
 
     @staticmethod
-    def tune_scale(acceptance,scale):
+    def tune_scale(acceptance, scale):
         """ Tunes scale for M-H algorithm
 
         Parameters
@@ -64,6 +74,11 @@ class MetropolisHastings(object):
         ----------
         scale : float
             An adjusted scale parameter
+
+        Notes
+        ----------
+        Ross : Initially did this by trial and error, then refined by looking at other
+        implementations, so some credit here to PyMC3 which became a guideline for this.
         """     
 
         if acceptance > 0.8:
@@ -118,8 +133,9 @@ class MetropolisHastings(object):
             # Holds data on acceptance rates and uniform random numbers
             a_rate = np.zeros([sims_to_do,1])
             crit = np.random.rand(sims_to_do,1)
-            post = multivariate_normal(np.zeros(self.param_no),self.cov_matrix)
+            post = multivariate_normal(np.zeros(self.param_no), self.cov_matrix)
             rnums = post.rvs()*self.scale
+            
             for k in range(1,sims_to_do): 
                 rnums = np.vstack((rnums,post.rvs()*self.scale))
 
@@ -131,13 +147,20 @@ class MetropolisHastings(object):
 
             print("Acceptance rate of Metropolis-Hastings is " + str(acceptance))
 
-        chain = np.array([self.phi[i][0] for i in range(0,self.phi.shape[0])])
-        for m in range(1,self.param_no):
-            chain = np.vstack((chain,[self.phi[i][m] for i in range(0,self.phi.shape[0])]))
+        # Remove warm-up and thin
+        self.phi = self.phi[self.nsims/2:,:][::self.thinning,:]
+
+        chain = np.array([self.phi[i][0] for i in range(0, self.phi.shape[0])])
+
+        for m in range(1, self.param_no):
+            chain = np.vstack((chain, [self.phi[i][m] for i in range(0,self.phi.shape[0])]))
+
+        if self.param_no == 1:
+            chain = np.array([chain])
 
         mean_est = np.array([np.mean(np.array([self.phi[i][j] for i in range(0,self.phi.shape[0])])) for j in range(self.param_no)])
         median_est = np.array([np.median(np.array([self.phi[i][j] for i in range(0,self.phi.shape[0])])) for j in range(self.param_no)])
-        upper_95_est = np.array([np.percentile(np.array([self.phi[i][j] for i in range(0,self.phi.shape[0])]),95) for j in range(self.param_no)])
-        lower_95_est = np.array([np.percentile(np.array([self.phi[i][j] for i in range(0,self.phi.shape[0])]),5) for j in range(self.param_no)])
+        upper_95_est = np.array([np.percentile(np.array([self.phi[i][j] for i in range(0,self.phi.shape[0])]), 95) for j in range(self.param_no)])
+        lower_95_est = np.array([np.percentile(np.array([self.phi[i][j] for i in range(0,self.phi.shape[0])]), 5) for j in range(self.param_no)])
 
         return chain, mean_est, median_est, upper_95_est, lower_95_est

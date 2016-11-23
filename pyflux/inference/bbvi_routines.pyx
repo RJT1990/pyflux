@@ -26,3 +26,16 @@ def log_p_posterior(np.ndarray[double,ndim=2] z, neg_posterior):
          result[i] = -neg_posterior(z[i])
 
     return result
+
+@cython.boundscheck(False)
+@cython.wraparound(False)
+@cython.cdivision(True)
+def mb_log_p_posterior(np.ndarray[double,ndim=2] z, neg_posterior, int mini_batch):
+
+    cdef Py_ssize_t i
+    cdef np.ndarray[double, ndim=1, mode="c"] result = np.zeros(z.shape[0], dtype=np.float64) 
+
+    for i in range(z.shape[0]):
+         result[i] = -neg_posterior(z[i], mini_batch)
+
+    return result

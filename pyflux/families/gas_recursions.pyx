@@ -5,6 +5,9 @@ cimport cython
 
 from libc.math cimport exp, abs, M_PI
 
+cdef inline double double_max(double a, double b): return a if a >= b else b
+cdef inline double double_min(double a, double b): return a if a <= b else b
+
 @cython.boundscheck(False)
 @cython.wraparound(False)
 @cython.cdivision(True)
@@ -37,7 +40,7 @@ def gas_recursion_exponential_orderone(double[:] parameters, double[:] theta, do
         else:
             theta[t] += np.dot(parameters[1:1+ar_terms],theta[(t-ar_terms):t][::-1]) + np.dot(parameters[1+ar_terms:1+ar_terms+sc_terms],model_scores[(t-sc_terms):t][::-1])
 
-        model_scores[t] = 1.0 - (exp(theta[t])*Y[t])
+        model_scores[t] = double_min(double_max(1.0 - (exp(theta[t])*Y[t]), -10000), 10000)
     
     return theta, model_scores
 
@@ -55,7 +58,7 @@ def gas_recursion_exponential_ordertwo(double[:] parameters, double[:] theta, do
         else:
             theta[t] += np.dot(parameters[1:1+ar_terms],theta[(t-ar_terms):t][::-1]) + np.dot(parameters[1+ar_terms:1+ar_terms+sc_terms],model_scores[(t-sc_terms):t][::-1])
 
-        model_scores[t] = 1.0 - (exp(theta[t])*Y[t])
+        model_scores[t] = double_min(double_max(1.0 - (exp(theta[t])*Y[t]), -10000), 10000)
     
     return theta, model_scores
 
@@ -145,7 +148,7 @@ def gas_recursion_poisson_orderone(double[:] parameters, double[:] theta, double
         else:
             theta[t] += np.dot(parameters[1:1+ar_terms],theta[(t-ar_terms):t][::-1]) + np.dot(parameters[1+ar_terms:1+ar_terms+sc_terms],model_scores[(t-sc_terms):t][::-1])
 
-        model_scores[t] = Y[t] - exp(theta[t])
+        model_scores[t] = double_min(double_max(Y[t] - exp(theta[t]), -10000), 10000)
     
     return theta, model_scores
 
@@ -163,7 +166,7 @@ def gas_recursion_poisson_ordertwo(double[:] parameters, double[:] theta, double
         else:
             theta[t] += np.dot(parameters[1:1+ar_terms],theta[(t-ar_terms):t][::-1]) + np.dot(parameters[1+ar_terms:1+ar_terms+sc_terms],model_scores[(t-sc_terms):t][::-1])
 
-        model_scores[t] = Y[t]/exp(theta[t]) - 1.0
+        model_scores[t] = double_min(double_max(Y[t]/exp(theta[t]) - 1.0, -10000), 10000)
     
     return theta, model_scores
 
@@ -202,6 +205,46 @@ def gas_recursion_t_ordertwo(double[:] parameters, double[:] theta, double[:] mo
         model_scores[t] = ((shape+1)/shape)*(Y[t]-theta[t])/(np.power(scale,2) + (np.power(Y[t]-theta[t],2)/shape))/((shape+1)*((np.power(scale,2)*shape) - np.power(Y[t]-theta[t],2))/np.power((np.power(scale,2)*shape) + np.power(Y[t]-theta[t],2),2))
     
     return theta, model_scores
+
+
+
+@cython.boundscheck(False)
+@cython.wraparound(False)
+@cython.cdivision(True)
+def gas_recursion_cauchy_orderone(double[:] parameters, double[:] theta, double[:] model_scores, double[:] Y, 
+    int ar_terms, int sc_terms, int Y_len, double scale, double shape, double skewness, int max_lag):
+
+    cdef Py_ssize_t t
+
+    for t in range(0,Y_len):
+        if t < max_lag:
+            theta[t] = parameters[0]/(1.0-np.sum(parameters[1:(ar_terms+1)]))
+        else:
+            theta[t] += np.dot(parameters[1:1+ar_terms],theta[(t-ar_terms):t][::-1]) + np.dot(parameters[1+ar_terms:1+ar_terms+sc_terms],model_scores[(t-sc_terms):t][::-1])
+
+        model_scores[t] = 2.0*(Y[t]-theta[t])/(np.power(scale,2) + (np.power(Y[t]-theta[t],2)))
+        
+    return theta, model_scores
+
+@cython.boundscheck(False)
+@cython.wraparound(False)
+@cython.cdivision(True)
+def gas_recursion_cauchy_ordertwo(double[:] parameters, double[:] theta, double[:] model_scores, double[:] Y, 
+    int ar_terms, int sc_terms, int Y_len, double scale, double shape, double skewness, int max_lag):
+
+    cdef Py_ssize_t t
+
+    for t in range(0,Y_len):
+        if t < max_lag:
+            theta[t] = parameters[0]/(1.0-np.sum(parameters[1:(ar_terms+1)]))
+        else:
+            theta[t] += np.dot(parameters[1:1+ar_terms],theta[(t-ar_terms):t][::-1]) + np.dot(parameters[1+ar_terms:1+ar_terms+sc_terms],model_scores[(t-sc_terms):t][::-1])
+
+        model_scores[t] = 2.0*(Y[t]-theta[t])/(np.power(scale,2) + (np.power(Y[t]-theta[t],2)))/((2.0)*((np.power(scale,2)) - np.power(Y[t]-theta[t],2))/np.power((np.power(scale,2)) + np.power(Y[t]-theta[t],2),2))
+    
+    return theta, model_scores
+
+
 
 @cython.boundscheck(False)
 @cython.wraparound(False)
@@ -281,7 +324,7 @@ def gasx_recursion_exponential_orderone(double[:] parameters, double[:] theta, d
         else:
             theta[t] += np.dot(parameters[:ar_terms],theta[(t-ar_terms):t][::-1]) + np.dot(parameters[ar_terms:ar_terms+sc_terms],model_scores[(t-sc_terms):t][::-1])
 
-        model_scores[t] = 1.0 - (exp(theta[t])*Y[t])
+        model_scores[t] = double_min(double_max(1.0 - (exp(theta[t])*Y[t]), -10000), 10000)
     
     return theta, model_scores
 
@@ -298,7 +341,7 @@ def gasx_recursion_exponential_ordertwo(double[:] parameters, double[:] theta, d
         else:
             theta[t] += np.dot(parameters[:ar_terms],theta[(t-ar_terms):t][::-1]) + np.dot(parameters[ar_terms:ar_terms+sc_terms],model_scores[(t-sc_terms):t][::-1])
 
-        model_scores[t] = 1.0 - (exp(theta[t])*Y[t])
+        model_scores[t] = double_min(double_max(1.0 - (exp(theta[t])*Y[t]), -10000), 10000)
     
     return theta, model_scores
 
@@ -441,6 +484,40 @@ def gasx_recursion_t_ordertwo(double[:] parameters, double[:] theta, double[:] m
 @cython.boundscheck(False)
 @cython.wraparound(False)
 @cython.cdivision(True)
+def gasx_recursion_cauchy_orderone(double[:] parameters, double[:] theta, double[:] model_scores, double[:] Y, int ar_terms, int sc_terms, int Y_len, double scale, double shape, double skewness, int max_lag):
+
+    cdef Py_ssize_t t
+
+    for t in range(0,Y_len):
+        if t < max_lag:
+            theta[t] = parameters[ar_terms+sc_terms]/(1-np.sum(parameters[:ar_terms]))
+        else:
+            theta[t] += np.dot(parameters[:ar_terms],theta[(t-ar_terms):t][::-1]) + np.dot(parameters[ar_terms:ar_terms+sc_terms],model_scores[(t-sc_terms):t][::-1])
+
+        model_scores[t] = 2.0*(Y[t]-theta[t])/(np.power(scale,2) + (np.power(Y[t]-theta[t],2)))
+    
+    return theta, model_scores
+
+@cython.boundscheck(False)
+@cython.wraparound(False)
+@cython.cdivision(True)
+def gasx_recursion_cauchy_ordertwo(double[:] parameters, double[:] theta, double[:] model_scores, double[:] Y, int ar_terms, int sc_terms, int Y_len, double scale, double shape, double skewness, int max_lag):
+
+    cdef Py_ssize_t t
+
+    for t in range(0,Y_len):
+        if t < max_lag:
+            theta[t] = parameters[ar_terms+sc_terms]/(1-np.sum(parameters[:ar_terms]))
+        else:
+            theta[t] += np.dot(parameters[:ar_terms],theta[(t-ar_terms):t][::-1]) + np.dot(parameters[ar_terms:ar_terms+sc_terms],model_scores[(t-sc_terms):t][::-1])
+
+        model_scores[t] = 2.0*(Y[t]-theta[t])/(np.power(scale,2) + (np.power(Y[t]-theta[t],2)))/((2.0)*((np.power(scale,2)) - np.power(Y[t]-theta[t],2))/np.power((np.power(scale,2)) + np.power(Y[t]-theta[t],2),2))
+    
+    return theta, model_scores
+
+@cython.boundscheck(False)
+@cython.wraparound(False)
+@cython.cdivision(True)
 def gasx_recursion_skewt_orderone(double[:] parameters, double[:] theta, double[:] model_scores, double[:] Y, int ar_terms, int sc_terms, int Y_len, double scale, double shape, double skewness, int max_lag):
 
     cdef Py_ssize_t t
@@ -514,7 +591,7 @@ def gas_llev_recursion_exponential_orderone(double[:] parameters, double[:] thet
         else:
             theta[t] = theta[t-1] + parameters[0]*model_scores[t-1]
 
-        model_scores[t] = 1.0 - (exp(theta[t])*Y[t])
+        model_scores[t] = double_min(double_max(1.0 - (exp(theta[t])*Y[t]), -10000), 10000)
     
     return theta, model_scores
 
@@ -531,7 +608,7 @@ def gas_llev_recursion_exponential_ordertwo(double[:] parameters, double[:] thet
         else:
             theta[t] = theta[t-1] + parameters[0]*model_scores[t-1]
 
-        model_scores[t] = 1.0 - (exp(theta[t])*Y[t])
+        model_scores[t] = double_min(double_max(1.0 - (exp(theta[t])*Y[t]), -10000), 10000)
     
     return theta, model_scores
 
@@ -671,6 +748,42 @@ def gas_llev_recursion_t_ordertwo(double[:] parameters, double[:] theta, double[
     
     return theta, model_scores
 
+
+@cython.boundscheck(False)
+@cython.wraparound(False)
+@cython.cdivision(True)
+def gas_llev_recursion_cauchy_orderone(double[:] parameters, double[:] theta, double[:] model_scores, double[:] Y, int Y_len, double scale, double shape, double skewness, int max_lag):
+
+    cdef Py_ssize_t t
+
+    for t in range(0,Y_len):
+        if t < max_lag:
+            theta[t] = 0.0
+        else:
+            theta[t] = theta[t-1] + parameters[0]*model_scores[t-1]
+
+        model_scores[t] = 2.0*(Y[t]-theta[t])/(np.power(scale,2) + (np.power(Y[t]-theta[t],2)))
+    
+    return theta, model_scores
+
+@cython.boundscheck(False)
+@cython.wraparound(False)
+@cython.cdivision(True)
+def gas_llev_recursion_cauchy_ordertwo(double[:] parameters, double[:] theta, double[:] model_scores, double[:] Y, int Y_len, double scale, double shape, double skewness, int max_lag):
+
+    cdef Py_ssize_t t
+
+    for t in range(0,Y_len):
+        if t < max_lag:
+            theta[t] = 0.0
+        else:
+            theta[t] = theta[t-1] + parameters[0]*model_scores[t-1]
+
+        model_scores[t] = 2.0*(Y[t]-theta[t])/(np.power(scale,2) + (np.power(Y[t]-theta[t],2)))/((2.0)*((np.power(scale,2)) - np.power(Y[t]-theta[t],2))/np.power((np.power(scale,2)) + np.power(Y[t]-theta[t],2),2))
+    
+    return theta, model_scores
+
+
 @cython.boundscheck(False)
 @cython.wraparound(False)
 @cython.cdivision(True)
@@ -749,7 +862,7 @@ def gas_llt_recursion_exponential_orderone(double[:] parameters, double[:] theta
             theta[t] = theta_t[t-1] + theta[t-1] + parameters[0]*model_scores[t-1]
             theta_t[t] = theta_t[t-1] + parameters[1]*model_scores[t-1]
 
-        model_scores[t] = 1.0 - (exp(theta[t])*Y[t])
+        model_scores[t] = double_min(double_max(1.0 - (exp(theta[t])*Y[t]), -10000), 10000)
     
     return theta, model_scores
 
@@ -767,7 +880,7 @@ def gas_llt_recursion_exponential_ordertwo(double[:] parameters, double[:] theta
             theta[t] = theta_t[t-1] + theta[t-1] + parameters[0]*model_scores[t-1]
             theta_t[t] = theta_t[t-1] + parameters[1]*model_scores[t-1]
 
-        model_scores[t] = 1.0 - (exp(theta[t])*Y[t])
+        model_scores[t] = double_min(double_max(1.0 - (exp(theta[t])*Y[t]), -10000), 10000)
     
     return theta, model_scores
 
@@ -915,6 +1028,45 @@ def gas_llt_recursion_t_ordertwo(double[:] parameters, double[:] theta, double[:
     
     return theta, model_scores
 
+
+
+@cython.boundscheck(False)
+@cython.wraparound(False)
+@cython.cdivision(True)
+def gas_llt_recursion_cauchy_orderone(double[:] parameters, double[:] theta, double[:] theta_t, double[:] model_scores, double[:] Y, int Y_len, double scale, double shape, double skewness, int max_lag):
+
+    cdef Py_ssize_t t
+
+    for t in range(0,Y_len):
+        if t < max_lag:
+            theta[t] = 0.0
+        else:
+            theta[t] = theta_t[t-1] + theta[t-1] + parameters[0]*model_scores[t-1]
+            theta_t[t] = theta_t[t-1] + parameters[1]*model_scores[t-1]
+
+        model_scores[t] = 2.0*(Y[t]-theta[t])/(np.power(scale,2) + (np.power(Y[t]-theta[t],2)))
+    
+    return theta, model_scores
+
+@cython.boundscheck(False)
+@cython.wraparound(False)
+@cython.cdivision(True)
+def gas_llt_recursion_cauchy_ordertwo(double[:] parameters, double[:] theta, double[:] theta_t, double[:] model_scores, double[:] Y, int Y_len, double scale, double shape, double skewness, int max_lag):
+
+    cdef Py_ssize_t t
+
+    for t in range(0,Y_len):
+        if t < max_lag:
+            theta[t] = 0.0
+        else:
+            theta[t] = theta_t[t-1] + theta[t-1] + parameters[0]*model_scores[t-1]
+            theta_t[t] = theta_t[t-1] + parameters[1]*model_scores[t-1]
+
+        model_scores[t] = 2.0*(Y[t]-theta[t])/(np.power(scale,2) + (np.power(Y[t]-theta[t],2)))/((2.0)*((np.power(scale,2)) - np.power(Y[t]-theta[t],2))/np.power((np.power(scale,2)) + np.power(Y[t]-theta[t],2),2))
+    
+    return theta, model_scores
+
+
 @cython.boundscheck(False)
 @cython.wraparound(False)
 @cython.cdivision(True)
@@ -1018,7 +1170,7 @@ def gas_reg_recursion_laplace_orderone(double[:] parameters, double[:] theta, np
 
     for t in range(0,Y_len):
         theta[t] = np.dot(X[t],coefficients[:,t])
-        model_scores[:,t] = X*(Y[t]-theta[t])/(scale*abs(Y[t]-theta[t]))
+        model_scores[:,t] = X[t]*(Y[t]-theta[t])/(scale*abs(Y[t]-theta[t]))
         coefficients[:,t+1] = coefficients[:,t] + parameters[0:X.shape[1]]*model_scores[:,t] 
 
     return theta, model_scores, coefficients
@@ -1033,7 +1185,7 @@ def gas_reg_recursion_laplace_ordertwo(double[:] parameters, double[:] theta, np
 
     for t in range(0,Y_len):
         theta[t] = np.dot(X[t],coefficients[:,t])
-        model_scores[:,t] = X*(Y[t]-theta[t])/(scale*abs(Y[t]-theta[t]))
+        model_scores[:,t] = X[t]*(Y[t]-theta[t])/(scale*abs(Y[t]-theta[t]))
         coefficients[:,t+1] = coefficients[:,t] + parameters[0:X.shape[1]]*model_scores[:,t] 
 
     return theta, model_scores, coefficients
@@ -1127,6 +1279,41 @@ def gas_reg_recursion_t_ordertwo(double[:] parameters, double[:] theta, np.ndarr
         coefficients[:,t+1] = coefficients[:,t] + parameters[0:X.shape[1]]*model_scores[:,t] 
 
     return theta, model_scores, coefficients
+
+
+
+@cython.boundscheck(False)
+@cython.wraparound(False)
+@cython.cdivision(True)
+def gas_reg_recursion_cauchy_orderone(double[:] parameters, double[:] theta, np.ndarray[double,ndim=2] X, np.ndarray[double,ndim=2] coefficients, np.ndarray[double,ndim=2] model_scores, 
+    double[:] Y, int Y_len, double scale, double shape, double skewness):
+
+    cdef Py_ssize_t t
+
+    for t in range(0,Y_len):
+        theta[t] = np.dot(X[t],coefficients[:,t])
+        model_scores[:,t] = 2.0*((Y[t]-theta[t])*X[t])/(np.power(scale,2)+np.power((Y[t]-theta[t]),2))
+        coefficients[:,t+1] = coefficients[:,t] + parameters[0:X.shape[1]]*model_scores[:,t] 
+
+    return theta, model_scores, coefficients
+
+@cython.boundscheck(False)
+@cython.wraparound(False)
+@cython.cdivision(True)
+def gas_reg_recursion_cauchy_ordertwo(double[:] parameters, double[:] theta, np.ndarray[double,ndim=2] X, np.ndarray[double,ndim=2] coefficients, np.ndarray[double,ndim=2] model_scores, 
+    double[:] Y, int Y_len, double scale, double shape, double skewness):
+
+    cdef Py_ssize_t t
+
+    for t in range(0,Y_len):
+        theta[t] = np.dot(X[t],coefficients[:,t])
+        model_scores[:,t] = 2.0*((Y[t]-theta[t])*X[t])/(np.power(scale,2)+np.power((Y[t]-theta[t]),2))
+        coefficients[:,t+1] = coefficients[:,t] + parameters[0:X.shape[1]]*model_scores[:,t] 
+
+    return theta, model_scores, coefficients
+
+
+
 
 @cython.boundscheck(False)
 @cython.wraparound(False)

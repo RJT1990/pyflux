@@ -32,7 +32,7 @@ class Family(object):
         elif transform == 'exp':
             return np.exp
         elif transform == 'logit':
-            return ilogit
+            return Family.ilogit
         elif transform is None:
             return np.array
         else:
@@ -48,7 +48,7 @@ class Family(object):
         elif transform == 'exp':
             return np.log
         elif transform == 'logit':
-            return logit
+            return Family.logit
         elif transform is None:
             return np.array
         else:

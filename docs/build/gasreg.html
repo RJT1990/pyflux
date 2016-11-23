@@ -8,7 +8,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>GAS Regression models &mdash; PyFlux 0.3.7 documentation</title>
+  <title>GAS Regression models &mdash; PyFlux 0.4.0 documentation</title>
   
 
   
@@ -30,8 +30,8 @@
   
 
   
-    <link rel="top" title="PyFlux 0.3.7 documentation" href="index.html"/>
-        <link rel="next" title="GAS models" href="gasx.html"/>
+    <link rel="top" title="PyFlux 0.4.0 documentation" href="index.html"/>
+        <link rel="next" title="GAS State Space models" href="gasssm.html"/>
         <link rel="prev" title="GAS models" href="gas.html"/> 
 
   
@@ -60,7 +60,7 @@
             
             
               <div class="version">
-                0.3
+                0.4
               </div>
             
           
@@ -84,6 +84,7 @@
                 <ul class="current">
 <li class="toctree-l1"><a class="reference internal" href="arima.html">ARIMA models</a></li>
 <li class="toctree-l1"><a class="reference internal" href="arimax.html">ARIMAX models</a></li>
+<li class="toctree-l1"><a class="reference internal" href="dar.html">DAR models</a></li>
 <li class="toctree-l1"><a class="reference internal" href="egarch.html">Beta-t-EGARCH models</a></li>
 <li class="toctree-l1"><a class="reference internal" href="egarchm.html">Beta-t-EGARCH in-mean models</a></li>
 <li class="toctree-l1"><a class="reference internal" href="egarchmreg.html">Beta-t-EGARCH-in-mean regression models</a></li>
@@ -98,7 +99,8 @@
 <li class="toctree-l2"><a class="reference internal" href="#class-methods">Class Methods</a></li>
 </ul>
 </li>
-<li class="toctree-l1"><a class="reference internal" href="gasx.html">GAS models</a></li>
+<li class="toctree-l1"><a class="reference internal" href="gasssm.html">GAS State Space models</a></li>
+<li class="toctree-l1"><a class="reference internal" href="gasx.html">GASX models</a></li>
 <li class="toctree-l1"><a class="reference internal" href="gpnar.html">GP-NARX models</a></li>
 <li class="toctree-l1"><a class="reference internal" href="ssm.html">Gaussian State Space models</a></li>
 <li class="toctree-l1"><a class="reference internal" href="ngssm.html">Non-Gaussian State Space models</a></li>
@@ -184,7 +186,7 @@
 27</pre></div></td><td class="code"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">numpy</span> <span class="kn">as</span> <span class="nn">np</span>
 <span class="kn">import</span> <span class="nn">pyflux</span> <span class="kn">as</span> <span class="nn">pf</span>
 <span class="kn">import</span> <span class="nn">pandas</span> <span class="kn">as</span> <span class="nn">pd</span>
-<span class="kn">from</span> <span class="nn">pandas.io.data</span> <span class="kn">import</span> <span class="n">DataReader</span>
+<span class="kn">from</span> <span class="nn">pandas_datareader.data</span> <span class="kn">import</span> <span class="n">DataReader</span>
 <span class="kn">from</span> <span class="nn">datetime</span> <span class="kn">import</span> <span class="n">datetime</span>
 
 <span class="n">a</span> <span class="o">=</span> <span class="n">DataReader</span><span class="p">(</span><span class="s1">&#39;AMZN&#39;</span><span class="p">,</span>  <span class="s1">&#39;yahoo&#39;</span><span class="p">,</span> <span class="n">datetime</span><span class="p">(</span><span class="mi">2012</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">),</span> <span class="n">datetime</span><span class="p">(</span><span class="mi">2016</span><span class="p">,</span><span class="mi">6</span><span class="p">,</span><span class="mi">1</span><span class="p">))</span>
@@ -245,7 +247,7 @@
 <dd><p>Adjusts the priors of the model. <strong>index</strong> can be an int or a list. <strong>prior</strong> is a prior object, such as Normal(0,3).</p>
 </dd></dl>
 
-<p>Here is example usage for <a class="reference internal" href="gasx.html#adjust_prior" title="adjust_prior"><code class="xref py py-func docutils literal"><span class="pre">adjust_prior()</span></code></a>:</p>
+<p>Here is example usage for <a class="reference internal" href="var.html#adjust_prior" title="adjust_prior"><code class="xref py py-func docutils literal"><span class="pre">adjust_prior()</span></code></a>:</p>
 <div class="highlight-python"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre>1
 2
 3
@@ -264,7 +266,7 @@
 <p>Optional arguments are specific to the <strong>method</strong> you choose - see the documentation for these methods for more detail.</p>
 </dd></dl>
 
-<p>Here is example usage for <a class="reference internal" href="gasx.html#fit" title="fit"><code class="xref py py-func docutils literal"><span class="pre">fit()</span></code></a>:</p>
+<p>Here is example usage for <a class="reference internal" href="var.html#fit" title="fit"><code class="xref py py-func docutils literal"><span class="pre">fit()</span></code></a>:</p>
 <div class="highlight-python"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre>1
 2
 3
@@ -296,8 +298,8 @@
 
 <dl class="function">
 <dt id="plot_predict_is">
-<code class="descname">plot_predict_is</code><span class="sig-paren">(</span><em>h</em>, <em>past_values</em>, <em>intervals</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="headerlink" href="#plot_predict_is" title="Permalink to this definition">¶</a></dt>
-<dd><p>Plots in-sample rolling predictions for the model. <strong>h</strong> is an int of how many previous steps to simulate performance on. <strong>past_values</strong> is an int of how many past values of the series to plot. <strong>intervals</strong> is a bool on whether to include confidence/credibility intervals or not.</p>
+<code class="descname">plot_predict_is</code><span class="sig-paren">(</span><em>h</em>, <em>fit_once</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="headerlink" href="#plot_predict_is" title="Permalink to this definition">¶</a></dt>
+<dd><p>Plots in-sample rolling predictions for the model. <strong>h</strong> is an int of how many previous steps to simulate performance on. <strong>fit_once</strong> is a boolean specifying whether to fit the model once at the beginning of the period (True), or whether to fit after every step (False).</p>
 <p>Optional arguments include <strong>figsize</strong> - the dimensions of the figure to plot.</p>
 </dd></dl>
 
@@ -309,8 +311,8 @@
 
 <dl class="function">
 <dt id="predict_is">
-<code class="descname">predict_is</code><span class="sig-paren">(</span><em>h</em><span class="sig-paren">)</span><a class="headerlink" href="#predict_is" title="Permalink to this definition">¶</a></dt>
-<dd><p>Returns DataFrame of in-sample rolling predictions for the model. <strong>h</strong> is an int of how many previous steps to simulate performance on.</p>
+<code class="descname">predict_is</code><span class="sig-paren">(</span><em>h</em>, <em>fit_once</em><span class="sig-paren">)</span><a class="headerlink" href="#predict_is" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns DataFrame of in-sample rolling predictions for the model. <strong>h</strong> is an int of how many previous steps to simulate performance on. <strong>fit_once</strong> is a boolean specifying whether to fit the model once at the beginning of the period (True), or whether to fit after every step (False).</p>
 </dd></dl>
 
 </div>
@@ -323,7 +325,7 @@
   
     <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
       
-        <a href="gasx.html" class="btn btn-neutral float-right" title="GAS models" accesskey="n">Next <span class="fa fa-arrow-circle-right"></span></a>
+        <a href="gasssm.html" class="btn btn-neutral float-right" title="GAS State Space models" accesskey="n">Next <span class="fa fa-arrow-circle-right"></span></a>
       
       
         <a href="gas.html" class="btn btn-neutral" title="GAS models" accesskey="p"><span class="fa fa-arrow-circle-left"></span> Previous</a>
@@ -357,7 +359,7 @@
     <script type="text/javascript">
         var DOCUMENTATION_OPTIONS = {
             URL_ROOT:'./',
-            VERSION:'0.3.7',
+            VERSION:'0.4.0',
             COLLAPSE_INDEX:false,
             FILE_SUFFIX:'.html',
             HAS_SOURCE:  true

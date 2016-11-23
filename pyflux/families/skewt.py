@@ -159,7 +159,7 @@ class Skewt(Family):
         ----------
         - Random draws from the distribution
         """
-        return loc + scale*self.rvs(shape, skewness, nsims)
+        return loc + scale*Skewt.rvs(shape, skewness, nsims)
 
     @staticmethod
     def first_order_score(y, mean, scale, shape, skewness):
@@ -209,13 +209,18 @@ class Skewt(Family):
             Number of simulations to perform; if list input, produces array
 
         """
+
         if type(n) == list:
             u = np.random.uniform(size=n[0]*n[1])
-            result = np.split(u,n[0])
+            result = Skewt.ppf(q=u, df=df, gamma=gamma)
+            result = np.split(result,n[0])
             return np.array(result)
         else:
             u = np.random.uniform(size=n)
-            return Skewt.ppf(q=u, df=df, gamma=gamma)
+            if isinstance(df, np.ndarray) or isinstance(gamma, np.ndarray):
+                return np.array([Skewt.ppf(q=np.array([u[i]]), df=df[i], gamma=gamma[i])[0] for i in range(n)])
+            else:
+                return Skewt.ppf(q=u, df=df, gamma=gamma)
 
     @staticmethod
     def logpdf_internal(x, df, loc=0.0, scale=1.0, gamma = 1.0):

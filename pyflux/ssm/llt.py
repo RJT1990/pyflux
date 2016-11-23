@@ -57,7 +57,9 @@ class LLT(tsm.TSM):
             self.data = np.diff(self.data)
             self.data_name = "Differenced " + self.data_name
 
+        self.data_length = self.data.shape[0]
         self._create_latent_variables()
+        self.z_no = 3
 
     def _create_latent_variables(self):
         """ Creates model latent variables
@@ -158,7 +160,32 @@ class LLT(tsm.TSM):
             loglik += np.linalg.slogdet(F[:,:,i])[1] + np.dot(v[i],np.dot(np.linalg.pinv(F[:,:,i]),v[i]))
         return -(-((self.data.shape[0]/2)*np.log(2*np.pi))-0.5*loglik.T[0].sum())
 
-    def plot_predict(self,h=5,past_values=20,intervals=True,**kwargs):      
+    def mb_neg_loglik(self, beta, mini_batch):
+        """ Creates the negative log likelihood of the model
+
+        Parameters
+        ----------
+        beta : np.array
+            Contains untransformed starting values for latent variables
+
+        mini_batch : int
+            Size of each mini batch of data
+
+        Returns
+        ----------
+        The negative log logliklihood of the model
+        """    
+
+        rand_int =  np.random.randint(low=0, high=self.data.shape[0]-mini_batch-self.max_lag+1)
+        sample = np.arange(start=rand_int, stop=rand_int+mini_batch)
+        _, _, _, F, v = self._model(self.data[sample],beta)
+        loglik = 0.0
+        for i in range(0,len(sample)):
+            loglik += np.linalg.slogdet(F[:,:,i])[1] + np.dot(v[i],np.dot(np.linalg.pinv(F[:,:,i]),v[i]))
+        return -(-((len(sample)/2)*np.log(2*np.pi))-0.5*loglik.T[0].sum())
+
+
+    def plot_predict(self, h=5, past_values=20, intervals=True, **kwargs):      
         """ Makes forecast with the estimated model
 
         Parameters
@@ -170,7 +197,7 @@ class LLT(tsm.TSM):
             How many past observations to show on the forecast graph?
 
         intervals : Boolean
-            Would you like to show 95% prediction intervals for the forecast?
+            Would you like to show prediction intervals for the forecast?
 
         Returns
         ----------
@@ -179,31 +206,68 @@ class LLT(tsm.TSM):
         import matplotlib.pyplot as plt
 
         figsize = kwargs.get('figsize',(10,7))
+        nsims = kwargs.get('nsims', 200)
 
         if self.latent_variables.estimated is False:
             raise Exception("No latent variables estimated!")
         else:
-            # Retrieve data, dates and (transformed) latent variables         
-            a, P = self._forecast_model(self.latent_variables.get_z_values(),h)
-            date_index = self.shift_dates(h)
-            plot_values = a[0][-h-past_values:]
-            forecasted_values = a[0][-h:]
-            lower = forecasted_values - 1.98*np.power(P[0][0][-h:] + self.latent_variables.z_list[0].prior.transform(self.latent_variables.get_z_values()[0]),0.5)
-            upper = forecasted_values + 1.98*np.power(P[0][0][-h:] + self.latent_variables.z_list[0].prior.transform(self.latent_variables.get_z_values()[0]),0.5)
-            lower = np.append(plot_values[-h-1],lower)
-            upper = np.append(plot_values[-h-1],upper)
+            # Retrieve data, dates and (transformed) latent variables   
+            if self.latent_variables.estimation_method in ['M-H']:
+                lower_final = 0
+                upper_final = 0
+                plot_values_final = 0
+                date_index = self.shift_dates(h)
+                plot_index = date_index[-h-past_values:]
 
-            plot_index = date_index[-h-past_values:]
+                for i in range(nsims):
 
-            plt.figure(figsize=figsize)
-            if intervals == True:
-                plt.fill_between(date_index[-h-1:], lower, upper, alpha=0.2)            
+                    t_params = self.draw_latent_variables(nsims=1).T[0]
+                    a, P = self._forecast_model(t_params, h)
 
-            plt.plot(plot_index,plot_values)
-            plt.title("Forecast for " + self.data_name)
-            plt.xlabel("Time")
-            plt.ylabel(self.data_name)
-            plt.show()
+                    plot_values = a[0][-h-past_values:]
+                    forecasted_values = a[0][-h:]
+
+                    lower = forecasted_values - 1.96*np.power(P[0][0][-h:] + self.latent_variables.z_list[0].prior.transform(t_params[0]),0.5)
+                    upper = forecasted_values + 1.96*np.power(P[0][0][-h:] + self.latent_variables.z_list[0].prior.transform(t_params[0]),0.5)
+                    lower_final += np.append(plot_values[-h-1], lower)
+                    upper_final += np.append(plot_values[-h-1], upper)
+                    plot_values_final += plot_values
+
+                plot_values_final = plot_values_final / nsims
+                lower_final = lower_final / nsims
+                upper_final = upper_final / nsims
+
+                plt.figure(figsize=figsize)
+                if intervals == True:
+                    plt.fill_between(date_index[-h-1:], lower_final, upper_final, alpha=0.2)            
+
+                plt.plot(plot_index, plot_values_final)
+                plt.title("Forecast for " + self.data_name)
+                plt.xlabel("Time")
+                plt.ylabel(self.data_name)
+                plt.show()
+            else:
+                a, P = self._forecast_model(self.latent_variables.get_z_values(),h)
+                date_index = self.shift_dates(h)
+                plot_values = a[0][-h-past_values:]
+                forecasted_values = a[0][-h:]
+
+                lower = forecasted_values - 1.96*np.power(P[0][0][-h:] + self.latent_variables.z_list[0].prior.transform(self.latent_variables.get_z_values()[0]),0.5)
+                upper = forecasted_values + 1.96*np.power(P[0][0][-h:] + self.latent_variables.z_list[0].prior.transform(self.latent_variables.get_z_values()[0]),0.5)
+                lower = np.append(plot_values[-h-1],lower)
+                upper = np.append(plot_values[-h-1],upper)
+
+                plot_index = date_index[-h-past_values:]
+
+                plt.figure(figsize=figsize)
+                if intervals == True:
+                    plt.fill_between(date_index[-h-1:], lower, upper, alpha=0.2)            
+
+                plt.plot(plot_index,plot_values)
+                plt.title("Forecast for " + self.data_name)
+                plt.xlabel("Time")
+                plt.ylabel(self.data_name)
+                plt.show()
 
     def plot_fit(self,intervals=True,**kwargs):
         """ Plots the fit of the model
@@ -278,7 +342,7 @@ class LLT(tsm.TSM):
             plt.plot(date_index[1:self.data.shape[0]],self.data[1:self.data.shape[0]]-mu0[1:self.data.shape[0]],label='Irregular term')
             plt.show()              
 
-    def predict(self,h=5):      
+    def predict(self, h=5, intervals=False, **kwargs):      
         """ Makes forecast with the estimated model
 
         Parameters
@@ -286,26 +350,94 @@ class LLT(tsm.TSM):
         h : int (default : 5)
             How many steps ahead would you like to forecast?
 
+        intervals : boolean (default: False)
+            Whether to return prediction intervals
+
         Returns
         ----------
         - pd.DataFrame with predictions
         """     
 
+        nsims = kwargs.get('nsims', 200)
+
         if self.latent_variables.estimated is False:
             raise Exception("No latent variables estimated!")
         else:
-            # Retrieve data, dates and (transformed) latent variables         
-            a, P = self._forecast_model(self.latent_variables.get_z_values(),h)
-            date_index = self.shift_dates(h)
-            forecasted_values = a[0][-h:]
+            # Retrieve data, dates and (transformed) latent variables   
+            if self.latent_variables.estimation_method in ['M-H']:
+                lower_1_final = 0
+                upper_99_final = 0
+                lower_5_final = 0
+                upper_95_final = 0
+                forecasted_values_final = 0
+                date_index = self.shift_dates(h)
 
-            result = pd.DataFrame(forecasted_values)
-            result.rename(columns={0:self.data_name}, inplace=True)
-            result.index = date_index[-h:]
+                for i in range(nsims):
+                    t_params = self.draw_latent_variables(nsims=1).T[0]
+                    a, P = self._forecast_model(t_params, h)
 
-            return result
+                    forecasted_values = a[0][-h:]
+                    lower_5 = forecasted_values - 1.96*np.power(P[0][0][-h:] + self.latent_variables.z_list[0].prior.transform(t_params[0]),0.5)
+                    upper_95 = forecasted_values + 1.96*np.power(P[0][0][-h:] + self.latent_variables.z_list[0].prior.transform(t_params[0]),0.5)
+                    lower_5_final += lower_5
+                    upper_95_final += upper_95
+                    lower_1 = forecasted_values - 2.575*np.power(P[0][0][-h:] + self.latent_variables.z_list[0].prior.transform(t_params[0]),0.5)
+                    upper_99 = forecasted_values + 2.575*np.power(P[0][0][-h:] + self.latent_variables.z_list[0].prior.transform(t_params[0]),0.5)
+                    lower_1_final += lower_1
+                    upper_99_final += upper_99
+                    forecasted_values_final += forecasted_values
 
-    def predict_is(self, h=5, fit_once=True):
+                forecasted_values_final = forecasted_values_final / nsims
+                lower_1_final = lower_1_final / nsims
+                lower_5_final = lower_5_final / nsims
+                upper_95_final = upper_95_final / nsims
+                upper_99_final = upper_99_final / nsims
+
+                if intervals is False:
+                    result = pd.DataFrame(forecasted_values_final)
+                    result.rename(columns={0:self.data_name}, inplace=True)
+                else:
+                    prediction_05 = lower_5_final
+                    prediction_95 = upper_95_final
+                    prediction_01 = lower_1_final
+                    prediction_99 = upper_99_final
+
+                    result = pd.DataFrame([forecasted_values_final, prediction_01, prediction_05, 
+                        prediction_95, prediction_99]).T
+                    result.rename(columns={0:self.data_name, 1: "1% Prediction Interval", 
+                        2: "5% Prediction Interval", 3: "95% Prediction Interval", 4: "99% Prediction Interval"}, 
+                        inplace=True)
+
+                result.index = date_index[-h:]
+
+                return result
+     
+            else:
+                # Retrieve data, dates and (transformed) latent variables         
+                a, P = self._forecast_model(self.latent_variables.get_z_values(),h)
+                date_index = self.shift_dates(h)
+                forecasted_values = a[0][-h:]
+
+                if intervals is False:
+                    result = pd.DataFrame(forecasted_values)
+                    result.rename(columns={0:self.data_name}, inplace=True)
+                else:
+                    prediction_05 = forecasted_values - 1.96*np.power(P[0][0][-h:] + self.latent_variables.z_list[0].prior.transform(self.latent_variables.get_z_values()[0]),0.5)
+                    prediction_95 = forecasted_values + 1.96*np.power(P[0][0][-h:] + self.latent_variables.z_list[0].prior.transform(self.latent_variables.get_z_values()[0]),0.5)
+                    prediction_01 = forecasted_values - 2.575*np.power(P[0][0][-h:] + self.latent_variables.z_list[0].prior.transform(self.latent_variables.get_z_values()[0]),0.5)
+                    prediction_99 = forecasted_values + 2.575*np.power(P[0][0][-h:] + self.latent_variables.z_list[0].prior.transform(self.latent_variables.get_z_values()[0]),0.5)
+
+                    result = pd.DataFrame([forecasted_values, prediction_01, prediction_05, 
+                        prediction_95, prediction_99]).T
+                    result.rename(columns={0:self.data_name, 1: "1% Prediction Interval", 
+                        2: "5% Prediction Interval", 3: "95% Prediction Interval", 4: "99% Prediction Interval"}, 
+                        inplace=True)
+     
+                result.index = date_index[-h:]
+
+                return result
+
+    def predict_is(self, h=5, fit_once=True, fit_method='MLE', intervals=False):
         """ Makes dynamic in-sample predictions with the estimated model
 
         Parameters
@@ -326,23 +458,23 @@ class LLT(tsm.TSM):
         for t in range(0,h):
             x = LLT(integ=self.integ,data=self.data_original[:(-h+t)])
             if fit_once is False:
-                x.fit(printer=False)
+                x.fit(fit_method=fit_method, printer=False)
             if t == 0:
                 if fit_once is True:
-                    x.fit(printer=False)
+                    x.fit(fit_method=fit_method, printer=False)
                     saved_lvs = x.latent_variables
-                predictions = x.predict(1)
+                predictions = x.predict(1, intervals=intervals)
             else:
                 if fit_once is True:
                     x.latent_variables = saved_lvs
-                predictions = pd.concat([predictions,x.predict(1)])
+                predictions = pd.concat([predictions,x.predict(1, intervals=intervals)])
 
         predictions.rename(columns={0:self.data_name}, inplace=True)
         predictions.index = self.index[-h:]
 
         return predictions
 
-    def plot_predict_is(self,h=5,**kwargs):
+    def plot_predict_is(self, h=5, fit_once=True, fit_method='MLE', **kwargs):
         """ Plots forecasts with the estimated model against data
             (Simulated prediction with data)
 
@@ -350,6 +482,12 @@ class LLT(tsm.TSM):
         ----------
         h : int (default : 5)
             How many steps to forecast
+
+        fit_once : boolean
+            (default: True) Fits only once before the in-sample prediction; if False, fits after every new datapoint
+
+        fit_method : string
+            Which method to fit the model with
 
         Returns
         ----------
@@ -360,13 +498,13 @@ class LLT(tsm.TSM):
         figsize = kwargs.get('figsize',(10,7))
 
         plt.figure(figsize=figsize)
-        predictions = self.predict_is(h)
+        predictions = self.predict_is(h, fit_once=fit_once, fit_method=fit_method)
         data = self.data[-h:]
         plt.plot(predictions.index,data,label='Data')
         plt.plot(predictions.index,predictions,label='Predictions',c='black')
         plt.title(self.data_name)
         plt.legend(loc=2)   
-        plt.show()          
+        plt.show()               
 
     def simulation_smoother(self,beta):
         """ Koopman's simulation smoother - simulates from states given
@@ -430,3 +568,118 @@ class LLT(tsm.TSM):
         T, Z, R, Q, H = self._ss_matrices(beta)
         alpha, V = llt_univariate_KFS(data,Z,H,T,Q,R,0.0)
         return alpha, V
+
+
+    def sample(self, nsims=1000):
+        """ Samples from the posterior predictive distribution
+
+        Parameters
+        ----------
+        nsims : int (default : 1000)
+            How many draws from the posterior predictive distribution
+
+        Returns
+        ----------
+        - np.ndarray of draws from the data
+        """     
+        if self.latent_variables.estimation_method not in ['BBVI', 'M-H']:
+            raise Exception("No latent variables estimated!")
+        else:
+            lv_draws = self.draw_latent_variables(nsims=nsims)
+            mus = [self.smoothed_state(self.data, lv_draws[:,i])[0][0][:-1] for i in range(nsims)]
+            data_draws = np.array([np.random.normal(mus[i], np.sqrt(self.latent_variables.z_list[0].prior.transform(lv_draws[0,i])), mus[i].shape[0]) for i in range(nsims)])
+            return data_draws
+
+    def plot_sample(self, nsims=10, plot_data=True, **kwargs):
+        """
+        Plots draws from the posterior predictive density against the data
+
+        Parameters
+        ----------
+        nsims : int (default : 1000)
+            How many draws from the posterior predictive distribution
+
+        plot_data boolean
+            Whether to plot the data or not
+        """
+
+        if self.latent_variables.estimation_method not in ['BBVI', 'M-H']:
+            raise Exception("No latent variables estimated!")
+        else:
+            import matplotlib.pyplot as plt
+
+            figsize = kwargs.get('figsize',(10,7))
+            plt.figure(figsize=figsize)
+            date_index = self.index
+            draws = self.sample(nsims).T
+            plt.plot(date_index, draws, label='Posterior Draws', alpha=1.0)
+            if plot_data is True:
+                plt.plot(date_index, self.data, label='Data', c='black', alpha=0.5, linestyle='', marker='s')
+            plt.title(self.data_name)
+            plt.show()    
+
+    def ppc(self, nsims=1000, T=np.mean):
+        """ Computes posterior predictive p-value
+
+        Parameters
+        ----------
+        nsims : int (default : 1000)
+            How many draws for the PPC
+
+        T : function
+            A discrepancy measure - e.g. np.mean, np.std, np.max
+
+        Returns
+        ----------
+        - float (posterior predictive p-value)
+        """     
+        if self.latent_variables.estimation_method not in ['BBVI', 'M-H']:
+            raise Exception("No latent variables estimated!")
+        else:
+            lv_draws = self.draw_latent_variables(nsims=nsims)
+            mus = [self.smoothed_state(self.data, lv_draws[:,i])[0][0][:-1] for i in range(nsims)]
+            data_draws = np.array([np.random.normal(mus[i], np.sqrt(self.latent_variables.z_list[0].prior.transform(lv_draws[0,i])), mus[i].shape[0]) for i in range(nsims)])
+            T_sims = T(self.sample(nsims=nsims), axis=1)
+            T_actual = T(self.data)
+            return len(T_sims[T_sims>T_actual])/nsims
+
+    def plot_ppc(self, nsims=1000, T=np.mean, **kwargs):
+        """ Plots histogram of the discrepancy from draws of the posterior
+
+        Parameters
+        ----------
+        nsims : int (default : 1000)
+            How many draws for the PPC
+
+        T : function
+            A discrepancy measure - e.g. np.mean, np.std, np.max
+        """     
+        if self.latent_variables.estimation_method not in ['BBVI', 'M-H']:
+            raise Exception("No latent variables estimated!")
+        else:
+            import matplotlib.pyplot as plt
+            figsize = kwargs.get('figsize',(10,7))
+
+            lv_draws = self.draw_latent_variables(nsims=nsims)
+            mus = [self.smoothed_state(self.data, lv_draws[:,i])[0][0][:-1] for i in range(nsims)]
+            data_draws = np.array([np.random.normal(mus[i], np.sqrt(self.latent_variables.z_list[0].prior.transform(lv_draws[0,i])), mus[i].shape[0]) for i in range(nsims)])
+            T_sim = T(self.sample(nsims=nsims), axis=1)
+            T_actual = T(self.data)
+
+            if T == np.mean:
+                description = " of the mean"
+            elif T == np.max:
+                description = " of the maximum"
+            elif T == np.min:
+                description = " of the minimum"
+            elif T == np.median:
+                description = " of the median"
+            else:
+                description = ""
+
+            plt.figure(figsize=figsize)
+            ax = plt.subplot()
+            ax.axvline(T_actual)
+            sns.distplot(T_sim, kde=False, ax=ax)
+            ax.set(title='Posterior predictive' + description, xlabel='T(x)', ylabel='Frequency');
+            plt.show()

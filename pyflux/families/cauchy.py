@@ -6,6 +6,11 @@ from .. import families as fam
 
 from .family import Family
 
+from .gas_recursions import gas_recursion_cauchy_orderone, gas_recursion_cauchy_ordertwo
+from .gas_recursions import gasx_recursion_cauchy_orderone, gasx_recursion_cauchy_ordertwo
+from .gas_recursions import gas_llev_recursion_cauchy_orderone, gas_llev_recursion_cauchy_ordertwo
+from .gas_recursions import gas_llt_recursion_cauchy_orderone, gas_llt_recursion_cauchy_ordertwo
+from .gas_recursions import gas_reg_recursion_cauchy_orderone, gas_reg_recursion_cauchy_ordertwo
 
 class Cauchy(Family):
     """ 
@@ -31,6 +36,12 @@ class Cauchy(Family):
         self.loc0 = loc
         self.scale0 = scale
         self.covariance_prior = False
+
+        self.gradient_only = kwargs.get('gradient_only', False) # used for GAS t models
+        if self.gradient_only is True:
+            self.score_function = self.first_order_score
+        else:
+            self.score_function = self.second_order_score
 
     def approximating_model(self, beta, T, Z, R, Q, h_approx, data):
         """ Creates approximating Gaussian state space model for the Cauchy measurement density
@@ -221,8 +232,62 @@ class Cauchy(Family):
         shape = False
         skewness = False
         mean_transform = np.array
-        cythonized = False # used for GAS models
+        cythonized = True # used for GAS models
         return name, link, scale, shape, skewness, mean_transform, cythonized
+
+    @staticmethod
+    def first_order_score(y, mean, scale, shape, skewness):
+        """ GAS t Update term using gradient only - native Python function
+
+        Parameters
+        ----------
+        y : float
+            datapoint for the time series
+
+        mean : float
+            location parameter for the t distribution
+
+        scale : float
+            scale parameter for the t distribution
+
+        shape : float
+            tail thickness parameter for the t distribution
+
+        skewness : float
+            skewness parameter for the t distribution
+
+        Returns
+        ----------
+        - Score of the t family
+        """
+        return (2.0*(y-mean)/(np.power(scale,2) + (np.power(y-mean,2))))
+
+    @staticmethod
+    def second_order_score(y, mean, scale, shape, skewness):
+        """ GAS t Update term potentially using second-order information - native Python function
+
+        Parameters
+        ----------
+        y : float
+            datapoint for the time series
+
+        mean : float
+            location parameter for the t distribution
+
+        scale : float
+            scale parameter for the t distribution
+
+        shape : float
+            tail thickness parameter for the t distribution
+
+        skewness : float
+            skewness parameter for the t distribution
+
+        Returns
+        ----------
+        - Adjusted score of the t family
+        """
+        return 2.0*(y-mean)/(np.power(scale,2) + (np.power(y-mean,2)))/(2.0*((np.power(scale,2)) - np.power(y-mean,2))/np.power((np.power(scale,2)) + np.power(y-mean,2),2))
 
     @staticmethod
     def neg_loglikelihood(y, mean, scale, shape, skewness):
@@ -252,3 +317,161 @@ class Cauchy(Family):
         return -np.sum(ss.cauchy.logpdf(y, loc=mean, scale=scale))
 
 
+    @staticmethod
+    def reg_score_function(X, y, mean, scale, shape, skewness):
+        """ GAS Cauchy Regression Update term using gradient only - native Python function
+
+        Parameters
+        ----------
+        X : float
+            datapoint for the right hand side variable
+    
+        y : float
+            datapoint for the time series
+
+        mean : float
+            location parameter for the Cauchy distribution
+
+        scale : float
+            scale parameter for the Cauchy distribution
+
+        shape : float
+            tail thickness parameter for the Cauchy distribution
+
+        skewness : float
+            skewness parameter for the Cauchy distribution
+
+        Returns
+        ----------
+        - Score of the Cauchy family
+        """
+        return 2.0*((y-mean)*X)/(np.power(scale,2)+np.power((y-mean),2))
+
+    @staticmethod
+    def second_order_score(y, mean, scale, shape, skewness):
+        """ GAS Cauchy Update term potentially using second-order information - native Python function
+
+        Parameters
+        ----------
+        y : float
+            datapoint for the time series
+
+        mean : float
+            location parameter for the Cauchy distribution
+
+        scale : float
+            scale parameter for the Cauchy distribution
+
+        shape : float
+            tail thickness parameter for the Cauchy distribution
+
+        skewness : float
+            skewness parameter for the Cauchy distribution
+
+        Returns
+        ----------
+        - Adjusted score of the Cauchy family
+        """
+        return 2.0*(y-mean)/(np.power(scale,2) + (np.power(y-mean,2)))/(2.0*((np.power(scale,2)) - np.power(y-mean,2))/np.power((np.power(scale,2)) + np.power(y-mean,2),2))
+
+    # Optional Cythonized recursions below for GAS Cauchy models
+
+    @staticmethod
+    def gradient_recursion():
+        """ GAS Cauchy Model Recursion - gradient only
+
+        Returns
+        ----------
+        - Recursion function for GAS Cauchy model - gradient only
+        """
+        return gas_recursion_cauchy_orderone
+
+    @staticmethod
+    def newton_recursion():
+        """ GAS Cauchy Model Recursion - adjusted score
+
+        Returns
+        ----------
+        - Recursion function for GAS Cauchy model - adjusted score
+        """
+        return gas_recursion_cauchy_ordertwo
+
+    @staticmethod
+    def gradientx_recursion():
+        """ GASX Cauchy Model Recursion - gradient only
+
+        Returns
+        ----------
+        - Recursion function for GASX Cauchy model - gradient only
+        """
+        return gasx_recursion_cauchy_orderone
+
+    @staticmethod
+    def newtonx_recursion():
+        """ GASX Cauchy Model Recursion - adjusted score
+
+        Returns
+        ----------
+        - Recursion function for GASX Cauchy model - adjusted score
+        """
+        return gasx_recursion_cauchy_ordertwo
+
+    @staticmethod
+    def gradientllev_recursion():
+        """ GAS Local Level Cauchy Model Recursion - gradient only
+
+        Returns
+        ----------
+        - Recursion function for GAS Local Level Cauchy model - gradient only
+        """
+        return gas_llev_recursion_cauchy_orderone
+
+    @staticmethod
+    def newtonllev_recursion():
+        """ GAS Local Level Cauchy Model Recursion - adjusted score
+
+        Returns
+        ----------
+        - Recursion function for GAS Local Level Cauchy model - adjusted score
+        """
+        return gas_llev_recursion_cauchy_ordertwo
+
+    @staticmethod
+    def gradientllt_recursion():
+        """ GAS Local Linear Trend Cauchy Model Recursion - gradient only
+
+        Returns
+        ----------
+        - Recursion function for GAS Local Linear Trend Cauchy model - gradient only
+        """
+        return gas_llt_recursion_cauchy_orderone
+
+    @staticmethod
+    def newtonllt_recursion():
+        """ GAS Local Linear Trend Cauchy Model Recursion - adjusted score
+
+        Returns
+        ----------
+        - Recursion function for GAS Local Linear Trend Cauchy model - adjusted score
+        """
+        return gas_llt_recursion_cauchy_ordertwo
+
+    @staticmethod
+    def gradientreg_recursion():
+        """ GAS Dynamic Regression Cauchy Model Recursion - gradient only
+
+        Returns
+        ----------
+        - Recursion function for GAS Dynamic Regression Cauchy model - gradient only
+        """
+        return gas_reg_recursion_cauchy_orderone
+
+    @staticmethod
+    def newtonreg_recursion():
+        """ GAS Dynamic Regression Cauchy Model Recursion - adjusted score
+
+        Returns
+        ----------
+        - Recursion function for GAS Dynamic Regression Cauchy model - adjusted score
+        """
+        return gas_reg_recursion_cauchy_ordertwo

@@ -219,6 +219,10 @@ class Exponential(Family):
         return ss.expon.logpdf(x=y, scale=1/mean)
 
     @staticmethod
+    def exponential_link(x):
+        return 1.0/np.exp(x)
+
+    @staticmethod
     def setup():
         """ Returns the attributes of this family
 
@@ -235,7 +239,7 @@ class Exponential(Family):
         - model name, link function, scale, shape, skewness, mean_transform, cythonized
         """
         name = "Exponential GAS"
-        link = exponential_link
+        link = Exponential.exponential_link
         scale = False
         shape = False
         skewness = False

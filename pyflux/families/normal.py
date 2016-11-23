@@ -127,7 +127,7 @@ class Normal(Family):
 
     @staticmethod
     def draw_variable(loc, scale, shape, skewness, nsims):
-        """ Draws random variables from this distribution
+        """ Draws random variables from this distribution with new latent variables
 
         Parameters
         ----------

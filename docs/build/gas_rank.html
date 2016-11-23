@@ -1,0 +1,693 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>GAS ranking models &mdash; PyFlux 0.4.0 documentation</title>
+  
+
+  
+  
+
+  
+
+  
+  
+    
+
+  
+
+  
+  
+    <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
+  
+
+  
+
+  
+    <link rel="top" title="PyFlux 0.4.0 documentation" href="index.html"/>
+        <link rel="next" title="GAS regression models" href="gas_reg.html"/>
+        <link rel="prev" title="GAS local linear trend models" href="gas_llt.html"/> 
+
+  
+  <script src="_static/js/modernizr.min.js"></script>
+
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search">
+          
+
+          
+            <a href="index.html" class="icon icon-home"> PyFlux
+          
+
+          
+          </a>
+
+          
+            
+            
+              <div class="version">
+                0.4
+              </div>
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+                <ul>
+<li class="toctree-l1"><a class="reference internal" href="getting_started.html">Getting Started with Time Series</a></li>
+</ul>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="arima.html">ARIMA models</a></li>
+<li class="toctree-l1"><a class="reference internal" href="arimax.html">ARIMAX models</a></li>
+<li class="toctree-l1"><a class="reference internal" href="dar.html">DAR models</a></li>
+<li class="toctree-l1"><a class="reference internal" href="egarch.html">Beta-t-EGARCH models</a></li>
+<li class="toctree-l1"><a class="reference internal" href="egarchm.html">Beta-t-EGARCH in-mean models</a></li>
+<li class="toctree-l1"><a class="reference internal" href="egarchmreg.html">Beta-t-EGARCH in-mean regression models</a></li>
+<li class="toctree-l1"><a class="reference internal" href="lmegarch.html">Beta-t-EGARCH long memory models</a></li>
+<li class="toctree-l1"><a class="reference internal" href="segarch.html">Beta Skew-t GARCH models</a></li>
+<li class="toctree-l1"><a class="reference internal" href="segarchm.html">Beta Skew-t in-mean GARCH models</a></li>
+<li class="toctree-l1"><a class="reference internal" href="garch.html">GARCH models</a></li>
+<li class="toctree-l1"><a class="reference internal" href="gas.html">GAS models</a></li>
+<li class="toctree-l1"><a class="reference internal" href="gas_llm.html">GAS local level models</a></li>
+<li class="toctree-l1"><a class="reference internal" href="gas_llt.html">GAS local linear trend models</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">GAS ranking models</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#introduction">Introduction</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#example">Example</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#class-description">Class Description</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#references">References</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="gas_reg.html">GAS regression models</a></li>
+<li class="toctree-l1"><a class="reference internal" href="gasx.html">GASX models</a></li>
+<li class="toctree-l1"><a class="reference internal" href="gpnar.html">GP-NARX models</a></li>
+<li class="toctree-l1"><a class="reference internal" href="ssm.html">Gaussian State Space models</a></li>
+<li class="toctree-l1"><a class="reference internal" href="ngssm.html">Non-Gaussian State Space models</a></li>
+<li class="toctree-l1"><a class="reference internal" href="var.html">VAR models</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="bayes.html">Bayesian Inference</a></li>
+<li class="toctree-l1"><a class="reference internal" href="classical.html">Classical Inference</a></li>
+</ul>
+
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" role="navigation" aria-label="top navigation">
+        <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+        <a href="index.html">PyFlux</a>
+      </nav>
+
+
+      
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          
+
+ 
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href="index.html">Docs</a> &raquo;</li>
+      
+    <li>GAS ranking models</li>
+      <li class="wy-breadcrumbs-aside">
+        
+          
+            <a href="_sources/gas_rank.txt" rel="nofollow"> View page source</a>
+          
+        
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <div class="section" id="gas-ranking-models">
+<h1>GAS ranking models<a class="headerlink" href="#gas-ranking-models" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="introduction">
+<h2>Introduction<a class="headerlink" href="#introduction" title="Permalink to this headline">¶</a></h2>
+<p>GAS ranking models can be used for pairwise comparisons or competitive activities. The <span class="math">\(GASRank\)</span> model of Taylor, R. (2016) models a point difference between two competitors. The point difference is assumed to follow a particular distribution. For example, suppose that the point difference <span class="math">\(\mu_{t}\)</span> is normally distributed, then we can model the point difference as the location parameter <span class="math">\(\mu\)</span>:</p>
+<div class="math">
+\[\mu_{t} = \delta + \alpha_{t,i} -  \alpha_{t,j}\]</div>
+<p>Where <span class="math">\(\delta_{t}\)</span> is a &#8216;home advantage&#8217; latent variable, <span class="math">\(i\)</span> and <span class="math">\(j\)</span> refer to home and away competitors, and <span class="math">\(\alpha\)</span> contains the team power rankings. The power rankings are modelled as random walk processes between each match:</p>
+<div class="math">
+\[\alpha_{k,i} = \alpha_{k-1,i} + \eta{U}_{k-1,i}\]</div>
+<div class="math">
+\[\alpha_{k,j} = \alpha_{k-1,j} - \eta{U}_{k-1,j}\]</div>
+<p>Where <span class="math">\(k\)</span> is the game index, <span class="math">\(\eta\)</span> is a learning rate or scaling parameter to be estimated.</p>
+<p>The model can be extended to a two component model where each competitor has two aspects to their &#8216;team&#8217;. For example, we might model an NFL team along with the Quarterback power rankings in the same game:</p>
+<div class="math">
+\[\mu_{t} = \delta + \alpha_{t,i} -  \alpha_{t,j}   + \gamma_{t,i} -  \gamma_{t,j}\]</div>
+<p>Here <span class="math">\(\gamma\)</span> represents the power ranking of the second component. The secondary component power rankings are modelled as random walk processes between each match:</p>
+<div class="math">
+\[\gamma_{k,i} = \gamma_{k-1,i} + \eta{U_2}_{k-1,i}\]</div>
+<div class="math">
+\[\gamma_{k,j} = \gamma_{k-1,j} - \eta{U_2}_{k-1,j}\]</div>
+</div>
+<div class="section" id="example">
+<h2>Example<a class="headerlink" href="#example" title="Permalink to this headline">¶</a></h2>
+<p>We will model the point difference in NFL games with a simple model. Here is the data:</p>
+<div class="highlight-python"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">pyflux</span> <span class="kn">as</span> <span class="nn">pf</span>
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="kn">as</span> <span class="nn">np</span>
+<span class="kn">import</span> <span class="nn">pandas</span> <span class="kn">as</span> <span class="nn">pd</span>
+<span class="kn">import</span> <span class="nn">matplotlib.pyplot</span> <span class="kn">as</span> <span class="nn">plt</span>
+
+<span class="n">data</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">read_csv</span><span class="p">(</span><span class="s2">&quot;nfl_data_new.csv&quot;</span><span class="p">)</span>
+<span class="n">data</span><span class="p">[</span><span class="s2">&quot;PointsDiff&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">data</span><span class="p">[</span><span class="s2">&quot;HomeScore&quot;</span><span class="p">]</span> <span class="o">-</span> <span class="n">data</span><span class="p">[</span><span class="s2">&quot;AwayScore&quot;</span><span class="p">]</span>
+<span class="n">data</span><span class="o">.</span><span class="n">columns</span>
+<span class="n">Index</span><span class="p">([</span><span class="s1">&#39;Unnamed: 0&#39;</span><span class="p">,</span> <span class="s1">&#39;AFirstDowns&#39;</span><span class="p">,</span> <span class="s1">&#39;AFumbles0&#39;</span><span class="p">,</span> <span class="s1">&#39;AFumbles1&#39;</span><span class="p">,</span> <span class="s1">&#39;AIntReturns0&#39;</span><span class="p">,</span>
+    <span class="s1">&#39;AIntReturns1&#39;</span><span class="p">,</span> <span class="s1">&#39;AKickoffReturns0&#39;</span><span class="p">,</span> <span class="s1">&#39;AKickoffReturns1&#39;</span><span class="p">,</span> <span class="s1">&#39;ANetPassYards&#39;</span><span class="p">,</span>
+    <span class="s1">&#39;APassesAttempted&#39;</span><span class="p">,</span> <span class="s1">&#39;APassesCompleted&#39;</span><span class="p">,</span> <span class="s1">&#39;APassesIntercepted&#39;</span><span class="p">,</span>
+    <span class="s1">&#39;APenalties0&#39;</span><span class="p">,</span> <span class="s1">&#39;APenalties1&#39;</span><span class="p">,</span> <span class="s1">&#39;APossession&#39;</span><span class="p">,</span> <span class="s1">&#39;APuntReturns0&#39;</span><span class="p">,</span>
+    <span class="s1">&#39;APuntReturns1&#39;</span><span class="p">,</span> <span class="s1">&#39;APunts0&#39;</span><span class="p">,</span> <span class="s1">&#39;APunts1&#39;</span><span class="p">,</span> <span class="s1">&#39;AQB&#39;</span><span class="p">,</span> <span class="s1">&#39;ARushes0&#39;</span><span class="p">,</span> <span class="s1">&#39;ARushes1&#39;</span><span class="p">,</span>
+    <span class="s1">&#39;ASacked0&#39;</span><span class="p">,</span> <span class="s1">&#39;ASacked1&#39;</span><span class="p">,</span> <span class="s1">&#39;AwayScore&#39;</span><span class="p">,</span> <span class="s1">&#39;AwayTeam&#39;</span><span class="p">,</span> <span class="s1">&#39;Date&#39;</span><span class="p">,</span> <span class="s1">&#39;HFirstDowns&#39;</span><span class="p">,</span>
+    <span class="s1">&#39;HFumbles0&#39;</span><span class="p">,</span> <span class="s1">&#39;HFumbles1&#39;</span><span class="p">,</span> <span class="s1">&#39;HIntReturns0&#39;</span><span class="p">,</span> <span class="s1">&#39;HIntReturns1&#39;</span><span class="p">,</span>
+    <span class="s1">&#39;HKickoffReturns0&#39;</span><span class="p">,</span> <span class="s1">&#39;HKickoffReturns1&#39;</span><span class="p">,</span> <span class="s1">&#39;HNetPassYards&#39;</span><span class="p">,</span>
+    <span class="s1">&#39;HPassesAttempted&#39;</span><span class="p">,</span> <span class="s1">&#39;HPassesCompleted&#39;</span><span class="p">,</span> <span class="s1">&#39;HPassesIntercepted&#39;</span><span class="p">,</span>
+    <span class="s1">&#39;HPenalties0&#39;</span><span class="p">,</span> <span class="s1">&#39;HPenalties1&#39;</span><span class="p">,</span> <span class="s1">&#39;HPossession&#39;</span><span class="p">,</span> <span class="s1">&#39;HPuntReturns0&#39;</span><span class="p">,</span>
+    <span class="s1">&#39;HPuntReturns1&#39;</span><span class="p">,</span> <span class="s1">&#39;HPunts0&#39;</span><span class="p">,</span> <span class="s1">&#39;HPunts1&#39;</span><span class="p">,</span> <span class="s1">&#39;HQB&#39;</span><span class="p">,</span> <span class="s1">&#39;HRushes0&#39;</span><span class="p">,</span> <span class="s1">&#39;HRushes1&#39;</span><span class="p">,</span>
+    <span class="s1">&#39;HSacked0&#39;</span><span class="p">,</span> <span class="s1">&#39;HSacked1&#39;</span><span class="p">,</span> <span class="s1">&#39;HomeScore&#39;</span><span class="p">,</span> <span class="s1">&#39;HomeTeam&#39;</span><span class="p">,</span> <span class="s1">&#39;Postseason&#39;</span><span class="p">,</span>
+    <span class="s1">&#39;PointsDiff&#39;</span><span class="p">],</span>
+   <span class="n">dtype</span><span class="o">=</span><span class="s1">&#39;object&#39;</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>We can plot the point difference to get an idea of potentially suitable distributions:</p>
+<div class="highlight-python"><div class="highlight"><pre><span></span><span class="n">data</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">read_csv</span><span class="p">(</span><span class="s2">&quot;nfl_data_new.csv&quot;</span><span class="p">)</span>
+<span class="n">data</span><span class="p">[</span><span class="s2">&quot;PointsDiff&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">data</span><span class="p">[</span><span class="s2">&quot;HomeScore&quot;</span><span class="p">]</span> <span class="o">-</span> <span class="n">data</span><span class="p">[</span><span class="s2">&quot;AwayScore&quot;</span><span class="p">]</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">figure</span><span class="p">(</span><span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">15</span><span class="p">,</span><span class="mi">7</span><span class="p">))</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">ylabel</span><span class="p">(</span><span class="s2">&quot;Frequency&quot;</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">xlabel</span><span class="p">(</span><span class="s2">&quot;Points Difference&quot;</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">hist</span><span class="p">(</span><span class="n">data</span><span class="p">[</span><span class="s2">&quot;PointsDiff&quot;</span><span class="p">],</span><span class="n">bins</span><span class="o">=</span><span class="mi">20</span><span class="p">);</span>
+</pre></div>
+</div>
+<img alt="http://www.pyflux.com/notebooks/GASRank/output_2_0.png" src="http://www.pyflux.com/notebooks/GASRank/output_2_0.png" />
+<p>We will use a <code class="docutils literal"><span class="pre">pf.Normal()</span></code> families, although we could try a family with heavier tails also. We setup the <span class="math">\(GASRank\)</span> model, referring to the appropriate columns in our DataFrame:</p>
+<div class="highlight-python"><div class="highlight"><pre><span></span><span class="n">model</span> <span class="o">=</span> <span class="n">pf</span><span class="o">.</span><span class="n">GASRank</span><span class="p">(</span><span class="n">data</span><span class="o">=</span><span class="n">data</span><span class="p">,</span><span class="n">team_1</span><span class="o">=</span><span class="s2">&quot;HomeTeam&quot;</span><span class="p">,</span> <span class="n">team_2</span><span class="o">=</span><span class="s2">&quot;AwayTeam&quot;</span><span class="p">,</span>
+                   <span class="n">score_diff</span><span class="o">=</span><span class="s2">&quot;PointsDiff&quot;</span><span class="p">,</span> <span class="n">family</span><span class="o">=</span><span class="n">pf</span><span class="o">.</span><span class="n">Normal</span><span class="p">())</span>
+</pre></div>
+</div>
+<p>Next we estimate the latent variables. For this example we will use a maximum likelihood point mass estimate <span class="math">\(z^{MLE}\)</span>:</p>
+<div class="highlight-python"><div class="highlight"><pre><span></span><span class="n">x</span> <span class="o">=</span> <span class="n">model</span><span class="o">.</span><span class="n">fit</span><span class="p">()</span>
+<span class="n">x</span><span class="o">.</span><span class="n">summary</span><span class="p">()</span>
+
+<span class="n">NormalGAS</span> <span class="n">Rank</span>
+<span class="o">========================================</span> <span class="o">==================================================</span>
+<span class="n">Dependent</span> <span class="n">Variable</span><span class="p">:</span> <span class="n">PointsDiff</span>           <span class="n">Method</span><span class="p">:</span> <span class="n">MLE</span>
+<span class="n">Start</span> <span class="n">Date</span><span class="p">:</span> <span class="mi">0</span>                            <span class="n">Log</span> <span class="n">Likelihood</span><span class="p">:</span> <span class="o">-</span><span class="mf">10825.1703</span>
+<span class="n">End</span> <span class="n">Date</span><span class="p">:</span> <span class="mi">2667</span>                           <span class="n">AIC</span><span class="p">:</span> <span class="mf">21656.3406</span>
+<span class="n">Number</span> <span class="n">of</span> <span class="n">observations</span><span class="p">:</span> <span class="mi">2668</span>             <span class="n">BIC</span><span class="p">:</span> <span class="mf">21674.0079</span>
+<span class="o">===========================================================================================</span>
+<span class="n">Latent</span> <span class="n">Variable</span>           <span class="n">Estimate</span>   <span class="n">Std</span> <span class="n">Error</span>  <span class="n">z</span>        <span class="n">P</span><span class="o">&gt;|</span><span class="n">z</span><span class="o">|</span>    <span class="mi">95</span><span class="o">%</span> <span class="n">C</span><span class="o">.</span><span class="n">I</span><span class="o">.</span>
+<span class="o">=========================</span> <span class="o">==========</span> <span class="o">==========</span> <span class="o">========</span> <span class="o">========</span> <span class="o">=========================</span>
+<span class="n">Constant</span>                  <span class="mf">2.2405</span>     <span class="mf">0.2547</span>     <span class="mf">8.795</span>    <span class="mf">0.0</span>      <span class="p">(</span><span class="mf">1.7412</span> <span class="o">|</span> <span class="mf">2.7398</span><span class="p">)</span>
+<span class="n">Ability</span> <span class="n">Scale</span>             <span class="mf">0.0637</span>     <span class="mf">0.0058</span>     <span class="mf">10.9582</span>  <span class="mf">0.0</span>      <span class="p">(</span><span class="mf">0.0523</span> <span class="o">|</span> <span class="mf">0.0751</span><span class="p">)</span>
+<span class="n">Normal</span> <span class="n">Scale</span>              <span class="mf">13.9918</span>
+<span class="o">===========================================================================================</span>
+</pre></div>
+</div>
+<p>Once we have fit the model we can plot the power rankings of the teams in our DataFrame over their competitive history using <code class="xref py py-func docutils literal"><span class="pre">plot_abilities()</span></code>:</p>
+<div class="highlight-python"><div class="highlight"><pre><span></span><span class="n">model</span><span class="o">.</span><span class="n">plot_abilities</span><span class="p">([</span><span class="s2">&quot;Denver Broncos&quot;</span><span class="p">,</span> <span class="s2">&quot;Green Bay Packers&quot;</span><span class="p">,</span> <span class="s2">&quot;New England Patriots&quot;</span><span class="p">,</span>
+                      <span class="s2">&quot;Carolina Panthers&quot;</span><span class="p">],</span><span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">15</span><span class="p">,</span><span class="mi">8</span><span class="p">))</span>
+</pre></div>
+</div>
+<img alt="http://www.pyflux.com/notebooks/GASRank/output_4_0.png" src="http://www.pyflux.com/notebooks/GASRank/output_4_0.png" />
+<div class="highlight-python"><div class="highlight"><pre><span></span><span class="n">model</span><span class="o">.</span><span class="n">plot_abilities</span><span class="p">([</span><span class="s2">&quot;San Francisco 49ers&quot;</span><span class="p">,</span> <span class="s2">&quot;Oakland Raiders&quot;</span><span class="p">,</span> <span class="s2">&quot;San Diego Chargers&quot;</span><span class="p">],</span>
+                       <span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">15</span><span class="p">,</span><span class="mi">8</span><span class="p">))</span>
+</pre></div>
+</div>
+<img alt="http://www.pyflux.com/notebooks/GASRank/output_6_0.png" src="http://www.pyflux.com/notebooks/GASRank/output_6_0.png" />
+<p>We can predict the point difference between two competitors in the future using <code class="xref py py-func docutils literal"><span class="pre">predict()</span></code>:</p>
+<div class="highlight-python"><div class="highlight"><pre><span></span><span class="n">model</span><span class="o">.</span><span class="n">predict</span><span class="p">(</span><span class="s2">&quot;Denver Broncos&quot;</span><span class="p">,</span><span class="s2">&quot;Carolina Panthers&quot;</span><span class="p">,</span><span class="n">neutral</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
+<span class="n">array</span><span class="p">(</span><span class="o">-</span><span class="mf">4.886816685966575</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>Our DataFrame also has information on quarterbacks. Let&#8217;s extend our model with a second component by including quarterbacks in the model:</p>
+<div class="highlight-python"><div class="highlight"><pre><span></span><span class="n">model</span><span class="o">.</span><span class="n">add_second_component</span><span class="p">(</span><span class="s2">&quot;HQB&quot;</span><span class="p">,</span><span class="s2">&quot;AQB&quot;</span><span class="p">)</span>
+<span class="n">x</span> <span class="o">=</span> <span class="n">model</span><span class="o">.</span><span class="n">fit</span><span class="p">()</span>
+<span class="n">x</span><span class="o">.</span><span class="n">summary</span><span class="p">()</span>
+
+<span class="n">NormalGAS</span> <span class="n">Rank</span>
+<span class="o">========================================</span> <span class="o">==================================================</span>
+<span class="n">Dependent</span> <span class="n">Variable</span><span class="p">:</span> <span class="n">PointsDiff</span>           <span class="n">Method</span><span class="p">:</span> <span class="n">MLE</span>
+<span class="n">Start</span> <span class="n">Date</span><span class="p">:</span> <span class="mi">0</span>                            <span class="n">Log</span> <span class="n">Likelihood</span><span class="p">:</span> <span class="o">-</span><span class="mf">10799.4544</span>
+<span class="n">End</span> <span class="n">Date</span><span class="p">:</span> <span class="mi">2667</span>                           <span class="n">AIC</span><span class="p">:</span> <span class="mf">21606.9087</span>
+<span class="n">Number</span> <span class="n">of</span> <span class="n">observations</span><span class="p">:</span> <span class="mi">2668</span>             <span class="n">BIC</span><span class="p">:</span> <span class="mf">21630.4651</span>
+<span class="o">===========================================================================================</span>
+<span class="n">Latent</span> <span class="n">Variable</span>           <span class="n">Estimate</span>   <span class="n">Std</span> <span class="n">Error</span>  <span class="n">z</span>        <span class="n">P</span><span class="o">&gt;|</span><span class="n">z</span><span class="o">|</span>    <span class="mi">95</span><span class="o">%</span> <span class="n">C</span><span class="o">.</span><span class="n">I</span><span class="o">.</span>
+<span class="o">=========================</span> <span class="o">==========</span> <span class="o">==========</span> <span class="o">========</span> <span class="o">========</span> <span class="o">=========================</span>
+<span class="n">Constant</span>                  <span class="mf">2.2419</span>     <span class="mf">0.2516</span>     <span class="mf">8.9118</span>   <span class="mf">0.0</span>      <span class="p">(</span><span class="mf">1.7488</span> <span class="o">|</span> <span class="mf">2.735</span><span class="p">)</span>
+<span class="n">Ability</span> <span class="n">Scale</span> <span class="mi">1</span>           <span class="mf">0.0186</span>     <span class="mf">0.0062</span>     <span class="mf">2.9904</span>   <span class="mf">0.0028</span>   <span class="p">(</span><span class="mf">0.0064</span> <span class="o">|</span> <span class="mf">0.0307</span><span class="p">)</span>
+<span class="n">Ability</span> <span class="n">Scale</span> <span class="mi">2</span>           <span class="mf">0.0523</span>     <span class="mf">0.0076</span>     <span class="mf">6.8492</span>   <span class="mf">0.0</span>      <span class="p">(</span><span class="mf">0.0373</span> <span class="o">|</span> <span class="mf">0.0673</span><span class="p">)</span>
+<span class="n">Normal</span> <span class="n">Scale</span>              <span class="mf">13.8576</span>
+<span class="o">==========================================================================================================</span>
+</pre></div>
+</div>
+<p>We can plot the power rankings of the QBs in our DataFrame over their competitive history using <code class="xref py py-func docutils literal"><span class="pre">plot_abilities()</span></code>:</p>
+<div class="highlight-python"><div class="highlight"><pre><span></span><span class="n">model</span><span class="o">.</span><span class="n">plot_abilities</span><span class="p">([</span><span class="s2">&quot;Cam Newton&quot;</span><span class="p">,</span> <span class="s2">&quot;Peyton Manning&quot;</span><span class="p">],</span><span class="mi">1</span><span class="p">,</span><span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">15</span><span class="p">,</span><span class="mi">8</span><span class="p">))</span>
+</pre></div>
+</div>
+<img alt="http://www.pyflux.com/notebooks/GASRank/output_9_0.png" src="http://www.pyflux.com/notebooks/GASRank/output_9_0.png" />
+<p>We can predict the point difference between two competitors in the future using <code class="xref py py-func docutils literal"><span class="pre">predict()</span></code>:</p>
+<div class="highlight-python"><div class="highlight"><pre><span></span><span class="n">model</span><span class="o">.</span><span class="n">predict</span><span class="p">(</span><span class="s2">&quot;Denver Broncos&quot;</span><span class="p">,</span><span class="s2">&quot;Carolina Panthers&quot;</span><span class="p">,</span><span class="s2">&quot;Peyton Manning&quot;</span><span class="p">,</span><span class="s2">&quot;Cam Newton&quot;</span><span class="p">,</span><span class="n">neutral</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
+<span class="n">array</span><span class="p">(</span><span class="o">-</span><span class="mf">7.33759714587138</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>And some more power rankings for fan interest...</p>
+<div class="highlight-python"><div class="highlight"><pre><span></span><span class="n">model</span><span class="o">.</span><span class="n">plot_abilities</span><span class="p">([</span><span class="s2">&quot;Aaron Rodgers&quot;</span><span class="p">,</span> <span class="s2">&quot;Tom Brady&quot;</span><span class="p">,</span> <span class="s2">&quot;Russell Wilson&quot;</span><span class="p">],</span><span class="mi">1</span><span class="p">,</span><span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">15</span><span class="p">,</span><span class="mi">8</span><span class="p">))</span>
+</pre></div>
+</div>
+<img alt="http://www.pyflux.com/notebooks/GASRank/output_10_0.png" src="http://www.pyflux.com/notebooks/GASRank/output_10_0.png" />
+<div class="highlight-python"><div class="highlight"><pre><span></span><span class="n">model</span><span class="o">.</span><span class="n">plot_abilities</span><span class="p">([</span><span class="s2">&quot;Peyton Manning&quot;</span><span class="p">,</span><span class="s2">&quot;Michael Vick&quot;</span><span class="p">,</span> <span class="s2">&quot;David Carr&quot;</span><span class="p">,</span> <span class="s2">&quot;Carson Palmer&quot;</span>
+                     <span class="p">,</span><span class="s2">&quot;Eli Manning&quot;</span><span class="p">,</span><span class="s2">&quot;Alex Smith&quot;</span><span class="p">,</span><span class="s2">&quot;JaMarcus Russell&quot;</span><span class="p">,</span><span class="s2">&quot;Matthew Stafford&quot;</span>
+                     <span class="p">,</span><span class="s2">&quot;Sam Bradford&quot;</span><span class="p">,</span><span class="s2">&quot;Cam Newton&quot;</span><span class="p">,</span><span class="s2">&quot;Andrew Luck&quot;</span><span class="p">,</span><span class="s2">&quot;Jameis Winston&quot;</span><span class="p">],</span><span class="mi">1</span><span class="p">,</span>
+                     <span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">15</span><span class="p">,</span><span class="mi">8</span><span class="p">))</span>
+</pre></div>
+</div>
+<img alt="http://www.pyflux.com/notebooks/GASRank/output_11_0.png" src="http://www.pyflux.com/notebooks/GASRank/output_11_0.png" />
+</div>
+<div class="section" id="class-description">
+<h2>Class Description<a class="headerlink" href="#class-description" title="Permalink to this headline">¶</a></h2>
+<dl class="class">
+<dt id="GASRank">
+<em class="property">class </em><code class="descname">GASRank</code><span class="sig-paren">(</span><em>data</em>, <em>team_1</em>, <em>team_2</em>, <em>family</em>, <em>score_diff</em><span class="sig-paren">)</span><a class="headerlink" href="#GASRank" title="Permalink to this definition">¶</a></dt>
+<dd><p><strong>Generalized Autoregressive Score Ranking Models (GASRank).</strong></p>
+<table border="1" class="docutils">
+<colgroup>
+<col width="21%" />
+<col width="36%" />
+<col width="44%" />
+</colgroup>
+<thead valign="bottom">
+<tr class="row-odd"><th class="head">Parameter</th>
+<th class="head">Type</th>
+<th class="head">Description</th>
+</tr>
+</thead>
+<tbody valign="top">
+<tr class="row-even"><td>data</td>
+<td>pd.dataframe</td>
+<td>Containing the competitive data</td>
+</tr>
+<tr class="row-odd"><td>team_1</td>
+<td>string</td>
+<td>Column name for home team names</td>
+</tr>
+<tr class="row-even"><td>team_2</td>
+<td>string</td>
+<td>Column name for away team names</td>
+</tr>
+<tr class="row-odd"><td>family</td>
+<td>pf.Family instance</td>
+<td>The distribution for the time series,
+e.g <code class="docutils literal"><span class="pre">pf.Normal()</span></code></td>
+</tr>
+<tr class="row-even"><td>score_diff</td>
+<td>string</td>
+<td>Column name for the point difference</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Attributes</strong></p>
+<dl class="attribute">
+<dt id="GASRank.latent_variables">
+<code class="descname">latent_variables</code><a class="headerlink" href="#GASRank.latent_variables" title="Permalink to this definition">¶</a></dt>
+<dd><p>A pf.LatentVariables() object containing information on the model latent variables,
+prior settings. any fitted values, starting values, and other latent variable
+information. When a model is fitted, this is where the latent variables are updated/stored.
+Please see the documentation on Latent Variables for information on attributes within this
+object, as well as methods for accessing the latent variable information.</p>
+</dd></dl>
+
+<p><strong>Methods</strong></p>
+<dl class="method">
+<dt id="GASRank.add_second_component">
+<code class="descname">add_second_component</code><span class="sig-paren">(</span><em>team_1</em>, <em>team_2</em><span class="sig-paren">)</span><a class="headerlink" href="#GASRank.add_second_component" title="Permalink to this definition">¶</a></dt>
+<dd><p>Adds a second component to the model</p>
+<table border="1" class="docutils">
+<colgroup>
+<col width="22%" />
+<col width="30%" />
+<col width="48%" />
+</colgroup>
+<thead valign="bottom">
+<tr class="row-odd"><th class="head">Parameter</th>
+<th class="head">Type</th>
+<th class="head">Description</th>
+</tr>
+</thead>
+<tbody valign="top">
+<tr class="row-even"><td>team_1</td>
+<td>string</td>
+<td>Column name for team 1 second component</td>
+</tr>
+<tr class="row-odd"><td>team_2</td>
+<td>string</td>
+<td>Column name for team 2 second component</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Returns</strong> : void - changes model to a second component model</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="GASRank.adjust_prior">
+<code class="descname">adjust_prior</code><span class="sig-paren">(</span><em>index</em>, <em>prior</em><span class="sig-paren">)</span><a class="headerlink" href="#GASRank.adjust_prior" title="Permalink to this definition">¶</a></dt>
+<dd><p>Adjusts the priors for the model latent variables. The latent variables and their indices
+can be viewed by printing the <code class="docutils literal"><span class="pre">latent_variables</span></code> attribute attached to the model instance.</p>
+<table border="1" class="docutils">
+<colgroup>
+<col width="22%" />
+<col width="29%" />
+<col width="49%" />
+</colgroup>
+<thead valign="bottom">
+<tr class="row-odd"><th class="head">Parameter</th>
+<th class="head">Type</th>
+<th class="head">Description</th>
+</tr>
+</thead>
+<tbody valign="top">
+<tr class="row-even"><td>index</td>
+<td>int</td>
+<td>Index of the latent variable to change</td>
+</tr>
+<tr class="row-odd"><td>prior</td>
+<td>pf.Family instance</td>
+<td>Prior distribution, e.g. <code class="docutils literal"><span class="pre">pf.Normal()</span></code></td>
+</tr>
+</tbody>
+</table>
+<p><strong>Returns</strong>: void - changes the model <code class="docutils literal"><span class="pre">latent_variables</span></code> attribute</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="GASRank.fit">
+<code class="descname">fit</code><span class="sig-paren">(</span><em>method</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="headerlink" href="#GASRank.fit" title="Permalink to this definition">¶</a></dt>
+<dd><p>Estimates latent variables for the model. User chooses an inference option and the
+method returns a results object, as well as updating the model&#8217;s <code class="docutils literal"><span class="pre">latent_variables</span></code>
+attribute.</p>
+<table border="1" class="docutils">
+<colgroup>
+<col width="23%" />
+<col width="30%" />
+<col width="48%" />
+</colgroup>
+<thead valign="bottom">
+<tr class="row-odd"><th class="head">Parameter</th>
+<th class="head">Type</th>
+<th class="head">Description</th>
+</tr>
+</thead>
+<tbody valign="top">
+<tr class="row-even"><td>method</td>
+<td>str</td>
+<td>Inference option: e.g. &#8216;M-H&#8217; or &#8216;MLE&#8217;</td>
+</tr>
+</tbody>
+</table>
+<p>See Bayesian Inference and Classical Inference sections of the documentation for the
+full list of inference options. Optional parameters can be entered that are relevant
+to the particular mode of inference chosen.</p>
+<p><strong>Returns</strong>: pf.Results instance with information for the estimated latent variables</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="GASRank.plot_abilities">
+<code class="descname">plot_abilities</code><span class="sig-paren">(</span><em>team_ids</em><span class="sig-paren">)</span><a class="headerlink" href="#GASRank.plot_abilities" title="Permalink to this definition">¶</a></dt>
+<dd><p>Plots power rankings of the model components. Optional arguments include <em>figsize</em>,
+the dimensions of the figure to plot.</p>
+<table border="1" class="docutils">
+<colgroup>
+<col width="23%" />
+<col width="30%" />
+<col width="48%" />
+</colgroup>
+<thead valign="bottom">
+<tr class="row-odd"><th class="head">Parameter</th>
+<th class="head">Type</th>
+<th class="head">Description</th>
+</tr>
+</thead>
+<tbody valign="top">
+<tr class="row-even"><td>team_ids</td>
+<td>list</td>
+<td>Of strings (team names) or indices</td>
+</tr>
+</tbody>
+</table>
+<p>For a two component model, arguments are:</p>
+<table border="1" class="docutils">
+<colgroup>
+<col width="23%" />
+<col width="30%" />
+<col width="48%" />
+</colgroup>
+<thead valign="bottom">
+<tr class="row-odd"><th class="head">Parameter</th>
+<th class="head">Type</th>
+<th class="head">Description</th>
+</tr>
+</thead>
+<tbody valign="top">
+<tr class="row-even"><td>team_ids</td>
+<td>list</td>
+<td>Of strings (team names) or indices</td>
+</tr>
+<tr class="row-odd"><td>component_id</td>
+<td>int</td>
+<td>0 for component 1, 1 for component 2</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Returns</strong> : void - shows a matplotlib plot</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="GASRank.plot_fit">
+<code class="descname">plot_fit</code><span class="sig-paren">(</span><em>**kwargs</em><span class="sig-paren">)</span><a class="headerlink" href="#GASRank.plot_fit" title="Permalink to this definition">¶</a></dt>
+<dd><p>Plots the fit of the model against the data. Optional arguments include <em>figsize</em>,
+the dimensions of the figure to plot.</p>
+<p><strong>Returns</strong> : void - shows a matplotlib plot</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="GASRank.plot_z">
+<code class="descname">plot_z</code><span class="sig-paren">(</span><em>indices</em>, <em>figsize</em><span class="sig-paren">)</span><a class="headerlink" href="#GASRank.plot_z" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns a plot of the latent variables and their associated uncertainty.</p>
+<table border="1" class="docutils">
+<colgroup>
+<col width="23%" />
+<col width="30%" />
+<col width="48%" />
+</colgroup>
+<thead valign="bottom">
+<tr class="row-odd"><th class="head">Parameter</th>
+<th class="head">Type</th>
+<th class="head">Description</th>
+</tr>
+</thead>
+<tbody valign="top">
+<tr class="row-even"><td>indices</td>
+<td>int or list</td>
+<td>Which latent variable indices to plot</td>
+</tr>
+<tr class="row-odd"><td>figsize</td>
+<td>tuple</td>
+<td>Size of the matplotlib figure</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Returns</strong> : void - shows a matplotlib plot</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="GASRank.predict">
+<code class="descname">predict</code><span class="sig-paren">(</span><em>team_1</em>, <em>team_2</em>, <em>neutral=False</em><span class="sig-paren">)</span><a class="headerlink" href="#GASRank.predict" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns predicted point differences. For a one component model, arguments are:</p>
+<table border="1" class="docutils">
+<colgroup>
+<col width="23%" />
+<col width="30%" />
+<col width="48%" />
+</colgroup>
+<thead valign="bottom">
+<tr class="row-odd"><th class="head">Parameter</th>
+<th class="head">Type</th>
+<th class="head">Description</th>
+</tr>
+</thead>
+<tbody valign="top">
+<tr class="row-even"><td>team_1</td>
+<td>string or int</td>
+<td>If string, team name, else team index</td>
+</tr>
+<tr class="row-odd"><td>team_2</td>
+<td>string or int</td>
+<td>If string, team name, else team index</td>
+</tr>
+<tr class="row-even"><td>neutral</td>
+<td>boolean</td>
+<td>If True, disables home advantage</td>
+</tr>
+</tbody>
+</table>
+<p>For a two component model, arguments are:</p>
+<table border="1" class="docutils">
+<colgroup>
+<col width="23%" />
+<col width="30%" />
+<col width="48%" />
+</colgroup>
+<thead valign="bottom">
+<tr class="row-odd"><th class="head">Parameter</th>
+<th class="head">Type</th>
+<th class="head">Description</th>
+</tr>
+</thead>
+<tbody valign="top">
+<tr class="row-even"><td>team_1</td>
+<td>string or int</td>
+<td>If string, team name, else team index</td>
+</tr>
+<tr class="row-odd"><td>team_2</td>
+<td>string or int</td>
+<td>If string, team name, else team index</td>
+</tr>
+<tr class="row-even"><td>team1b</td>
+<td>string or int</td>
+<td>If string, team 1, player 2 name</td>
+</tr>
+<tr class="row-odd"><td>team2b</td>
+<td>string or int</td>
+<td>If string, team 2, player 2 name</td>
+</tr>
+<tr class="row-even"><td>neutral</td>
+<td>boolean</td>
+<td>If True, disables home advantage</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Returns</strong> : np.ndarray - point difference predictions</p>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+<div class="section" id="references">
+<h2>References<a class="headerlink" href="#references" title="Permalink to this headline">¶</a></h2>
+<p>Creal, D; Koopman, S.J.; Lucas, A. (2013). Generalized Autoregressive Score Models with
+Applications. Journal of Applied Econometrics, 28(5), 777–795. doi:10.1002/jae.1279.</p>
+<p>Harvey, A.C. (2013). Dynamic Models for Volatility and Heavy Tails: With Applications to
+Financial and Economic Time Series. Cambridge University Press.</p>
+<p>Taylor, R. (2016). A Tour of Time Series Analysis (and a model for predicting NFL games).
+<a class="reference external" href="https://github.com/RJT1990/PyData2016-SanFrancisco">https://github.com/RJT1990/PyData2016-SanFrancisco</a></p>
+</div>
+</div>
+
+
+           </div>
+          </div>
+          <footer>
+  
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+      
+        <a href="gas_reg.html" class="btn btn-neutral float-right" title="GAS regression models" accesskey="n">Next <span class="fa fa-arrow-circle-right"></span></a>
+      
+      
+        <a href="gas_llt.html" class="btn btn-neutral" title="GAS local linear trend models" accesskey="p"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+      
+    </div>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2016, Ross Taylor.
+
+    </p>
+  </div>
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/snide/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  
+
+    <script type="text/javascript">
+        var DOCUMENTATION_OPTIONS = {
+            URL_ROOT:'./',
+            VERSION:'0.4.0',
+            COLLAPSE_INDEX:false,
+            FILE_SUFFIX:'.html',
+            HAS_SOURCE:  true
+        };
+    </script>
+      <script type="text/javascript" src="_static/jquery.js"></script>
+      <script type="text/javascript" src="_static/underscore.js"></script>
+      <script type="text/javascript" src="_static/doctools.js"></script>
+      <script type="text/javascript" src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+
+  
+
+  
+  
+    <script type="text/javascript" src="_static/js/theme.js"></script>
+  
+
+  
+  
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.StickyNav.enable();
+      });
+  </script>
+   
+
+</body>
+</html>

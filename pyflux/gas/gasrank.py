@@ -66,12 +66,13 @@ class GASRank(tsm.TSM):
         self.data, self.data_name, self.is_pandas, self.index = dc.data_check(data, score_diff)
         self.data = self.data.astype(np.float) 
         self.data_original = self.data.copy()
+        self.data_length = self.data.shape[0]
 
         self._create_latent_variables()
 
         self.family = family
         
-        self.model_name2, self.link, self.scale, self.shape, self.skewness, self.mean_transform = self.family.setup()
+        self.model_name2, self.link, self.scale, self.shape, self.skewness, self.mean_transform, _ = self.family.setup()
         self.model_name = self.model_name2 + "GAS Rank "
 
         for no, i in enumerate(self.family.build_latent_variables()):
@@ -84,6 +85,7 @@ class GASRank(tsm.TSM):
         self.plot_abilities = self.plot_abilities_one_components
         self.predict = self.predict_one_component
 
+        self.family_z_no = len(self.family.build_latent_variables())
         self.z_no = len(self.latent_variables.z_list)
 
     def _create_ids(self, home_teams, away_teams):
@@ -151,6 +153,38 @@ class GASRank(tsm.TSM):
             model_skewness = parm[-3]
         else:
             model_skewness = 0
+
+        return model_scale, model_shape, model_skewness
+
+    def _get_scale_and_shape_sim(self, transformed_lvs):
+        """ Obtains model scale, shape, skewness latent variables for
+        a 2d array of simulations.
+
+        Parameters
+        ----------
+        transformed_lvs : np.array
+            Transformed latent variable vector (2d - with draws of each variable)
+
+        Returns
+        ----------
+        - Tuple of np.arrays (each being scale, shape and skewness draws)
+        """
+
+        if self.scale is True:
+            if self.shape is True:
+                model_shape = self.latent_variables.z_list[-1].prior.transform(transformed_lvs[-1, :]) 
+                model_scale = self.latent_variables.z_list[-2].prior.transform(transformed_lvs[-2, :])
+            else:
+                model_shape = np.zeros(transformed_lvs.shape[1])
+                model_scale = self.latent_variables.z_list[-1].prior.transform(transformed_lvs[-1, :])
+        else:
+            model_scale = np.zeros(transformed_lvs.shape[1])
+            model_shape = np.zeros(transformed_lvs.shape[1])
+
+        if self.skewness is True:
+            model_skewness = self.latent_variables.z_list[-3].prior.transform(transformed_lvs[-3, :])
+        else:
+            model_skewness = np.zeros(transformed_lvs.shape[1])
 
         return model_scale, model_shape, model_skewness
 

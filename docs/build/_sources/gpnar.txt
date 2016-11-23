@@ -12,12 +12,12 @@ Example
    import pyflux as pf
 
    USgrowth = #somequarterlyGDPgrowthdatahere
-   model = pf.GPNARX(USgrowth,ar=4,kernel_type='OU')
+   model = pf.GPNARX(USgrowth, ar=4, kernel_type='OU')
 
 Class Arguments
 ----------
 
-.. py:class:: GPNARX(data,ar,kernel_type,integ,target)
+.. py:class:: GPNARX(data, ar, kernel_type, integ, target)
 
    .. py:attribute:: data
 
@@ -29,7 +29,7 @@ Class Arguments
 
    .. py:attribute:: kernel_type
 
-      string : the type of kernel; one of ['SE','RQ','OU','ARD']
+      string : the type of kernel; one of ['SE','RQ','OU','Periodic','ARD']
 
    .. py:attribute:: integ
       
@@ -59,7 +59,7 @@ Here is example usage for :py:func:`adjust_prior`:
 
 .. py:function:: fit(method,**kwargs)
    
-   Estimates parameters for the model. Returns a Results object. **method** is an inference/estimation option; see Bayesian Inference and Classical Inference sections for options. If no **method** is provided then a default will be used.
+   Estimates latent variables for the model. Returns a Results object. **method** is an inference/estimation option; see Bayesian Inference and Classical Inference sections for options. If no **method** is provided then a default will be used.
 
    Optional arguments are specific to the **method** you choose - see the documentation for these methods for more detail.
 
@@ -79,9 +79,9 @@ Here is example usage for :py:func:`fit`:
 
    Optional arguments include **figsize** - the dimensions of the figure to plot.
 
-.. py:function:: plot_parameters(indices, figsize)
+.. py:function:: plot_z(indices, figsize)
 
-   Returns a plot of the parameters and their associated uncertainty. **indices** is a list referring to the parameter indices that you want ot plot. Figsize specifies how big the plot will be.
+   Returns a plot of the latent variables and their associated uncertainty. **indices** is a list referring to the latent variable indices that you want ot plot. Figsize specifies how big the plot will be.
 
 .. py:function:: plot_predict(h,past_values,intervals,**kwargs)
    
@@ -89,9 +89,9 @@ Here is example usage for :py:func:`fit`:
 
    Optional arguments include **figsize** - the dimensions of the figure to plot.
 
-.. py:function:: plot_predict_is(h,past_values,intervals,**kwargs)
+.. py:function:: plot_predict_is(h, fit_once, **kwargs)
    
-   Plots in-sample rolling predictions for the model. **h** is an int of how many previous steps to simulate performance on. **past_values** is an int of how many past values of the series to plot. **intervals** is a bool on whether to include confidence/credibility intervals or not.
+   Plots in-sample rolling predictions for the model. **h** is an int of how many previous steps to simulate performance on. **fit_once** is a boolean specifying whether to fit the model once at the beginning of the period (True), or whether to fit after every step (False).
 
    Optional arguments include **figsize** - the dimensions of the figure to plot.
 
@@ -99,6 +99,6 @@ Here is example usage for :py:func:`fit`:
    
    Returns DataFrame of model predictions. **h** is an int of how many steps ahead to predict. 
 
-.. py:function:: predict_is(h)
+.. py:function:: predict_is(h, fit_once)
    
-   Returns DataFrame of in-sample rolling predictions for the model. **h** is an int of how many previous steps to simulate performance on.
+   Returns DataFrame of in-sample rolling predictions for the model. **h** is an int of how many previous steps to simulate performance on. **fit_once** is a boolean specifying whether to fit the model once at the beginning of the period (True), or whether to fit after every step (False).

@@ -9,7 +9,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>Index &mdash; PyFlux 0.3.7 documentation</title>
+  <title>Index &mdash; PyFlux 0.4.0 documentation</title>
   
 
   
@@ -31,7 +31,7 @@
   
 
   
-    <link rel="top" title="PyFlux 0.3.7 documentation" href="index.html"/> 
+    <link rel="top" title="PyFlux 0.4.0 documentation" href="index.html"/> 
 
   
   <script src="_static/js/modernizr.min.js"></script>
@@ -59,7 +59,7 @@
             
             
               <div class="version">
-                0.3
+                0.4
               </div>
             
           
@@ -81,18 +81,24 @@
             
             
                 <ul>
+<li class="toctree-l1"><a class="reference internal" href="getting_started.html">Getting Started with Time Series</a></li>
+</ul>
+<ul>
 <li class="toctree-l1"><a class="reference internal" href="arima.html">ARIMA models</a></li>
 <li class="toctree-l1"><a class="reference internal" href="arimax.html">ARIMAX models</a></li>
 <li class="toctree-l1"><a class="reference internal" href="dar.html">DAR models</a></li>
 <li class="toctree-l1"><a class="reference internal" href="egarch.html">Beta-t-EGARCH models</a></li>
 <li class="toctree-l1"><a class="reference internal" href="egarchm.html">Beta-t-EGARCH in-mean models</a></li>
-<li class="toctree-l1"><a class="reference internal" href="egarchmreg.html">Beta-t-EGARCH-in-mean regression models</a></li>
-<li class="toctree-l1"><a class="reference internal" href="lmegarch.html">Beta-t-EGARCH Long Memory models</a></li>
+<li class="toctree-l1"><a class="reference internal" href="egarchmreg.html">Beta-t-EGARCH in-mean regression models</a></li>
+<li class="toctree-l1"><a class="reference internal" href="lmegarch.html">Beta-t-EGARCH long memory models</a></li>
+<li class="toctree-l1"><a class="reference internal" href="segarch.html">Beta Skew-t GARCH models</a></li>
+<li class="toctree-l1"><a class="reference internal" href="segarchm.html">Beta Skew-t in-mean GARCH models</a></li>
 <li class="toctree-l1"><a class="reference internal" href="garch.html">GARCH models</a></li>
-<li class="toctree-l1"><a class="reference internal" href="segarch.html">Skew-t EGARCH models</a></li>
-<li class="toctree-l1"><a class="reference internal" href="segarchm.html">Skew-t EGARCH in-mean models</a></li>
 <li class="toctree-l1"><a class="reference internal" href="gas.html">GAS models</a></li>
-<li class="toctree-l1"><a class="reference internal" href="gasreg.html">GAS Regression models</a></li>
+<li class="toctree-l1"><a class="reference internal" href="gas_llm.html">GAS local level models</a></li>
+<li class="toctree-l1"><a class="reference internal" href="gas_llt.html">GAS local linear trend models</a></li>
+<li class="toctree-l1"><a class="reference internal" href="gas_rank.html">GAS ranking models</a></li>
+<li class="toctree-l1"><a class="reference internal" href="gas_reg.html">GAS regression models</a></li>
 <li class="toctree-l1"><a class="reference internal" href="gasx.html">GASX models</a></li>
 <li class="toctree-l1"><a class="reference internal" href="gpnar.html">GP-NARX models</a></li>
 <li class="toctree-l1"><a class="reference internal" href="ssm.html">Gaussian State Space models</a></li>
@@ -161,7 +167,6 @@
  | <a href="#M"><strong>M</strong></a>
  | <a href="#N"><strong>N</strong></a>
  | <a href="#P"><strong>P</strong></a>
- | <a href="#Q"><strong>Q</strong></a>
  | <a href="#S"><strong>S</strong></a>
  | <a href="#T"><strong>T</strong></a>
  | <a href="#U"><strong>U</strong></a>
@@ -172,13 +177,101 @@
 <table style="width: 100%" class="indextable genindextable"><tr>
   <td style="width: 33%" valign="top"><dl>
       
-  <dt><a href="egarch.html#add_leverage">add_leverage() (built-in function)</a>, <a href="egarchm.html#add_leverage">[1]</a>, <a href="egarchmreg.html#add_leverage">[2]</a>, <a href="lmegarch.html#add_leverage">[3]</a>, <a href="segarch.html#add_leverage">[4]</a>, <a href="segarchm.html#add_leverage">[5]</a>
+  <dt><a href="egarch.html#EGARCH.add_leverage">add_leverage() (EGARCH method)</a>
+  </dt>
+
+      <dd><dl>
+        
+  <dt><a href="egarchm.html#EGARCHM.add_leverage">(EGARCHM method)</a>
+  </dt>
+
+        
+  <dt><a href="egarchmreg.html#EGARCHMReg.add_leverage">(EGARCHMReg method)</a>
+  </dt>
+
+        
+  <dt><a href="lmegarch.html#LMGARCHM.add_leverage">(LMGARCHM method)</a>
+  </dt>
+
+        
+  <dt><a href="segarch.html#SEGARCH.add_leverage">(SEGARCH method)</a>
+  </dt>
+
+        
+  <dt><a href="segarchm.html#SEGARCHM.add_leverage">(SEGARCHM method)</a>
+  </dt>
+
+      </dl></dd>
+      
+  <dt><a href="gas_rank.html#GASRank.add_second_component">add_second_component() (GASRank method)</a>
   </dt>
 
       
-  <dt><a href="arima.html#adjust_prior">adjust_prior() (built-in function)</a>, <a href="arimax.html#adjust_prior">[1]</a>, <a href="bayes.html#adjust_prior">[2]</a>, <a href="dar.html#adjust_prior">[3]</a>, <a href="egarch.html#adjust_prior">[4]</a>, <a href="egarchm.html#adjust_prior">[5]</a>, <a href="egarchmreg.html#adjust_prior">[6]</a>, <a href="garch.html#adjust_prior">[7]</a>, <a href="gas.html#adjust_prior">[8]</a>, <a href="gasreg.html#adjust_prior">[9]</a>, <a href="gasx.html#adjust_prior">[10]</a>, <a href="gpnar.html#adjust_prior">[11]</a>, <a href="lmegarch.html#adjust_prior">[12]</a>, <a href="ngssm.html#adjust_prior">[13]</a>, <a href="segarch.html#adjust_prior">[14]</a>, <a href="segarchm.html#adjust_prior">[15]</a>, <a href="ssm.html#adjust_prior">[16]</a>, <a href="var.html#adjust_prior">[17]</a>
+  <dt><a href="arima.html#ARIMA.adjust_prior">adjust_prior() (ARIMA method)</a>
   </dt>
 
+      <dd><dl>
+        
+  <dt><a href="arimax.html#ARIMAX.adjust_prior">(ARIMAX method)</a>
+  </dt>
+
+        
+  <dt><a href="egarch.html#EGARCH.adjust_prior">(EGARCH method)</a>
+  </dt>
+
+        
+  <dt><a href="egarchm.html#EGARCHM.adjust_prior">(EGARCHM method)</a>
+  </dt>
+
+        
+  <dt><a href="egarchmreg.html#EGARCHMReg.adjust_prior">(EGARCHMReg method)</a>
+  </dt>
+
+        
+  <dt><a href="garch.html#GARCH.adjust_prior">(GARCH method)</a>
+  </dt>
+
+        
+  <dt><a href="gas.html#GAS.adjust_prior">(GAS method)</a>
+  </dt>
+
+        
+  <dt><a href="gas_llm.html#GASLLEV.adjust_prior">(GASLLEV method)</a>
+  </dt>
+
+        
+  <dt><a href="gas_llt.html#GASLLT.adjust_prior">(GASLLT method)</a>
+  </dt>
+
+        
+  <dt><a href="gas_rank.html#GASRank.adjust_prior">(GASRank method)</a>
+  </dt>
+
+        
+  <dt><a href="gas_reg.html#GASReg.adjust_prior">(GASReg method)</a>
+  </dt>
+
+        
+  <dt><a href="gasx.html#GASX.adjust_prior">(GASX method)</a>
+  </dt>
+
+        
+  <dt><a href="lmegarch.html#LMGARCHM.adjust_prior">(LMGARCHM method)</a>
+  </dt>
+
+        
+  <dt><a href="segarch.html#SEGARCH.adjust_prior">(SEGARCH method)</a>
+  </dt>
+
+        
+  <dt><a href="segarchm.html#SEGARCHM.adjust_prior">(SEGARCHM method)</a>
+  </dt>
+
+        
+  <dt><a href="bayes.html#adjust_prior">(built-in function)</a>, <a href="dar.html#adjust_prior">[1]</a>, <a href="gasssm.html#adjust_prior">[2]</a>, <a href="gpnar.html#adjust_prior">[3]</a>, <a href="ngssm.html#adjust_prior">[4]</a>, <a href="ssm.html#adjust_prior">[5]</a>, <a href="var.html#adjust_prior">[6]</a>
+  </dt>
+
+      </dl></dd>
       
   <dt><a href="bayes.html#InverseGamma.alpha">alpha (InverseGamma attribute)</a>
   </dt>
@@ -186,26 +279,10 @@
   </dl></td>
   <td style="width: 33%" valign="top"><dl>
       
-  <dt><a href="arima.html#ARIMA.ar">ar (ARIMA attribute)</a>
+  <dt><a href="dar.html#DAR.ar">ar (DAR attribute)</a>
   </dt>
 
       <dd><dl>
-        
-  <dt><a href="arimax.html#ARIMAX.ar">(ARIMAX attribute)</a>
-  </dt>
-
-        
-  <dt><a href="dar.html#DAR.ar">(DAR attribute)</a>
-  </dt>
-
-        
-  <dt><a href="gas.html#GAS.ar">(GAS attribute)</a>
-  </dt>
-
-        
-  <dt><a href="gasx.html#GASX.ar">(GASX attribute)</a>
-  </dt>
-
         
   <dt><a href="gpnar.html#GPNARX.ar">(GPNARX attribute)</a>
   </dt>
@@ -250,48 +327,20 @@
   </dt>
 
       
-  <dt><a href="arima.html#ARIMA.data">data (ARIMA attribute)</a>
+  <dt><a href="dar.html#DAR.data">data (DAR attribute)</a>
   </dt>
 
       <dd><dl>
         
-  <dt><a href="arimax.html#ARIMAX.data">(ARIMAX attribute)</a>
+  <dt><a href="ssm.html#DynReg.data">(DynReg attribute)</a>
   </dt>
 
         
-  <dt><a href="dar.html#DAR.data">(DAR attribute)</a>
+  <dt><a href="gasssm.html#GASLLEV.data">(GASLLEV attribute)</a>
   </dt>
 
         
-  <dt><a href="ssm.html#DynLin.data">(DynLin attribute)</a>
-  </dt>
-
-        
-  <dt><a href="egarch.html#EGARCH.data">(EGARCH attribute)</a>
-  </dt>
-
-        
-  <dt><a href="egarchm.html#EGARCHM.data">(EGARCHM attribute)</a>
-  </dt>
-
-        
-  <dt><a href="egarchmreg.html#EGARCHMReg.data">(EGARCHMReg attribute)</a>
-  </dt>
-
-        
-  <dt><a href="garch.html#GARCH.data">(GARCH attribute)</a>
-  </dt>
-
-        
-  <dt><a href="gas.html#GAS.data">(GAS attribute)</a>
-  </dt>
-
-        
-  <dt><a href="gasreg.html#GASReg.data">(GASReg attribute)</a>
-  </dt>
-
-        
-  <dt><a href="gasx.html#GASX.data">(GASX attribute)</a>
+  <dt><a href="gasssm.html#GASLLT.data">(GASLLT attribute)</a>
   </dt>
 
         
@@ -307,10 +356,6 @@
   </dt>
 
         
-  <dt><a href="lmegarch.html#LMEGARCH.data">(LMEGARCH attribute)</a>
-  </dt>
-
-        
   <dt><a href="ngssm.html#NDynLin.data">(NDynLin attribute)</a>
   </dt>
 
@@ -323,14 +368,6 @@
   </dt>
 
         
-  <dt><a href="segarch.html#SEGARCH.data">(SEGARCH attribute)</a>
-  </dt>
-
-        
-  <dt><a href="segarchm.html#SEGARCHM.data">(SEGARCHM attribute)</a>
-  </dt>
-
-        
   <dt><a href="var.html#VAR.data">(VAR attribute)</a>
   </dt>
 
@@ -338,7 +375,7 @@
   </dl></td>
   <td style="width: 33%" valign="top"><dl>
       
-  <dt><a href="ssm.html#DynLin">DynLin (built-in class)</a>
+  <dt><a href="ssm.html#DynReg">DynReg (built-in class)</a>
   </dt>
 
   </dl></td>
@@ -368,46 +405,88 @@
 <table style="width: 100%" class="indextable genindextable"><tr>
   <td style="width: 33%" valign="top"><dl>
       
-  <dt><a href="gas.html#GAS.family">family (GAS attribute)</a>
+  <dt><a href="gasssm.html#GASLLEV.family">family (GASLLEV attribute)</a>
   </dt>
 
       <dd><dl>
         
-  <dt><a href="gasreg.html#GASReg.family">(GASReg attribute)</a>
-  </dt>
-
-        
-  <dt><a href="gasx.html#GASX.family">(GASX attribute)</a>
+  <dt><a href="gasssm.html#GASLLT.family">(GASLLT attribute)</a>
   </dt>
 
       </dl></dd>
       
-  <dt><a href="arima.html#fit">fit() (built-in function)</a>, <a href="arimax.html#fit">[1]</a>, <a href="dar.html#fit">[2]</a>, <a href="egarch.html#fit">[3]</a>, <a href="egarchm.html#fit">[4]</a>, <a href="egarchmreg.html#fit">[5]</a>, <a href="garch.html#fit">[6]</a>, <a href="gas.html#fit">[7]</a>, <a href="gasreg.html#fit">[8]</a>, <a href="gasx.html#fit">[9]</a>, <a href="gpnar.html#fit">[10]</a>, <a href="lmegarch.html#fit">[11]</a>, <a href="ngssm.html#fit">[12]</a>, <a href="segarch.html#fit">[13]</a>, <a href="segarchm.html#fit">[14]</a>, <a href="ssm.html#fit">[15]</a>, <a href="var.html#fit">[16]</a>
-  </dt>
-
-  </dl></td>
-  <td style="width: 33%" valign="top"><dl>
-      
-  <dt><a href="arimax.html#ARIMAX.formula">formula (ARIMAX attribute)</a>
+  <dt><a href="arima.html#ARIMA.fit">fit() (ARIMA method)</a>
   </dt>
 
       <dd><dl>
         
-  <dt><a href="ssm.html#DynLin.formula">(DynLin attribute)</a>
+  <dt><a href="arimax.html#ARIMAX.fit">(ARIMAX method)</a>
   </dt>
 
         
-  <dt><a href="egarchmreg.html#EGARCHMReg.formula">(EGARCHMReg attribute)</a>
+  <dt><a href="egarch.html#EGARCH.fit">(EGARCH method)</a>
   </dt>
 
         
-  <dt><a href="gasreg.html#GASReg.formula">(GASReg attribute)</a>
+  <dt><a href="egarchm.html#EGARCHM.fit">(EGARCHM method)</a>
   </dt>
 
         
-  <dt><a href="gasx.html#GASX.formula">(GASX attribute)</a>
+  <dt><a href="egarchmreg.html#EGARCHMReg.fit">(EGARCHMReg method)</a>
   </dt>
 
+        
+  <dt><a href="garch.html#GARCH.fit">(GARCH method)</a>
+  </dt>
+
+        
+  <dt><a href="gas.html#GAS.fit">(GAS method)</a>
+  </dt>
+
+        
+  <dt><a href="gas_llm.html#GASLLEV.fit">(GASLLEV method)</a>
+  </dt>
+
+        
+  <dt><a href="gas_llt.html#GASLLT.fit">(GASLLT method)</a>
+  </dt>
+
+        
+  <dt><a href="gas_rank.html#GASRank.fit">(GASRank method)</a>
+  </dt>
+
+        
+  <dt><a href="gas_reg.html#GASReg.fit">(GASReg method)</a>
+  </dt>
+
+        
+  <dt><a href="gasx.html#GASX.fit">(GASX method)</a>
+  </dt>
+
+        
+  <dt><a href="lmegarch.html#LMGARCHM.fit">(LMGARCHM method)</a>
+  </dt>
+
+        
+  <dt><a href="segarch.html#SEGARCH.fit">(SEGARCH method)</a>
+  </dt>
+
+        
+  <dt><a href="segarchm.html#SEGARCHM.fit">(SEGARCHM method)</a>
+  </dt>
+
+        
+  <dt><a href="dar.html#fit">(built-in function)</a>, <a href="gasssm.html#fit">[1]</a>, <a href="gpnar.html#fit">[2]</a>, <a href="ngssm.html#fit">[3]</a>, <a href="ssm.html#fit">[4]</a>, <a href="var.html#fit">[5]</a>
+  </dt>
+
+      </dl></dd>
+  </dl></td>
+  <td style="width: 33%" valign="top"><dl>
+      
+  <dt><a href="ssm.html#DynReg.formula">formula (DynReg attribute)</a>
+  </dt>
+
+      <dd><dl>
         
   <dt><a href="ngssm.html#NDynLin.formula">(NDynLin attribute)</a>
   </dt>
@@ -428,11 +507,23 @@
   </dt>
 
       
-  <dt><a href="gasreg.html#GASReg">GASReg (built-in class)</a>
+  <dt><a href="gas_llm.html#GASLLEV">GASLLEV (built-in class)</a>, <a href="gasssm.html#GASLLEV">[1]</a>
+  </dt>
+
+      
+  <dt><a href="gas_llt.html#GASLLT">GASLLT (built-in class)</a>, <a href="gasssm.html#GASLLT">[1]</a>
   </dt>
 
   </dl></td>
   <td style="width: 33%" valign="top"><dl>
+      
+  <dt><a href="gas_rank.html#GASRank">GASRank (built-in class)</a>
+  </dt>
+
+      
+  <dt><a href="gas_reg.html#GASReg">GASReg (built-in class)</a>
+  </dt>
+
       
   <dt><a href="gasx.html#GASX">GASX (built-in class)</a>
   </dt>
@@ -448,24 +539,16 @@
 <table style="width: 100%" class="indextable genindextable"><tr>
   <td style="width: 33%" valign="top"><dl>
       
-  <dt><a href="arima.html#ARIMA.integ">integ (ARIMA attribute)</a>
+  <dt><a href="dar.html#DAR.integ">integ (DAR attribute)</a>
   </dt>
 
       <dd><dl>
         
-  <dt><a href="arimax.html#ARIMAX.integ">(ARIMAX attribute)</a>
+  <dt><a href="gasssm.html#GASLLEV.integ">(GASLLEV attribute)</a>
   </dt>
 
         
-  <dt><a href="dar.html#DAR.integ">(DAR attribute)</a>
-  </dt>
-
-        
-  <dt><a href="gas.html#GAS.integ">(GAS attribute)</a>
-  </dt>
-
-        
-  <dt><a href="gasx.html#GASX.integ">(GASX attribute)</a>
+  <dt><a href="gasssm.html#GASLLT.integ">(GASLLT attribute)</a>
   </dt>
 
         
@@ -520,6 +603,68 @@
   </dt>
 
       
+  <dt><a href="arima.html#ARIMA.latent_variables">latent_variables (ARIMA attribute)</a>
+  </dt>
+
+      <dd><dl>
+        
+  <dt><a href="arimax.html#ARIMAX.latent_variables">(ARIMAX attribute)</a>
+  </dt>
+
+        
+  <dt><a href="egarch.html#EGARCH.latent_variables">(EGARCH attribute)</a>
+  </dt>
+
+        
+  <dt><a href="egarchm.html#EGARCHM.latent_variables">(EGARCHM attribute)</a>
+  </dt>
+
+        
+  <dt><a href="egarchmreg.html#EGARCHMReg.latent_variables">(EGARCHMReg attribute)</a>
+  </dt>
+
+        
+  <dt><a href="garch.html#GARCH.latent_variables">(GARCH attribute)</a>
+  </dt>
+
+        
+  <dt><a href="gas.html#GAS.latent_variables">(GAS attribute)</a>
+  </dt>
+
+        
+  <dt><a href="gas_llm.html#GASLLEV.latent_variables">(GASLLEV attribute)</a>
+  </dt>
+
+        
+  <dt><a href="gas_llt.html#GASLLT.latent_variables">(GASLLT attribute)</a>
+  </dt>
+
+        
+  <dt><a href="gas_rank.html#GASRank.latent_variables">(GASRank attribute)</a>
+  </dt>
+
+        
+  <dt><a href="gas_reg.html#GASReg.latent_variables">(GASReg attribute)</a>
+  </dt>
+
+        
+  <dt><a href="gasx.html#GASX.latent_variables">(GASX attribute)</a>
+  </dt>
+
+        
+  <dt><a href="lmegarch.html#LMGARCHM.latent_variables">(LMGARCHM attribute)</a>
+  </dt>
+
+        
+  <dt><a href="segarch.html#SEGARCH.latent_variables">(SEGARCH attribute)</a>
+  </dt>
+
+        
+  <dt><a href="segarchm.html#SEGARCHM.latent_variables">(SEGARCHM attribute)</a>
+  </dt>
+
+      </dl></dd>
+      
   <dt><a href="ssm.html#LLEV">LLEV (built-in class)</a>
   </dt>
 
@@ -530,7 +675,7 @@
   </dt>
 
       
-  <dt><a href="lmegarch.html#LMEGARCH">LMEGARCH (built-in class)</a>
+  <dt><a href="lmegarch.html#LMGARCHM">LMGARCHM (built-in class)</a>
   </dt>
 
   </dl></td>
@@ -540,21 +685,15 @@
 <table style="width: 100%" class="indextable genindextable"><tr>
   <td style="width: 33%" valign="top"><dl>
       
-  <dt><a href="arima.html#ARIMA.ma">ma (ARIMA attribute)</a>
+  <dt><a href="bayes.html#Normal.mu0">mu0 (Normal attribute)</a>
   </dt>
 
       <dd><dl>
         
-  <dt><a href="arimax.html#ARIMAX.ma">(ARIMAX attribute)</a>
+  <dt><a href="bayes.html#TruncatedNormal.mu0">(TruncatedNormal attribute)</a>
   </dt>
 
       </dl></dd>
-  </dl></td>
-  <td style="width: 33%" valign="top"><dl>
-      
-  <dt><a href="bayes.html#Normal.mu0">mu0 (Normal attribute)</a>
-  </dt>
-
   </dl></td>
 </tr></table>
 
@@ -586,98 +725,570 @@
 <table style="width: 100%" class="indextable genindextable"><tr>
   <td style="width: 33%" valign="top"><dl>
       
-  <dt><a href="egarch.html#EGARCH.p">p (EGARCH attribute)</a>
+  <dt><a href="gas_rank.html#GASRank.plot_abilities">plot_abilities() (GASRank method)</a>
+  </dt>
+
+      
+  <dt><a href="arima.html#ARIMA.plot_fit">plot_fit() (ARIMA method)</a>
   </dt>
 
       <dd><dl>
         
-  <dt><a href="egarchm.html#EGARCHM.p">(EGARCHM attribute)</a>
+  <dt><a href="arimax.html#ARIMAX.plot_fit">(ARIMAX method)</a>
   </dt>
 
         
-  <dt><a href="egarchmreg.html#EGARCHMReg.p">(EGARCHMReg attribute)</a>
+  <dt><a href="egarch.html#EGARCH.plot_fit">(EGARCH method)</a>
   </dt>
 
         
-  <dt><a href="garch.html#GARCH.p">(GARCH attribute)</a>
+  <dt><a href="egarchm.html#EGARCHM.plot_fit">(EGARCHM method)</a>
   </dt>
 
         
-  <dt><a href="lmegarch.html#LMEGARCH.p">(LMEGARCH attribute)</a>
+  <dt><a href="egarchmreg.html#EGARCHMReg.plot_fit">(EGARCHMReg method)</a>
   </dt>
 
         
-  <dt><a href="segarch.html#SEGARCH.p">(SEGARCH attribute)</a>
+  <dt><a href="garch.html#GARCH.plot_fit">(GARCH method)</a>
   </dt>
 
         
-  <dt><a href="segarchm.html#SEGARCHM.p">(SEGARCHM attribute)</a>
+  <dt><a href="gas.html#GAS.plot_fit">(GAS method)</a>
+  </dt>
+
+        
+  <dt><a href="gas_llm.html#GASLLEV.plot_fit">(GASLLEV method)</a>
+  </dt>
+
+        
+  <dt><a href="gas_llt.html#GASLLT.plot_fit">(GASLLT method)</a>
+  </dt>
+
+        
+  <dt><a href="gas_rank.html#GASRank.plot_fit">(GASRank method)</a>
+  </dt>
+
+        
+  <dt><a href="gas_reg.html#GASReg.plot_fit">(GASReg method)</a>
+  </dt>
+
+        
+  <dt><a href="gasx.html#GASX.plot_fit">(GASX method)</a>
+  </dt>
+
+        
+  <dt><a href="lmegarch.html#LMGARCHM.plot_fit">(LMGARCHM method)</a>
+  </dt>
+
+        
+  <dt><a href="segarch.html#SEGARCH.plot_fit">(SEGARCH method)</a>
+  </dt>
+
+        
+  <dt><a href="segarchm.html#SEGARCHM.plot_fit">(SEGARCHM method)</a>
+  </dt>
+
+        
+  <dt><a href="dar.html#plot_fit">(built-in function)</a>, <a href="gasssm.html#plot_fit">[1]</a>, <a href="gpnar.html#plot_fit">[2]</a>, <a href="ngssm.html#plot_fit">[3]</a>, <a href="ssm.html#plot_fit">[4]</a>, <a href="var.html#plot_fit">[5]</a>
   </dt>
 
       </dl></dd>
       
-  <dt><a href="arima.html#plot_fit">plot_fit() (built-in function)</a>, <a href="arimax.html#plot_fit">[1]</a>, <a href="dar.html#plot_fit">[2]</a>, <a href="egarch.html#plot_fit">[3]</a>, <a href="egarchm.html#plot_fit">[4]</a>, <a href="egarchmreg.html#plot_fit">[5]</a>, <a href="garch.html#plot_fit">[6]</a>, <a href="gas.html#plot_fit">[7]</a>, <a href="gasreg.html#plot_fit">[8]</a>, <a href="gasx.html#plot_fit">[9]</a>, <a href="gpnar.html#plot_fit">[10]</a>, <a href="lmegarch.html#plot_fit">[11]</a>, <a href="ngssm.html#plot_fit">[12]</a>, <a href="segarch.html#plot_fit">[13]</a>, <a href="segarchm.html#plot_fit">[14]</a>, <a href="ssm.html#plot_fit">[15]</a>, <a href="var.html#plot_fit">[16]</a>
+  <dt><a href="ngssm.html#plot_parameters">plot_parameters() (built-in function)</a>, <a href="ssm.html#plot_parameters">[1]</a>
   </dt>
 
       
-  <dt><a href="gpnar.html#plot_parameters">plot_parameters() (built-in function)</a>, <a href="ngssm.html#plot_parameters">[1]</a>, <a href="ssm.html#plot_parameters">[2]</a>
-  </dt>
-
-      
-  <dt><a href="arima.html#plot_predict">plot_predict() (built-in function)</a>, <a href="arimax.html#plot_predict">[1]</a>, <a href="dar.html#plot_predict">[2]</a>, <a href="egarch.html#plot_predict">[3]</a>, <a href="egarchm.html#plot_predict">[4]</a>, <a href="egarchmreg.html#plot_predict">[5]</a>, <a href="garch.html#plot_predict">[6]</a>, <a href="gas.html#plot_predict">[7]</a>, <a href="gasreg.html#plot_predict">[8]</a>, <a href="gasx.html#plot_predict">[9]</a>, <a href="gpnar.html#plot_predict">[10]</a>, <a href="lmegarch.html#plot_predict">[11]</a>, <a href="ngssm.html#plot_predict">[12]</a>, <a href="segarch.html#plot_predict">[13]</a>, <a href="segarchm.html#plot_predict">[14]</a>, <a href="ssm.html#plot_predict">[15]</a>, <a href="var.html#plot_predict">[16]</a>
-  </dt>
-
-  </dl></td>
-  <td style="width: 33%" valign="top"><dl>
-      
-  <dt><a href="arima.html#plot_predict_is">plot_predict_is() (built-in function)</a>, <a href="arimax.html#plot_predict_is">[1]</a>, <a href="dar.html#plot_predict_is">[2]</a>, <a href="egarch.html#plot_predict_is">[3]</a>, <a href="egarchm.html#plot_predict_is">[4]</a>, <a href="egarchmreg.html#plot_predict_is">[5]</a>, <a href="garch.html#plot_predict_is">[6]</a>, <a href="gas.html#plot_predict_is">[7]</a>, <a href="gasreg.html#plot_predict_is">[8]</a>, <a href="gasx.html#plot_predict_is">[9]</a>, <a href="gpnar.html#plot_predict_is">[10]</a>, <a href="lmegarch.html#plot_predict_is">[11]</a>, <a href="ngssm.html#plot_predict_is">[12]</a>, <a href="segarch.html#plot_predict_is">[13]</a>, <a href="segarchm.html#plot_predict_is">[14]</a>, <a href="ssm.html#plot_predict_is">[15]</a>, <a href="var.html#plot_predict_is">[16]</a>
-  </dt>
-
-      
-  <dt><a href="arima.html#plot_z">plot_z() (built-in function)</a>, <a href="arimax.html#plot_z">[1]</a>, <a href="dar.html#plot_z">[2]</a>, <a href="egarch.html#plot_z">[3]</a>, <a href="egarchm.html#plot_z">[4]</a>, <a href="egarchmreg.html#plot_z">[5]</a>, <a href="garch.html#plot_z">[6]</a>, <a href="gas.html#plot_z">[7]</a>, <a href="gasreg.html#plot_z">[8]</a>, <a href="gasx.html#plot_z">[9]</a>, <a href="lmegarch.html#plot_z">[10]</a>, <a href="segarch.html#plot_z">[11]</a>, <a href="segarchm.html#plot_z">[12]</a>, <a href="var.html#plot_z">[13]</a>
-  </dt>
-
-      
-  <dt><a href="arima.html#predict">predict() (built-in function)</a>, <a href="arimax.html#predict">[1]</a>, <a href="dar.html#predict">[2]</a>, <a href="egarch.html#predict">[3]</a>, <a href="egarchm.html#predict">[4]</a>, <a href="egarchmreg.html#predict">[5]</a>, <a href="garch.html#predict">[6]</a>, <a href="gas.html#predict">[7]</a>, <a href="gasreg.html#predict">[8]</a>, <a href="gasx.html#predict">[9]</a>, <a href="gpnar.html#predict">[10]</a>, <a href="lmegarch.html#predict">[11]</a>, <a href="ngssm.html#predict">[12]</a>, <a href="segarch.html#predict">[13]</a>, <a href="segarchm.html#predict">[14]</a>, <a href="ssm.html#predict">[15]</a>, <a href="var.html#predict">[16]</a>
-  </dt>
-
-      
-  <dt><a href="arima.html#predict_is">predict_is() (built-in function)</a>, <a href="arimax.html#predict_is">[1]</a>, <a href="dar.html#predict_is">[2]</a>, <a href="egarch.html#predict_is">[3]</a>, <a href="egarchm.html#predict_is">[4]</a>, <a href="egarchmreg.html#predict_is">[5]</a>, <a href="garch.html#predict_is">[6]</a>, <a href="gas.html#predict_is">[7]</a>, <a href="gasreg.html#predict_is">[8]</a>, <a href="gasx.html#predict_is">[9]</a>, <a href="gpnar.html#predict_is">[10]</a>, <a href="lmegarch.html#predict_is">[11]</a>, <a href="ngssm.html#predict_is">[12]</a>, <a href="segarch.html#predict_is">[13]</a>, <a href="segarchm.html#predict_is">[14]</a>, <a href="ssm.html#predict_is">[15]</a>, <a href="var.html#predict_is">[16]</a>
-  </dt>
-
-  </dl></td>
-</tr></table>
-
-<h2 id="Q">Q</h2>
-<table style="width: 100%" class="indextable genindextable"><tr>
-  <td style="width: 33%" valign="top"><dl>
-      
-  <dt><a href="egarch.html#EGARCH.q">q (EGARCH attribute)</a>
+  <dt><a href="arima.html#ARIMA.plot_ppc">plot_ppc() (ARIMA method)</a>
   </dt>
 
       <dd><dl>
         
-  <dt><a href="egarchm.html#EGARCHM.q">(EGARCHM attribute)</a>
+  <dt><a href="arimax.html#ARIMAX.plot_ppc">(ARIMAX method)</a>
   </dt>
 
         
-  <dt><a href="egarchmreg.html#EGARCHMReg.q">(EGARCHMReg attribute)</a>
+  <dt><a href="egarch.html#EGARCH.plot_ppc">(EGARCH method)</a>
   </dt>
 
         
-  <dt><a href="garch.html#GARCH.q">(GARCH attribute)</a>
+  <dt><a href="egarchm.html#EGARCHM.plot_ppc">(EGARCHM method)</a>
   </dt>
 
         
-  <dt><a href="lmegarch.html#LMEGARCH.q">(LMEGARCH attribute)</a>
+  <dt><a href="egarchmreg.html#EGARCHMReg.plot_ppc">(EGARCHMReg method)</a>
   </dt>
 
         
-  <dt><a href="segarch.html#SEGARCH.q">(SEGARCH attribute)</a>
+  <dt><a href="garch.html#GARCH.plot_ppc">(GARCH method)</a>
   </dt>
 
         
-  <dt><a href="segarchm.html#SEGARCHM.q">(SEGARCHM attribute)</a>
+  <dt><a href="gas.html#GAS.plot_ppc">(GAS method)</a>
+  </dt>
+
+        
+  <dt><a href="gas_llm.html#GASLLEV.plot_ppc">(GASLLEV method)</a>
+  </dt>
+
+        
+  <dt><a href="gas_llt.html#GASLLT.plot_ppc">(GASLLT method)</a>
+  </dt>
+
+        
+  <dt><a href="gas_reg.html#GASReg.plot_ppc">(GASReg method)</a>
+  </dt>
+
+        
+  <dt><a href="gasx.html#GASX.plot_ppc">(GASX method)</a>
+  </dt>
+
+        
+  <dt><a href="lmegarch.html#LMGARCHM.plot_ppc">(LMGARCHM method)</a>
+  </dt>
+
+        
+  <dt><a href="segarch.html#SEGARCH.plot_ppc">(SEGARCH method)</a>
+  </dt>
+
+        
+  <dt><a href="segarchm.html#SEGARCHM.plot_ppc">(SEGARCHM method)</a>
+  </dt>
+
+      </dl></dd>
+      
+  <dt><a href="arima.html#ARIMA.plot_predict">plot_predict() (ARIMA method)</a>
+  </dt>
+
+      <dd><dl>
+        
+  <dt><a href="arimax.html#ARIMAX.plot_predict">(ARIMAX method)</a>
+  </dt>
+
+        
+  <dt><a href="egarch.html#EGARCH.plot_predict">(EGARCH method)</a>
+  </dt>
+
+        
+  <dt><a href="egarchm.html#EGARCHM.plot_predict">(EGARCHM method)</a>
+  </dt>
+
+        
+  <dt><a href="egarchmreg.html#EGARCHMReg.plot_predict">(EGARCHMReg method)</a>
+  </dt>
+
+        
+  <dt><a href="garch.html#GARCH.plot_predict">(GARCH method)</a>
+  </dt>
+
+        
+  <dt><a href="gas.html#GAS.plot_predict">(GAS method)</a>
+  </dt>
+
+        
+  <dt><a href="gas_llm.html#GASLLEV.plot_predict">(GASLLEV method)</a>
+  </dt>
+
+        
+  <dt><a href="gas_llt.html#GASLLT.plot_predict">(GASLLT method)</a>
+  </dt>
+
+        
+  <dt><a href="gas_reg.html#GASReg.plot_predict">(GASReg method)</a>
+  </dt>
+
+        
+  <dt><a href="gasx.html#GASX.plot_predict">(GASX method)</a>
+  </dt>
+
+        
+  <dt><a href="lmegarch.html#LMGARCHM.plot_predict">(LMGARCHM method)</a>
+  </dt>
+
+        
+  <dt><a href="segarch.html#SEGARCH.plot_predict">(SEGARCH method)</a>
+  </dt>
+
+        
+  <dt><a href="segarchm.html#SEGARCHM.plot_predict">(SEGARCHM method)</a>
+  </dt>
+
+        
+  <dt><a href="dar.html#plot_predict">(built-in function)</a>, <a href="gasssm.html#plot_predict">[1]</a>, <a href="gpnar.html#plot_predict">[2]</a>, <a href="ngssm.html#plot_predict">[3]</a>, <a href="ssm.html#plot_predict">[4]</a>, <a href="var.html#plot_predict">[5]</a>
+  </dt>
+
+      </dl></dd>
+      
+  <dt><a href="arima.html#ARIMA.plot_predict_is">plot_predict_is() (ARIMA method)</a>
+  </dt>
+
+      <dd><dl>
+        
+  <dt><a href="arimax.html#ARIMAX.plot_predict_is">(ARIMAX method)</a>
+  </dt>
+
+        
+  <dt><a href="egarch.html#EGARCH.plot_predict_is">(EGARCH method)</a>
+  </dt>
+
+        
+  <dt><a href="egarchm.html#EGARCHM.plot_predict_is">(EGARCHM method)</a>
+  </dt>
+
+        
+  <dt><a href="egarchmreg.html#EGARCHMReg.plot_predict_is">(EGARCHMReg method)</a>
+  </dt>
+
+        
+  <dt><a href="garch.html#GARCH.plot_predict_is">(GARCH method)</a>
+  </dt>
+
+        
+  <dt><a href="gas.html#GAS.plot_predict_is">(GAS method)</a>
+  </dt>
+
+        
+  <dt><a href="gas_llm.html#GASLLEV.plot_predict_is">(GASLLEV method)</a>
+  </dt>
+
+        
+  <dt><a href="gas_llt.html#GASLLT.plot_predict_is">(GASLLT method)</a>
+  </dt>
+
+        
+  <dt><a href="gas_reg.html#GASReg.plot_predict_is">(GASReg method)</a>
+  </dt>
+
+        
+  <dt><a href="gasx.html#GASX.plot_predict_is">(GASX method)</a>
+  </dt>
+
+        
+  <dt><a href="lmegarch.html#LMGARCHM.plot_predict_is">(LMGARCHM method)</a>
+  </dt>
+
+        
+  <dt><a href="segarch.html#SEGARCH.plot_predict_is">(SEGARCH method)</a>
+  </dt>
+
+        
+  <dt><a href="segarchm.html#SEGARCHM.plot_predict_is">(SEGARCHM method)</a>
+  </dt>
+
+        
+  <dt><a href="dar.html#plot_predict_is">(built-in function)</a>, <a href="gasssm.html#plot_predict_is">[1]</a>, <a href="gpnar.html#plot_predict_is">[2]</a>, <a href="ngssm.html#plot_predict_is">[3]</a>, <a href="ssm.html#plot_predict_is">[4]</a>, <a href="var.html#plot_predict_is">[5]</a>
+  </dt>
+
+      </dl></dd>
+  </dl></td>
+  <td style="width: 33%" valign="top"><dl>
+      
+  <dt><a href="arima.html#ARIMA.plot_sample">plot_sample() (ARIMA method)</a>
+  </dt>
+
+      <dd><dl>
+        
+  <dt><a href="arimax.html#ARIMAX.plot_sample">(ARIMAX method)</a>
+  </dt>
+
+        
+  <dt><a href="egarch.html#EGARCH.plot_sample">(EGARCH method)</a>
+  </dt>
+
+        
+  <dt><a href="egarchm.html#EGARCHM.plot_sample">(EGARCHM method)</a>
+  </dt>
+
+        
+  <dt><a href="egarchmreg.html#EGARCHMReg.plot_sample">(EGARCHMReg method)</a>
+  </dt>
+
+        
+  <dt><a href="garch.html#GARCH.plot_sample">(GARCH method)</a>
+  </dt>
+
+        
+  <dt><a href="gas.html#GAS.plot_sample">(GAS method)</a>
+  </dt>
+
+        
+  <dt><a href="gas_llm.html#GASLLEV.plot_sample">(GASLLEV method)</a>
+  </dt>
+
+        
+  <dt><a href="gas_llt.html#GASLLT.plot_sample">(GASLLT method)</a>
+  </dt>
+
+        
+  <dt><a href="gas_reg.html#GASReg.plot_sample">(GASReg method)</a>
+  </dt>
+
+        
+  <dt><a href="gasx.html#GASX.plot_sample">(GASX method)</a>
+  </dt>
+
+        
+  <dt><a href="lmegarch.html#LMGARCHM.plot_sample">(LMGARCHM method)</a>
+  </dt>
+
+        
+  <dt><a href="segarch.html#SEGARCH.plot_sample">(SEGARCH method)</a>
+  </dt>
+
+        
+  <dt><a href="segarchm.html#SEGARCHM.plot_sample">(SEGARCHM method)</a>
+  </dt>
+
+      </dl></dd>
+      
+  <dt><a href="arima.html#ARIMA.plot_z">plot_z() (ARIMA method)</a>
+  </dt>
+
+      <dd><dl>
+        
+  <dt><a href="arimax.html#ARIMAX.plot_z">(ARIMAX method)</a>
+  </dt>
+
+        
+  <dt><a href="egarch.html#EGARCH.plot_z">(EGARCH method)</a>
+  </dt>
+
+        
+  <dt><a href="egarchm.html#EGARCHM.plot_z">(EGARCHM method)</a>
+  </dt>
+
+        
+  <dt><a href="egarchmreg.html#EGARCHMReg.plot_z">(EGARCHMReg method)</a>
+  </dt>
+
+        
+  <dt><a href="garch.html#GARCH.plot_z">(GARCH method)</a>
+  </dt>
+
+        
+  <dt><a href="gas.html#GAS.plot_z">(GAS method)</a>
+  </dt>
+
+        
+  <dt><a href="gas_llm.html#GASLLEV.plot_z">(GASLLEV method)</a>
+  </dt>
+
+        
+  <dt><a href="gas_llt.html#GASLLT.plot_z">(GASLLT method)</a>
+  </dt>
+
+        
+  <dt><a href="gas_rank.html#GASRank.plot_z">(GASRank method)</a>
+  </dt>
+
+        
+  <dt><a href="gas_reg.html#GASReg.plot_z">(GASReg method)</a>
+  </dt>
+
+        
+  <dt><a href="gasx.html#GASX.plot_z">(GASX method)</a>
+  </dt>
+
+        
+  <dt><a href="lmegarch.html#LMGARCHM.plot_z">(LMGARCHM method)</a>
+  </dt>
+
+        
+  <dt><a href="segarch.html#SEGARCH.plot_z">(SEGARCH method)</a>
+  </dt>
+
+        
+  <dt><a href="segarchm.html#SEGARCHM.plot_z">(SEGARCHM method)</a>
+  </dt>
+
+        
+  <dt><a href="dar.html#plot_z">(built-in function)</a>, <a href="gasssm.html#plot_z">[1]</a>, <a href="gpnar.html#plot_z">[2]</a>, <a href="var.html#plot_z">[3]</a>
+  </dt>
+
+      </dl></dd>
+      
+  <dt><a href="arima.html#ARIMA.ppc">ppc() (ARIMA method)</a>
+  </dt>
+
+      <dd><dl>
+        
+  <dt><a href="arimax.html#ARIMAX.ppc">(ARIMAX method)</a>
+  </dt>
+
+        
+  <dt><a href="egarch.html#EGARCH.ppc">(EGARCH method)</a>
+  </dt>
+
+        
+  <dt><a href="egarchm.html#EGARCHM.ppc">(EGARCHM method)</a>
+  </dt>
+
+        
+  <dt><a href="egarchmreg.html#EGARCHMReg.ppc">(EGARCHMReg method)</a>
+  </dt>
+
+        
+  <dt><a href="garch.html#GARCH.ppc">(GARCH method)</a>
+  </dt>
+
+        
+  <dt><a href="gas.html#GAS.ppc">(GAS method)</a>
+  </dt>
+
+        
+  <dt><a href="gas_llm.html#GASLLEV.ppc">(GASLLEV method)</a>
+  </dt>
+
+        
+  <dt><a href="gas_llt.html#GASLLT.ppc">(GASLLT method)</a>
+  </dt>
+
+        
+  <dt><a href="gas_reg.html#GASReg.ppc">(GASReg method)</a>
+  </dt>
+
+        
+  <dt><a href="gasx.html#GASX.ppc">(GASX method)</a>
+  </dt>
+
+        
+  <dt><a href="lmegarch.html#LMGARCHM.ppc">(LMGARCHM method)</a>
+  </dt>
+
+        
+  <dt><a href="segarch.html#SEGARCH.ppc">(SEGARCH method)</a>
+  </dt>
+
+        
+  <dt><a href="segarchm.html#SEGARCHM.ppc">(SEGARCHM method)</a>
+  </dt>
+
+      </dl></dd>
+      
+  <dt><a href="arima.html#ARIMA.predict">predict() (ARIMA method)</a>
+  </dt>
+
+      <dd><dl>
+        
+  <dt><a href="arimax.html#ARIMAX.predict">(ARIMAX method)</a>
+  </dt>
+
+        
+  <dt><a href="egarch.html#EGARCH.predict">(EGARCH method)</a>
+  </dt>
+
+        
+  <dt><a href="egarchm.html#EGARCHM.predict">(EGARCHM method)</a>
+  </dt>
+
+        
+  <dt><a href="egarchmreg.html#EGARCHMReg.predict">(EGARCHMReg method)</a>
+  </dt>
+
+        
+  <dt><a href="garch.html#GARCH.predict">(GARCH method)</a>
+  </dt>
+
+        
+  <dt><a href="gas.html#GAS.predict">(GAS method)</a>
+  </dt>
+
+        
+  <dt><a href="gas_llm.html#GASLLEV.predict">(GASLLEV method)</a>
+  </dt>
+
+        
+  <dt><a href="gas_llt.html#GASLLT.predict">(GASLLT method)</a>
+  </dt>
+
+        
+  <dt><a href="gas_rank.html#GASRank.predict">(GASRank method)</a>
+  </dt>
+
+        
+  <dt><a href="gas_reg.html#GASReg.predict">(GASReg method)</a>
+  </dt>
+
+        
+  <dt><a href="gasx.html#GASX.predict">(GASX method)</a>
+  </dt>
+
+        
+  <dt><a href="lmegarch.html#LMGARCHM.predict">(LMGARCHM method)</a>
+  </dt>
+
+        
+  <dt><a href="segarch.html#SEGARCH.predict">(SEGARCH method)</a>
+  </dt>
+
+        
+  <dt><a href="segarchm.html#SEGARCHM.predict">(SEGARCHM method)</a>
+  </dt>
+
+        
+  <dt><a href="dar.html#predict">(built-in function)</a>, <a href="gasssm.html#predict">[1]</a>, <a href="gpnar.html#predict">[2]</a>, <a href="ngssm.html#predict">[3]</a>, <a href="ssm.html#predict">[4]</a>, <a href="var.html#predict">[5]</a>
+  </dt>
+
+      </dl></dd>
+      
+  <dt><a href="arima.html#ARIMA.predict_is">predict_is() (ARIMA method)</a>
+  </dt>
+
+      <dd><dl>
+        
+  <dt><a href="arimax.html#ARIMAX.predict_is">(ARIMAX method)</a>
+  </dt>
+
+        
+  <dt><a href="egarch.html#EGARCH.predict_is">(EGARCH method)</a>
+  </dt>
+
+        
+  <dt><a href="egarchm.html#EGARCHM.predict_is">(EGARCHM method)</a>
+  </dt>
+
+        
+  <dt><a href="egarchmreg.html#EGARCHMReg.predict_is">(EGARCHMReg method)</a>
+  </dt>
+
+        
+  <dt><a href="garch.html#GARCH.predict_is">(GARCH method)</a>
+  </dt>
+
+        
+  <dt><a href="gas.html#GAS.predict_is">(GAS method)</a>
+  </dt>
+
+        
+  <dt><a href="gas_llm.html#GASLLEV.predict_is">(GASLLEV method)</a>
+  </dt>
+
+        
+  <dt><a href="gas_llt.html#GASLLT.predict_is">(GASLLT method)</a>
+  </dt>
+
+        
+  <dt><a href="gas_reg.html#GASReg.predict_is">(GASReg method)</a>
+  </dt>
+
+        
+  <dt><a href="gasx.html#GASX.predict_is">(GASX method)</a>
+  </dt>
+
+        
+  <dt><a href="lmegarch.html#LMGARCHM.predict_is">(LMGARCHM method)</a>
+  </dt>
+
+        
+  <dt><a href="segarch.html#SEGARCH.predict_is">(SEGARCH method)</a>
+  </dt>
+
+        
+  <dt><a href="segarchm.html#SEGARCHM.predict_is">(SEGARCHM method)</a>
+  </dt>
+
+        
+  <dt><a href="dar.html#predict_is">(built-in function)</a>, <a href="gasssm.html#predict_is">[1]</a>, <a href="gpnar.html#predict_is">[2]</a>, <a href="ngssm.html#predict_is">[3]</a>, <a href="ssm.html#predict_is">[4]</a>, <a href="var.html#predict_is">[5]</a>
   </dt>
 
       </dl></dd>
@@ -688,12 +1299,60 @@
 <table style="width: 100%" class="indextable genindextable"><tr>
   <td style="width: 33%" valign="top"><dl>
       
-  <dt><a href="gas.html#GAS.sc">sc (GAS attribute)</a>
+  <dt><a href="arima.html#ARIMA.sample">sample() (ARIMA method)</a>
   </dt>
 
       <dd><dl>
         
-  <dt><a href="gasx.html#GASX.sc">(GASX attribute)</a>
+  <dt><a href="arimax.html#ARIMAX.sample">(ARIMAX method)</a>
+  </dt>
+
+        
+  <dt><a href="egarch.html#EGARCH.sample">(EGARCH method)</a>
+  </dt>
+
+        
+  <dt><a href="egarchm.html#EGARCHM.sample">(EGARCHM method)</a>
+  </dt>
+
+        
+  <dt><a href="egarchmreg.html#EGARCHMReg.sample">(EGARCHMReg method)</a>
+  </dt>
+
+        
+  <dt><a href="garch.html#GARCH.sample">(GARCH method)</a>
+  </dt>
+
+        
+  <dt><a href="gas.html#GAS.sample">(GAS method)</a>
+  </dt>
+
+        
+  <dt><a href="gas_llm.html#GASLLEV.sample">(GASLLEV method)</a>
+  </dt>
+
+        
+  <dt><a href="gas_llt.html#GASLLT.sample">(GASLLT method)</a>
+  </dt>
+
+        
+  <dt><a href="gas_reg.html#GASReg.sample">(GASReg method)</a>
+  </dt>
+
+        
+  <dt><a href="gasx.html#GASX.sample">(GASX method)</a>
+  </dt>
+
+        
+  <dt><a href="lmegarch.html#LMGARCHM.sample">(LMGARCHM method)</a>
+  </dt>
+
+        
+  <dt><a href="segarch.html#SEGARCH.sample">(SEGARCH method)</a>
+  </dt>
+
+        
+  <dt><a href="segarchm.html#SEGARCHM.sample">(SEGARCHM method)</a>
   </dt>
 
       </dl></dd>
@@ -711,6 +1370,12 @@
   <dt><a href="bayes.html#Normal.sigma0">sigma0 (Normal attribute)</a>
   </dt>
 
+      <dd><dl>
+        
+  <dt><a href="bayes.html#TruncatedNormal.sigma0">(TruncatedNormal attribute)</a>
+  </dt>
+
+      </dl></dd>
       
   <dt><a href="ngssm.html#simulation_smoother">simulation_smoother() (built-in function)</a>, <a href="ssm.html#simulation_smoother">[1]</a>
   </dt>
@@ -722,32 +1387,16 @@
 <table style="width: 100%" class="indextable genindextable"><tr>
   <td style="width: 33%" valign="top"><dl>
       
-  <dt><a href="arima.html#ARIMA.target">target (ARIMA attribute)</a>
+  <dt><a href="dar.html#DAR.target">target (DAR attribute)</a>
   </dt>
 
       <dd><dl>
         
-  <dt><a href="dar.html#DAR.target">(DAR attribute)</a>
+  <dt><a href="gasssm.html#GASLLEV.target">(GASLLEV attribute)</a>
   </dt>
 
         
-  <dt><a href="egarch.html#EGARCH.target">(EGARCH attribute)</a>
-  </dt>
-
-        
-  <dt><a href="egarchm.html#EGARCHM.target">(EGARCHM attribute)</a>
-  </dt>
-
-        
-  <dt><a href="garch.html#GARCH.target">(GARCH attribute)</a>
-  </dt>
-
-        
-  <dt><a href="gas.html#GAS.target">(GAS attribute)</a>
-  </dt>
-
-        
-  <dt><a href="gasx.html#GASX.target">(GASX attribute)</a>
+  <dt><a href="gasssm.html#GASLLT.target">(GASLLT attribute)</a>
   </dt>
 
         
@@ -763,10 +1412,6 @@
   </dt>
 
         
-  <dt><a href="lmegarch.html#LMEGARCH.target">(LMEGARCH attribute)</a>
-  </dt>
-
-        
   <dt><a href="ngssm.html#NLLEV.target">(NLLEV attribute)</a>
   </dt>
 
@@ -775,20 +1420,10 @@
   </dt>
 
         
-  <dt><a href="segarch.html#SEGARCH.target">(SEGARCH attribute)</a>
-  </dt>
-
-        
-  <dt><a href="segarchm.html#SEGARCHM.target">(SEGARCHM attribute)</a>
-  </dt>
-
-        
   <dt><a href="var.html#VAR.target">(VAR attribute)</a>
   </dt>
 
       </dl></dd>
-  </dl></td>
-  <td style="width: 33%" valign="top"><dl>
       
   <dt><a href="bayes.html#InverseGamma.transform">transform (InverseGamma attribute)</a>
   </dt>
@@ -799,10 +1434,20 @@
   </dt>
 
         
+  <dt><a href="bayes.html#TruncatedNormal.transform">(TruncatedNormal attribute)</a>
+  </dt>
+
+        
   <dt><a href="bayes.html#Uniform.transform">(Uniform attribute)</a>
   </dt>
 
       </dl></dd>
+  </dl></td>
+  <td style="width: 33%" valign="top"><dl>
+      
+  <dt><a href="bayes.html#TruncatedNormal">TruncatedNormal (built-in class)</a>
+  </dt>
+
   </dl></td>
 </tr></table>
 
@@ -859,7 +1504,7 @@
     <script type="text/javascript">
         var DOCUMENTATION_OPTIONS = {
             URL_ROOT:'./',
-            VERSION:'0.3.7',
+            VERSION:'0.4.0',
             COLLAPSE_INDEX:false,
             FILE_SUFFIX:'.html',
             HAS_SOURCE:  true

@@ -1,0 +1,462 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>Introduction &mdash; PyFlux 0.4.0 documentation</title>
+  
+
+  
+  
+
+  
+
+  
+  
+    
+
+  
+
+  
+  
+    <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
+  
+
+  
+
+  
+    <link rel="top" title="PyFlux 0.4.0 documentation" href="index.html"/> 
+
+  
+  <script src="_static/js/modernizr.min.js"></script>
+
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search">
+          
+
+          
+            <a href="index.html" class="icon icon-home"> PyFlux
+          
+
+          
+          </a>
+
+          
+            
+            
+              <div class="version">
+                0.4
+              </div>
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+                <ul>
+<li class="toctree-l1"><a class="reference internal" href="getting_started.html">Getting Started with Time Series</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="arima.html">ARIMA models</a></li>
+<li class="toctree-l1"><a class="reference internal" href="arimax.html">ARIMAX models</a></li>
+<li class="toctree-l1"><a class="reference internal" href="dar.html">DAR models</a></li>
+<li class="toctree-l1"><a class="reference internal" href="egarch.html">Beta-t-EGARCH models</a></li>
+<li class="toctree-l1"><a class="reference internal" href="egarchm.html">Beta-t-EGARCH in-mean models</a></li>
+<li class="toctree-l1"><a class="reference internal" href="egarchmreg.html">Beta-t-EGARCH-in-mean regression models</a></li>
+<li class="toctree-l1"><a class="reference internal" href="lmegarch.html">Beta-t-EGARCH Long Memory models</a></li>
+<li class="toctree-l1"><a class="reference internal" href="garch.html">GARCH models</a></li>
+<li class="toctree-l1"><a class="reference internal" href="segarch.html">Skew-t EGARCH models</a></li>
+<li class="toctree-l1"><a class="reference internal" href="segarchm.html">Skew-t EGARCH in-mean models</a></li>
+<li class="toctree-l1"><a class="reference internal" href="gas.html">GAS models</a></li>
+<li class="toctree-l1"><a class="reference internal" href="gasreg.html">GAS Regression models</a></li>
+<li class="toctree-l1"><a class="reference internal" href="gasssm.html">GAS State Space models</a></li>
+<li class="toctree-l1"><a class="reference internal" href="gasx.html">GASX models</a></li>
+<li class="toctree-l1"><a class="reference internal" href="gpnar.html">GP-NARX models</a></li>
+<li class="toctree-l1"><a class="reference internal" href="ssm.html">Gaussian State Space models</a></li>
+<li class="toctree-l1"><a class="reference internal" href="ngssm.html">Non-Gaussian State Space models</a></li>
+<li class="toctree-l1"><a class="reference internal" href="var.html">VAR models</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="bayes.html">Bayesian Inference</a></li>
+<li class="toctree-l1"><a class="reference internal" href="classical.html">Classical Inference</a></li>
+</ul>
+
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" role="navigation" aria-label="top navigation">
+        <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+        <a href="index.html">PyFlux</a>
+      </nav>
+
+
+      
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          
+
+ 
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href="index.html">Docs</a> &raquo;</li>
+      
+    <li>Introduction</li>
+      <li class="wy-breadcrumbs-aside">
+        
+          
+            <a href="_sources/introduction.txt" rel="nofollow"> View page source</a>
+          
+        
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <div class="section" id="introduction">
+<h1>Introduction<a class="headerlink" href="#introduction" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="what-is-pyflux">
+<h2>What is PyFlux?<a class="headerlink" href="#what-is-pyflux" title="Permalink to this headline">¶</a></h2>
+<p>PyFlux is a library for time series analysis and prediction. Users can choose from a flexible range of modelling and inference options, and use the output for forecasting and retrospection. Users can build a full probabilistic model where the data <span class="math">\(y\)</span> and latent variables (parameters) <span class="math">\(z\)</span> are treated as random variables through a joint probability <span class="math">\(p\left(y,z\right)\)</span>. The advantage of a probabilistic approach is that it gives a more complete picture of uncertainty, which is important for time series tasks such as forecasting. Alternatively, for speed, users can simply use Maximum Likelihood estimation for speed within the same unified API.</p>
+</div>
+<div class="section" id="installation">
+<h2>Installation<a class="headerlink" href="#installation" title="Permalink to this headline">¶</a></h2>
+<p>The latest release version of PyFlux is available on PyPi. Python 2.7 and Python 3.5 are supported, but development occurs primarily on 3.5. To install <code class="docutils literal"><span class="pre">pyflux</span></code>, simply call <code class="docutils literal"><span class="pre">pip</span></code>:</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="n">pip</span> <span class="n">install</span> <span class="n">pyflux</span>
+</pre></div>
+</div>
+<p>PyFlux requires a number of dependencies, in particular <code class="docutils literal"><span class="pre">numpy</span></code>, <code class="docutils literal"><span class="pre">pandas</span></code>, <code class="docutils literal"><span class="pre">scipy</span></code>, <code class="docutils literal"><span class="pre">patsy</span></code>, <code class="docutils literal"><span class="pre">matplotlib</span></code>, <code class="docutils literal"><span class="pre">numdifftools</span></code> and <code class="docutils literal"><span class="pre">seaborn</span></code>.</p>
+<p>The development code can be accessed on <a class="reference external" href="http://www.github.com/RJT1990/pyflux">GitHub</a>. The project is open source, and contributions are welcome and encouraged. We also encourage you to check out other modelling libraries written in Python including <code class="docutils literal"><span class="pre">pymc3</span></code>, <code class="docutils literal"><span class="pre">edward</span></code> and <code class="docutils literal"><span class="pre">statsmodels</span></code>.</p>
+</div>
+<div class="section" id="application-interface">
+<h2>Application Interface<a class="headerlink" href="#application-interface" title="Permalink to this headline">¶</a></h2>
+<p>The PyFlux API is designed to be as clear and concise as possible, meaning it takes a minimal number of steps to conduct the model building process. The high-level outline is detailed below.</p>
+<p>The first step is to <strong>create a model instance</strong>, where the main arguments are (i) a data input, such as a pandas dataframe, (ii) design parameters, such as autoregressive lags for an ARIMA model, and (iii) a family, which specifies the distribution of the modelled time series, such as a Normal distribution.</p>
+<img alt="http://www.pyflux.com/welcome_pack/introduction/model_api_1.png" class="align-center" src="http://www.pyflux.com/welcome_pack/introduction/model_api_1.png" />
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="n">my_model</span> <span class="o">=</span> <span class="n">pf</span><span class="o">.</span><span class="n">ARIMA</span><span class="p">(</span><span class="n">data</span><span class="o">=</span><span class="n">my_dataframe</span><span class="p">,</span> <span class="n">ar</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">ma</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">family</span><span class="o">=</span><span class="n">pf</span><span class="o">.</span><span class="n">Normal</span><span class="p">())</span>
+</pre></div>
+</div>
+<p>The second step is <strong>prior formation</strong>, which involves specifying a family for each latent variable in the model using the <code class="docutils literal"><span class="pre">adjust_prior</span></code> method, for example we can a prior for the constant in the ARIMA model <span class="math">\(N\left(0,10\right)\)</span>. The latent variables can be viewed by printing the <code class="docutils literal"><span class="pre">latent_variables</span></code> object attached to the model. Prior formation be ignored if the user is intending to just do Maximum Likelihood.</p>
+<img alt="http://www.pyflux.com/welcome_pack/introduction/model_api_2.png" class="align-center" src="http://www.pyflux.com/welcome_pack/introduction/model_api_2.png" />
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="nb">print</span><span class="p">(</span><span class="n">my_model</span><span class="o">.</span><span class="n">latent_variables</span><span class="p">)</span>
+
+<span class="n">Index</span>    <span class="n">Latent</span> <span class="n">Variable</span>     <span class="n">Prior</span>           <span class="n">Prior</span> <span class="n">Hyperparameters</span>     <span class="n">V</span><span class="o">.</span><span class="n">I</span><span class="o">.</span> <span class="n">Dist</span>  <span class="n">Transform</span>
+<span class="o">========</span> <span class="o">===================</span> <span class="o">===============</span> <span class="o">=========================</span> <span class="o">==========</span> <span class="o">==========</span>
+<span class="mi">0</span>        <span class="n">Constant</span>            <span class="n">Normal</span>          <span class="n">mu0</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span> <span class="n">sigma0</span><span class="p">:</span> <span class="mi">3</span>         <span class="n">Normal</span>     <span class="kc">None</span>
+<span class="mi">1</span>        <span class="n">AR</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>               <span class="n">Normal</span>          <span class="n">mu0</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span> <span class="n">sigma0</span><span class="p">:</span> <span class="mf">0.5</span>       <span class="n">Normal</span>     <span class="kc">None</span>
+<span class="mi">2</span>        <span class="n">AR</span><span class="p">(</span><span class="mi">2</span><span class="p">)</span>               <span class="n">Normal</span>          <span class="n">mu0</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span> <span class="n">sigma0</span><span class="p">:</span> <span class="mf">0.5</span>       <span class="n">Normal</span>     <span class="kc">None</span>
+<span class="mi">3</span>        <span class="n">Normal</span> <span class="n">Scale</span>        <span class="n">Flat</span>            <span class="n">n</span><span class="o">/</span><span class="n">a</span> <span class="p">(</span><span class="n">noninformative</span><span class="p">)</span>      <span class="n">Normal</span>     <span class="n">exp</span>
+
+<span class="n">my_model</span><span class="o">.</span><span class="n">adjust_prior</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">pf</span><span class="o">.</span><span class="n">Normal</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">))</span>
+
+<span class="nb">print</span><span class="p">(</span><span class="n">my_model</span><span class="o">.</span><span class="n">latent_variables</span><span class="p">)</span>
+
+<span class="n">Index</span>    <span class="n">Latent</span> <span class="n">Variable</span>     <span class="n">Prior</span>           <span class="n">Prior</span> <span class="n">Hyperparameters</span>     <span class="n">V</span><span class="o">.</span><span class="n">I</span><span class="o">.</span> <span class="n">Dist</span>  <span class="n">Transform</span>
+<span class="o">========</span> <span class="o">===================</span> <span class="o">===============</span> <span class="o">=========================</span> <span class="o">==========</span> <span class="o">==========</span>
+<span class="mi">0</span>        <span class="n">Constant</span>            <span class="n">Normal</span>          <span class="n">mu0</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span> <span class="n">sigma0</span><span class="p">:</span> <span class="mi">10</span>        <span class="n">Normal</span>     <span class="kc">None</span>
+<span class="mi">1</span>        <span class="n">AR</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>               <span class="n">Normal</span>          <span class="n">mu0</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span> <span class="n">sigma0</span><span class="p">:</span> <span class="mf">0.5</span>       <span class="n">Normal</span>     <span class="kc">None</span>
+<span class="mi">2</span>        <span class="n">AR</span><span class="p">(</span><span class="mi">2</span><span class="p">)</span>               <span class="n">Normal</span>          <span class="n">mu0</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span> <span class="n">sigma0</span><span class="p">:</span> <span class="mf">0.5</span>       <span class="n">Normal</span>     <span class="kc">None</span>
+<span class="mi">3</span>        <span class="n">Normal</span> <span class="n">Scale</span>        <span class="n">Flat</span>            <span class="n">n</span><span class="o">/</span><span class="n">a</span> <span class="p">(</span><span class="n">noninformative</span><span class="p">)</span>      <span class="n">Normal</span>     <span class="n">exp</span>
+</pre></div>
+</div>
+<p>The third step is <strong>model fitting (or inference)</strong>, which involves using a <code class="docutils literal"><span class="pre">fit</span></code> method, specifying an inference option. Current options include Maximum Likelihood (MLE), Metropolis-Hastings (M-H), and black box variational inference (BBVI). Once complete, the model latent variable information will be updated, and the user can proceed to the post fitting methods.</p>
+<img alt="http://www.pyflux.com/welcome_pack/introduction/model_api_3.png" class="align-center" src="http://www.pyflux.com/welcome_pack/introduction/model_api_3.png" />
+<div class="highlight-default"><div class="highlight"><pre><span></span>x = my_model.fit(&#39;M-H&#39;)
+Tuning complete! Now sampling.
+Acceptance rate of Metropolis-Hastings is 0.2915
+
+x.summary()
+Normal ARIMA(2,0,0)
+======================================== ==================================================
+Dependent Variable: sunspot.year         Method: Metropolis Hastings
+Start Date: 1702                         Unnormalized Log Posterior: -1219.7028
+End Date: 1988                           AIC: 2447.40563132
+Number of observations: 287              BIC: 2462.04356018
+===========================================================================================
+Latent Variable           Median             Mean               95% Credibility Interval
+========================= ================== ================== =========================
+Constant                  14.6129            14.5537            (11.8099 | 17.1807)
+AR(1)                     1.3790             1.3796             (1.3105 | 1.4517)
+AR(2)                     -0.6762            -0.6774            (-0.7484 | -0.6072)
+Normal Scale              16.6720            16.6551            (15.5171 | 17.8696)
+===========================================================================================
+</pre></div>
+</div>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="n">my_model</span><span class="o">.</span><span class="n">plot_z</span><span class="p">(</span><span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">15</span><span class="p">,</span> <span class="mi">7</span><span class="p">))</span>
+</pre></div>
+</div>
+<img alt="http://www.pyflux.com/welcome_pack/introduction/output_6_1.png" class="align-center" src="http://www.pyflux.com/welcome_pack/introduction/output_6_1.png" />
+<p>The fourth step is <strong>model evaluation</strong>, <strong>retrospection</strong> and <strong>prediction</strong>. Once the model has been fit, the user can look at historical fit, criticize with posterior predictive checks, predict out of sample, and perform a range of other tasks for their model.</p>
+<img alt="http://www.pyflux.com/welcome_pack/introduction/model_api_4.png" class="align-center" src="http://www.pyflux.com/welcome_pack/introduction/model_api_4.png" />
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="c1"># Some example tasks</span>
+<span class="n">my_model</span><span class="o">.</span><span class="n">plot_fit</span><span class="p">()</span> <span class="c1"># plots the fit of the model</span>
+<span class="n">my_model</span><span class="o">.</span><span class="n">plot_sample</span><span class="p">(</span><span class="n">nsims</span><span class="o">=</span><span class="mi">10</span><span class="p">)</span> <span class="c1"># draws samples from the model</span>
+<span class="n">my_model</span><span class="o">.</span><span class="n">plot_ppc</span><span class="p">(</span><span class="n">T</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">)</span> <span class="c1"># plots histogram of posterior predictive check for mean</span>
+<span class="n">my_model</span><span class="o">.</span><span class="n">plot_predict</span><span class="p">(</span><span class="n">h</span><span class="o">=</span><span class="mi">5</span><span class="p">)</span> <span class="c1"># plots predictions for next 5 time steps</span>
+<span class="n">my_model</span><span class="o">.</span><span class="n">plot_predict_is</span><span class="p">(</span><span class="n">h</span><span class="o">=</span><span class="mi">5</span><span class="p">)</span> <span class="c1"># plots rolling in-sample prediction for past 5 time steps</span>
+
+<span class="n">predictions</span> <span class="o">=</span> <span class="n">my_model</span><span class="o">.</span><span class="n">predict</span><span class="p">(</span><span class="n">h</span><span class="o">=</span><span class="mi">5</span><span class="p">,</span> <span class="n">intervals</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span> <span class="c1"># outputs dataframe of predictions</span>
+<span class="n">samples</span> <span class="o">=</span> <span class="n">my_model</span><span class="o">.</span><span class="n">sample</span><span class="p">(</span><span class="n">nsims</span><span class="o">=</span><span class="mi">10</span><span class="p">)</span> <span class="c1"># returns 10 samples from the data</span>
+<span class="n">ppc_pvalue</span> <span class="o">=</span> <span class="n">my_model</span><span class="o">.</span><span class="n">ppc</span><span class="p">(</span><span class="n">T</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">)</span> <span class="c1"># p-value for mean posterior predictive test</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="tutorials">
+<h2>Tutorials<a class="headerlink" href="#tutorials" title="Permalink to this headline">¶</a></h2>
+<p>Want to learn how to use this library? Check out these tutorials:</p>
+<div class="toctree-wrapper compound">
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="getting_started.html">Getting Started with Time Series</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="getting_started.html#introduction">Introduction</a></li>
+<li class="toctree-l2"><a class="reference internal" href="getting_started.html#step-one-visualize-the-data">Step One: Visualize the Data</a></li>
+<li class="toctree-l2"><a class="reference internal" href="getting_started.html#step-two-propose-a-model">Step Two: Propose a Model</a></li>
+<li class="toctree-l2"><a class="reference internal" href="getting_started.html#step-three-perform-inference">Step Three: Perform Inference</a></li>
+<li class="toctree-l2"><a class="reference internal" href="getting_started.html#step-four-evaluate-model-fit">Step Four: Evaluate Model Fit</a></li>
+<li class="toctree-l2"><a class="reference internal" href="getting_started.html#step-five-analyse-and-predict">Step Five: Analyse and Predict</a></li>
+<li class="toctree-l2"><a class="reference internal" href="getting_started.html#references">References</a></li>
+</ul>
+</li>
+</ul>
+</div>
+</div>
+<div class="section" id="model-guide">
+<h2>Model Guide<a class="headerlink" href="#model-guide" title="Permalink to this headline">¶</a></h2>
+<div class="toctree-wrapper compound">
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="arima.html">ARIMA models</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="arima.html#introduction">Introduction</a></li>
+<li class="toctree-l2"><a class="reference internal" href="arima.html#example">Example</a></li>
+<li class="toctree-l2"><a class="reference internal" href="arima.html#class-description">Class Description</a></li>
+<li class="toctree-l2"><a class="reference internal" href="arima.html#references">References</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="arimax.html">ARIMAX models</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="arimax.html#introduction">Introduction</a></li>
+<li class="toctree-l2"><a class="reference internal" href="arimax.html#example">Example</a></li>
+<li class="toctree-l2"><a class="reference internal" href="arimax.html#class-description">Class Description</a></li>
+<li class="toctree-l2"><a class="reference internal" href="arimax.html#references">References</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="dar.html">DAR models</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="dar.html#example">Example</a></li>
+<li class="toctree-l2"><a class="reference internal" href="dar.html#class-arguments">Class Arguments</a></li>
+<li class="toctree-l2"><a class="reference internal" href="dar.html#class-methods">Class Methods</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="egarch.html">Beta-t-EGARCH models</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="egarch.html#introduction">Introduction</a></li>
+<li class="toctree-l2"><a class="reference internal" href="egarch.html#developer-note">Developer Note</a></li>
+<li class="toctree-l2"><a class="reference internal" href="egarch.html#example">Example</a></li>
+<li class="toctree-l2"><a class="reference internal" href="egarch.html#class-description">Class Description</a></li>
+<li class="toctree-l2"><a class="reference internal" href="egarch.html#references">References</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="egarchm.html">Beta-t-EGARCH in-mean models</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="egarchm.html#example">Example</a></li>
+<li class="toctree-l2"><a class="reference internal" href="egarchm.html#class-arguments">Class Arguments</a></li>
+<li class="toctree-l2"><a class="reference internal" href="egarchm.html#class-methods">Class Methods</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="egarchmreg.html">Beta-t-EGARCH-in-mean regression models</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="egarchmreg.html#example">Example</a></li>
+<li class="toctree-l2"><a class="reference internal" href="egarchmreg.html#class-arguments">Class Arguments</a></li>
+<li class="toctree-l2"><a class="reference internal" href="egarchmreg.html#class-methods">Class Methods</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="lmegarch.html">Beta-t-EGARCH Long Memory models</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="lmegarch.html#example">Example</a></li>
+<li class="toctree-l2"><a class="reference internal" href="lmegarch.html#class-arguments">Class Arguments</a></li>
+<li class="toctree-l2"><a class="reference internal" href="lmegarch.html#class-methods">Class Methods</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="garch.html">GARCH models</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="garch.html#introduction">Introduction</a></li>
+<li class="toctree-l2"><a class="reference internal" href="garch.html#example">Example</a></li>
+<li class="toctree-l2"><a class="reference internal" href="garch.html#class-description">Class Description</a></li>
+<li class="toctree-l2"><a class="reference internal" href="garch.html#references">References</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="segarch.html">Skew-t EGARCH models</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="segarch.html#example">Example</a></li>
+<li class="toctree-l2"><a class="reference internal" href="segarch.html#class-arguments">Class Arguments</a></li>
+<li class="toctree-l2"><a class="reference internal" href="segarch.html#class-methods">Class Methods</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="segarchm.html">Skew-t EGARCH in-mean models</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="segarchm.html#example">Example</a></li>
+<li class="toctree-l2"><a class="reference internal" href="segarchm.html#class-arguments">Class Arguments</a></li>
+<li class="toctree-l2"><a class="reference internal" href="segarchm.html#class-methods">Class Methods</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="gas.html">GAS models</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="gas.html#example">Example</a></li>
+<li class="toctree-l2"><a class="reference internal" href="gas.html#class-arguments">Class Arguments</a></li>
+<li class="toctree-l2"><a class="reference internal" href="gas.html#class-methods">Class Methods</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="gasreg.html">GAS Regression models</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="gasreg.html#example">Example</a></li>
+<li class="toctree-l2"><a class="reference internal" href="gasreg.html#class-arguments">Class Arguments</a></li>
+<li class="toctree-l2"><a class="reference internal" href="gasreg.html#class-methods">Class Methods</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="gasssm.html">GAS State Space models</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="gasssm.html#example">Example</a></li>
+<li class="toctree-l2"><a class="reference internal" href="gasssm.html#class-arguments">Class Arguments</a></li>
+<li class="toctree-l2"><a class="reference internal" href="gasssm.html#class-methods">Class Methods</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="gasx.html">GASX models</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="gasx.html#example">Example</a></li>
+<li class="toctree-l2"><a class="reference internal" href="gasx.html#class-arguments">Class Arguments</a></li>
+<li class="toctree-l2"><a class="reference internal" href="gasx.html#class-methods">Class Methods</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="gpnar.html">GP-NARX models</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="gpnar.html#example">Example</a></li>
+<li class="toctree-l2"><a class="reference internal" href="gpnar.html#class-arguments">Class Arguments</a></li>
+<li class="toctree-l2"><a class="reference internal" href="gpnar.html#class-methods">Class Methods</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="ssm.html">Gaussian State Space models</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="ssm.html#example">Example</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ssm.html#class-arguments">Class Arguments</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ssm.html#class-methods">Class Methods</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="ngssm.html">Non-Gaussian State Space models</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="ngssm.html#example">Example</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ngssm.html#class-arguments">Class Arguments</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ngssm.html#class-methods">Class Methods</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="var.html">VAR models</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="var.html#example">Example</a></li>
+<li class="toctree-l2"><a class="reference internal" href="var.html#class-arguments">Class Arguments</a></li>
+<li class="toctree-l2"><a class="reference internal" href="var.html#class-methods">Class Methods</a></li>
+</ul>
+</li>
+</ul>
+</div>
+</div>
+<div class="section" id="inference-guide">
+<h2>Inference Guide<a class="headerlink" href="#inference-guide" title="Permalink to this headline">¶</a></h2>
+<div class="toctree-wrapper compound">
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="bayes.html">Bayesian Inference</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="bayes.html#interface">Interface</a></li>
+<li class="toctree-l2"><a class="reference internal" href="bayes.html#methods">Methods</a></li>
+<li class="toctree-l2"><a class="reference internal" href="bayes.html#priors">Priors</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="classical.html">Classical Inference</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="classical.html#methods">Methods</a></li>
+</ul>
+</li>
+</ul>
+</div>
+</div>
+<div class="section" id="acknowledgements-by-the-author">
+<h2>Acknowledgements by the Author<a class="headerlink" href="#acknowledgements-by-the-author" title="Permalink to this headline">¶</a></h2>
+<p>I am grateful to my employer <a class="reference external" href="http://www.alpima.net/">ALPIMA</a> for being supportive of my efforts to develop this library in my spare time. I am also grateful to those in the <a class="reference external" href="http://www.pydata.org/">PyData</a> community who have given helpful comments and feedback for development.</p>
+<p>Ross Taylor, &#64;rosstaylor90</p>
+</div>
+</div>
+
+
+           </div>
+          </div>
+          <footer>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2016, Ross Taylor.
+
+    </p>
+  </div>
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/snide/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  
+
+    <script type="text/javascript">
+        var DOCUMENTATION_OPTIONS = {
+            URL_ROOT:'./',
+            VERSION:'0.4.0',
+            COLLAPSE_INDEX:false,
+            FILE_SUFFIX:'.html',
+            HAS_SOURCE:  true
+        };
+    </script>
+      <script type="text/javascript" src="_static/jquery.js"></script>
+      <script type="text/javascript" src="_static/underscore.js"></script>
+      <script type="text/javascript" src="_static/doctools.js"></script>
+      <script type="text/javascript" src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+
+  
+
+  
+  
+    <script type="text/javascript" src="_static/js/theme.js"></script>
+  
+
+  
+  
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.StickyNav.enable();
+      });
+  </script>
+   
+
+</body>
+</html>

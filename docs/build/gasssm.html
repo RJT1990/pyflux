@@ -1,0 +1,400 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>GAS State Space models &mdash; PyFlux 0.4.0 documentation</title>
+  
+
+  
+  
+
+  
+
+  
+  
+    
+
+  
+
+  
+  
+    <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
+  
+
+  
+
+  
+    <link rel="top" title="PyFlux 0.4.0 documentation" href="index.html"/>
+        <link rel="next" title="GASX models" href="gasx.html"/>
+        <link rel="prev" title="GAS Regression models" href="gasreg.html"/> 
+
+  
+  <script src="_static/js/modernizr.min.js"></script>
+
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search">
+          
+
+          
+            <a href="index.html" class="icon icon-home"> PyFlux
+          
+
+          
+          </a>
+
+          
+            
+            
+              <div class="version">
+                0.4
+              </div>
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+                <ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="arima.html">ARIMA models</a></li>
+<li class="toctree-l1"><a class="reference internal" href="arimax.html">ARIMAX models</a></li>
+<li class="toctree-l1"><a class="reference internal" href="dar.html">DAR models</a></li>
+<li class="toctree-l1"><a class="reference internal" href="egarch.html">Beta-t-EGARCH models</a></li>
+<li class="toctree-l1"><a class="reference internal" href="egarchm.html">Beta-t-EGARCH in-mean models</a></li>
+<li class="toctree-l1"><a class="reference internal" href="egarchmreg.html">Beta-t-EGARCH-in-mean regression models</a></li>
+<li class="toctree-l1"><a class="reference internal" href="lmegarch.html">Beta-t-EGARCH Long Memory models</a></li>
+<li class="toctree-l1"><a class="reference internal" href="garch.html">GARCH models</a></li>
+<li class="toctree-l1"><a class="reference internal" href="segarch.html">Skew-t EGARCH models</a></li>
+<li class="toctree-l1"><a class="reference internal" href="segarchm.html">Skew-t EGARCH in-mean models</a></li>
+<li class="toctree-l1"><a class="reference internal" href="gas.html">GAS models</a></li>
+<li class="toctree-l1"><a class="reference internal" href="gasreg.html">GAS Regression models</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">GAS State Space models</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#example">Example</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#class-arguments">Class Arguments</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#class-methods">Class Methods</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="gasx.html">GASX models</a></li>
+<li class="toctree-l1"><a class="reference internal" href="gpnar.html">GP-NARX models</a></li>
+<li class="toctree-l1"><a class="reference internal" href="ssm.html">Gaussian State Space models</a></li>
+<li class="toctree-l1"><a class="reference internal" href="ngssm.html">Non-Gaussian State Space models</a></li>
+<li class="toctree-l1"><a class="reference internal" href="var.html">VAR models</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="bayes.html">Bayesian Inference</a></li>
+<li class="toctree-l1"><a class="reference internal" href="classical.html">Classical Inference</a></li>
+</ul>
+
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" role="navigation" aria-label="top navigation">
+        <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+        <a href="index.html">PyFlux</a>
+      </nav>
+
+
+      
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          
+
+ 
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href="index.html">Docs</a> &raquo;</li>
+      
+    <li>GAS State Space models</li>
+      <li class="wy-breadcrumbs-aside">
+        
+          
+            <a href="_sources/gasssm.txt" rel="nofollow"> View page source</a>
+          
+        
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <div class="section" id="gas-state-space-models">
+<h1>GAS State Space models<a class="headerlink" href="#gas-state-space-models" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="example">
+<h2>Example<a class="headerlink" href="#example" title="Permalink to this headline">¶</a></h2>
+<div class="highlight-python"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre> 1
+ 2
+ 3
+ 4
+ 5
+ 6
+ 7
+ 8
+ 9
+10
+11
+12
+13
+14</pre></div></td><td class="code"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">numpy</span> <span class="kn">as</span> <span class="nn">np</span>
+<span class="kn">import</span> <span class="nn">pyflux</span> <span class="kn">as</span> <span class="nn">pf</span>
+<span class="kn">import</span> <span class="nn">pandas</span> <span class="kn">as</span> <span class="nn">pd</span>
+
+<span class="n">nile</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">read_csv</span><span class="p">(</span><span class="s1">&#39;https://vincentarelbundock.github.io/Rdatasets/csv/datasets/Nile.csv&#39;</span><span class="p">)</span>
+<span class="n">nile</span><span class="o">.</span><span class="n">index</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">to_datetime</span><span class="p">(</span><span class="n">nile</span><span class="p">[</span><span class="s1">&#39;time&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">values</span><span class="p">,</span><span class="n">format</span><span class="o">=</span><span class="s1">&#39;%Y&#39;</span><span class="p">)</span>
+
+<span class="n">model</span> <span class="o">=</span> <span class="n">pf</span><span class="o">.</span><span class="n">GASLLEV</span><span class="p">(</span><span class="n">data</span><span class="o">=</span><span class="n">nile</span><span class="p">,</span> <span class="n">target</span><span class="o">=</span><span class="s1">&#39;Nile&#39;</span><span class="p">,</span> <span class="n">family</span><span class="o">=</span><span class="n">pf</span><span class="o">.</span><span class="n">GASt</span><span class="p">())</span> <span class="c1"># local level</span>
+
+<span class="n">USgrowth</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="n">growthdata</span><span class="p">[</span><span class="s1">&#39;VALUE&#39;</span><span class="p">]))</span>
+<span class="n">USgrowth</span><span class="o">.</span><span class="n">index</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">to_datetime</span><span class="p">(</span><span class="n">growthdata</span><span class="p">[</span><span class="s1">&#39;DATE&#39;</span><span class="p">])</span>
+<span class="n">USgrowth</span><span class="o">.</span><span class="n">columns</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;Logged US Real GDP&#39;</span><span class="p">]</span>
+
+<span class="n">model2</span> <span class="o">=</span> <span class="n">pf</span><span class="o">.</span><span class="n">GASLLT</span><span class="p">(</span><span class="n">data</span><span class="o">=</span><span class="n">USgrowth</span><span class="p">,</span> <span class="n">family</span><span class="o">=</span><span class="n">pf</span><span class="o">.</span><span class="n">GASt</span><span class="p">())</span> <span class="c1"># local linear trend model</span>
+</pre></div>
+</td></tr></table></div>
+</div>
+<div class="section" id="class-arguments">
+<h2>Class Arguments<a class="headerlink" href="#class-arguments" title="Permalink to this headline">¶</a></h2>
+<p>The GAS local level (<strong>GASLLEV</strong>) and GAS local linear trend (<strong>GASLLT</strong>) models are of the following form:</p>
+<dl class="class">
+<dt id="GASLLEV">
+<em class="property">class </em><code class="descname">GASLLEV</code><span class="sig-paren">(</span><em>data</em>, <em>integ</em>, <em>target</em>, <em>family</em><span class="sig-paren">)</span><a class="headerlink" href="#GASLLEV" title="Permalink to this definition">¶</a></dt>
+<dd><dl class="attribute">
+<dt id="GASLLEV.data">
+<code class="descname">data</code><a class="headerlink" href="#GASLLEV.data" title="Permalink to this definition">¶</a></dt>
+<dd><p>pd.DataFrame or array-like : the time-series data</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="GASLLEV.integ">
+<code class="descname">integ</code><a class="headerlink" href="#GASLLEV.integ" title="Permalink to this definition">¶</a></dt>
+<dd><p>int : how many times to difference the time series (default: 0)</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="GASLLEV.target">
+<code class="descname">target</code><a class="headerlink" href="#GASLLEV.target" title="Permalink to this definition">¶</a></dt>
+<dd><p>string (data is DataFrame) or int (data is np.array) : which column to use as the time series. If None, the first column will be chosen as the data.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="GASLLEV.family">
+<code class="descname">family</code><a class="headerlink" href="#GASLLEV.family" title="Permalink to this definition">¶</a></dt>
+<dd><p>a GAS family object; choices include GASExponential(), GASLaplace(), GASNormal(), GASPoisson(), GASSkewt(), GASt()</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="GASLLT">
+<em class="property">class </em><code class="descname">GASLLT</code><span class="sig-paren">(</span><em>data</em>, <em>integ</em>, <em>target</em>, <em>family</em><span class="sig-paren">)</span><a class="headerlink" href="#GASLLT" title="Permalink to this definition">¶</a></dt>
+<dd><dl class="attribute">
+<dt id="GASLLT.data">
+<code class="descname">data</code><a class="headerlink" href="#GASLLT.data" title="Permalink to this definition">¶</a></dt>
+<dd><p>pd.DataFrame or array-like : the time-series data</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="GASLLT.integ">
+<code class="descname">integ</code><a class="headerlink" href="#GASLLT.integ" title="Permalink to this definition">¶</a></dt>
+<dd><p>int : how many times to difference the time series (default: 0)</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="GASLLT.target">
+<code class="descname">target</code><a class="headerlink" href="#GASLLT.target" title="Permalink to this definition">¶</a></dt>
+<dd><p>string (data is DataFrame) or int (data is np.array) : which column to use as the time series. If None, the first column will be chosen as the data.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="GASLLT.family">
+<code class="descname">family</code><a class="headerlink" href="#GASLLT.family" title="Permalink to this definition">¶</a></dt>
+<dd><p>a GAS family object; choices include GASExponential(), GASLaplace(), GASNormal(), GASPoisson(), GASSkewt(), GASt()</p>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+<div class="section" id="class-methods">
+<h2>Class Methods<a class="headerlink" href="#class-methods" title="Permalink to this headline">¶</a></h2>
+<dl class="function">
+<dt id="adjust_prior">
+<code class="descname">adjust_prior</code><span class="sig-paren">(</span><em>index</em>, <em>prior</em><span class="sig-paren">)</span><a class="headerlink" href="#adjust_prior" title="Permalink to this definition">¶</a></dt>
+<dd><p>Adjusts the priors of the model. <strong>index</strong> can be an int or a list. <strong>prior</strong> is a prior object, such as Normal(0,3).</p>
+</dd></dl>
+
+<p>Here is example usage for <a class="reference internal" href="var.html#adjust_prior" title="adjust_prior"><code class="xref py py-func docutils literal"><span class="pre">adjust_prior()</span></code></a>:</p>
+<div class="highlight-python"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre>1
+2
+3
+4
+5</pre></div></td><td class="code"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">pyflux</span> <span class="kn">as</span> <span class="nn">pf</span>
+
+<span class="c1"># model = ... (specify a model)</span>
+<span class="n">model</span><span class="o">.</span><span class="n">list_priors</span><span class="p">()</span>
+<span class="n">model</span><span class="o">.</span><span class="n">adjust_prior</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span><span class="n">pf</span><span class="o">.</span><span class="n">Normal</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">))</span>
+</pre></div>
+</td></tr></table></div>
+<dl class="function">
+<dt id="fit">
+<code class="descname">fit</code><span class="sig-paren">(</span><em>method</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="headerlink" href="#fit" title="Permalink to this definition">¶</a></dt>
+<dd><p>Estimates latent variables for the model. Returns a Results object. <strong>method</strong> is an inference/estimation option; see Bayesian Inference and Classical Inference sections for options. If no <strong>method</strong> is provided then a default will be used.</p>
+<p>Optional arguments are specific to the <strong>method</strong> you choose - see the documentation for these methods for more detail.</p>
+</dd></dl>
+
+<p>Here is example usage for <a class="reference internal" href="var.html#fit" title="fit"><code class="xref py py-func docutils literal"><span class="pre">fit()</span></code></a>:</p>
+<div class="highlight-python"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre>1
+2
+3
+4</pre></div></td><td class="code"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">pyflux</span> <span class="kn">as</span> <span class="nn">pf</span>
+
+<span class="c1"># model = ... (specify a model)</span>
+<span class="n">model</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="s2">&quot;M-H&quot;</span><span class="p">,</span><span class="n">nsims</span><span class="o">=</span><span class="mi">20000</span><span class="p">)</span>
+</pre></div>
+</td></tr></table></div>
+<dl class="function">
+<dt id="plot_fit">
+<code class="descname">plot_fit</code><span class="sig-paren">(</span><em>intervals</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="headerlink" href="#plot_fit" title="Permalink to this definition">¶</a></dt>
+<dd><p>Graphs the fit of the model. <strong>intervals</strong> is a boolean; if true shows 95% C.I. intervals for the states.</p>
+<p>Optional arguments include <strong>figsize</strong> - the dimensions of the figure to plot - and <strong>series_type</strong> which has two options: <em>Filtered</em> or <em>Smoothed</em>.</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="plot_z">
+<code class="descname">plot_z</code><span class="sig-paren">(</span><em>indices</em>, <em>figsize</em><span class="sig-paren">)</span><a class="headerlink" href="#plot_z" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns a plot of the latent variables and their associated uncertainty. <strong>indices</strong> is a list referring to the latent variable indices that you want ot plot. Figsize specifies how big the plot will be.</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="plot_predict">
+<code class="descname">plot_predict</code><span class="sig-paren">(</span><em>h</em>, <em>past_values</em>, <em>intervals</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="headerlink" href="#plot_predict" title="Permalink to this definition">¶</a></dt>
+<dd><p>Plots predictions of the model. <strong>h</strong> is an int of how many steps ahead to predict. <strong>past_values</strong> is an int of how many past values of the series to plot. <strong>intervals</strong> is a bool on whether to include confidence/credibility intervals or not.</p>
+<p>Optional arguments include <strong>figsize</strong> - the dimensions of the figure to plot.</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="plot_predict_is">
+<code class="descname">plot_predict_is</code><span class="sig-paren">(</span><em>h</em>, <em>fit_once</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="headerlink" href="#plot_predict_is" title="Permalink to this definition">¶</a></dt>
+<dd><p>Plots in-sample rolling predictions for the model. <strong>h</strong> is an int of how many previous steps to simulate performance on. <strong>fit_once</strong> is a boolean specifying whether to fit the model once at the beginning of the period (True), or whether to fit after every step (False).</p>
+<p>Optional arguments include <strong>figsize</strong> - the dimensions of the figure to plot.</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="predict">
+<code class="descname">predict</code><span class="sig-paren">(</span><em>h</em><span class="sig-paren">)</span><a class="headerlink" href="#predict" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns DataFrame of model predictions. <strong>h</strong> is an int of how many steps ahead to predict.</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="predict_is">
+<code class="descname">predict_is</code><span class="sig-paren">(</span><em>h</em>, <em>fit_once</em><span class="sig-paren">)</span><a class="headerlink" href="#predict_is" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns DataFrame of in-sample rolling predictions for the model. <strong>h</strong> is an int of how many previous steps to simulate performance on. <strong>fit_once</strong> is a boolean specifying whether to fit the model once at the beginning of the period (True), or whether to fit after every step (False).</p>
+</dd></dl>
+
+</div>
+</div>
+
+
+           </div>
+          </div>
+          <footer>
+  
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+      
+        <a href="gasx.html" class="btn btn-neutral float-right" title="GASX models" accesskey="n">Next <span class="fa fa-arrow-circle-right"></span></a>
+      
+      
+        <a href="gasreg.html" class="btn btn-neutral" title="GAS Regression models" accesskey="p"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+      
+    </div>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2016, Ross Taylor.
+
+    </p>
+  </div>
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/snide/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  
+
+    <script type="text/javascript">
+        var DOCUMENTATION_OPTIONS = {
+            URL_ROOT:'./',
+            VERSION:'0.4.0',
+            COLLAPSE_INDEX:false,
+            FILE_SUFFIX:'.html',
+            HAS_SOURCE:  true
+        };
+    </script>
+      <script type="text/javascript" src="_static/jquery.js"></script>
+      <script type="text/javascript" src="_static/underscore.js"></script>
+      <script type="text/javascript" src="_static/doctools.js"></script>
+      <script type="text/javascript" src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+
+  
+
+  
+  
+    <script type="text/javascript" src="_static/js/theme.js"></script>
+  
+
+  
+  
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.StickyNav.enable();
+      });
+  </script>
+   
+
+</body>
+</html>

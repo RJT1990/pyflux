@@ -14,7 +14,7 @@ import pandas as pd
 
 from .covariances import acf
 from .families import Normal
-from .inference import BBVI, MetropolisHastings, norm_post_sim
+from .inference import BBVI, BBVIM, MetropolisHastings, norm_post_sim
 from .output import TablePrinter
 from .tests import find_p_value
 from .latent_variables import LatentVariable, LatentVariables
@@ -94,7 +94,9 @@ class TSM(object):
 
         return theta, Y, scores, states, states_var, X_names
 
-    def _bbvi_fit(self, posterior, optimizer='RMSProp', iterations=1000, map_start=True, **kwargs):
+    def _bbvi_fit(self, posterior, optimizer='RMSProp', iterations=1000, 
+        map_start=True, batch_size=12, mini_batch=None, learning_rate=0.001, 
+        record_elbo=False, **kwargs):
         """ Performs Black Box Variational Inference
 
         Parameters
@@ -111,6 +113,8 @@ class TSM(object):
         map_start : boolean
             Whether to start values from a MAP estimate (if False, uses default starting values)
 
+
+
         Returns
         ----------
         BBVIResults object
@@ -119,9 +123,9 @@ class TSM(object):
         # Starting values
         phi = self.latent_variables.get_z_starting_values()
         phi = kwargs.get('start',phi).copy() # If user supplied
-        batch_size = kwargs.get('batch_size',12) # If user supplied
-        if self.model_type not in ['GPNARX','GPR','GP','GASRank'] and map_start is True:
-            p = optimize.minimize(posterior,phi,method='L-BFGS-B') # PML starting values
+
+        if self.model_type not in ['GPNARX','GPR','GP','GASRank'] and map_start is True and mini_batch is None:
+            p = optimize.minimize(posterior, phi, method='L-BFGS-B') # PML starting values
             start_loc = 0.8*p.x + 0.2*phi
         else:
             start_loc = phi
@@ -139,13 +143,19 @@ class TSM(object):
                     self.latent_variables.z_list[i].q.sigma0 = start_ses[i]
 
         q_list = [k.q for k in self.latent_variables.z_list]
+
+        if mini_batch is None:
+            bbvi_obj = BBVI(posterior, q_list, batch_size, optimizer, iterations, learning_rate, record_elbo)
+        else:
+            bbvi_obj = BBVIM(posterior, self.neg_logposterior, q_list, mini_batch, optimizer, iterations, learning_rate, mini_batch, record_elbo)
         
-        bbvi_obj = BBVI(posterior,q_list,batch_size,optimizer,iterations)
-        q, q_z, q_ses = bbvi_obj.run()
+        q, q_z, q_ses, elbo_records = bbvi_obj.run()
         self.latent_variables.set_z_values(q_z,'BBVI',np.exp(q_ses),None)
 
         for k in range(len(self.latent_variables.z_list)):
             self.latent_variables.z_list[k].q = q[k]
+
+        self.latent_variables.estimation_method = 'BBVI'
 
         theta, Y, scores, states, states_var, X_names = self._categorize_model_output(q_z)
 
@@ -155,11 +165,11 @@ class TSM(object):
         except:
             latent_variables_store = self.latent_variables
 
-        return BBVIResults(data_name=self.data_name,X_names=X_names,model_name=self.model_name,
-            model_type=self.model_type, latent_variables=latent_variables_store,data=Y, index=self.index,
-            multivariate_model=self.multivariate_model,objective_object=posterior, 
-            method='BBVI',ses=q_ses,signal=theta,scores=scores,
-            z_hide=self._z_hide,max_lag=self.max_lag,states=states,states_var=states_var)
+        return BBVIResults(data_name=self.data_name, X_names=X_names, model_name=self.model_name,
+            model_type=self.model_type, latent_variables=latent_variables_store, data=Y, index=self.index,
+            multivariate_model=self.multivariate_model, objective_object=self.neg_logposterior, 
+            method='BBVI', ses=q_ses, signal=theta, scores=scores, elbo_records=elbo_records,
+            z_hide=self._z_hide, max_lag=self.max_lag, states=states, states_var=states_var)
 
     def _laplace_fit(self,obj_type):
         """ Performs a Laplace approximation to the posterior
@@ -181,6 +191,8 @@ class TSM(object):
             raise Exception("No Hessian information - Laplace approximation cannot be performed")
         else:
 
+            self.latent_variables.estimation_method = 'Laplace'
+
             theta, Y, scores, states, states_var, X_names = self._categorize_model_output(self.latent_variables.get_z_values())
 
             # Change this in future
@@ -195,9 +207,9 @@ class TSM(object):
                 method='Laplace',ihessian=y.ihessian,signal=theta,scores=scores,
                 z_hide=self._z_hide,max_lag=self.max_lag,states=states,states_var=states_var)
 
-    def _mcmc_fit(self,scale=1.0, nsims=10000, printer=True, method="M-H", cov_matrix=None,
-        map_start=True, **kwargs):
-        """ Performs MCMC 
+    def _mcmc_fit(self, scale=1.0, nsims=10000, printer=True, method="M-H", 
+        cov_matrix=None, map_start=True, **kwargs):
+        """ Performs random walk Metropolis-Hastings
 
         Parameters
         ----------
@@ -217,10 +229,13 @@ class TSM(object):
             Can optionally provide a covariance matrix for M-H.
         """
         scale = 2.38/np.sqrt(self.z_no)
+
         # Get Mode and Inverse Hessian information
-        if self.model_type in ['GPNARX','GPR','GP'] or map_start is True:
-            y = self.fit(method='PML',printer=False)
+        if self.model_type in ['GPNARX', 'GPR', 'GP'] or map_start is True:
+            y = self.fit(method='PML', printer=False)
             starting_values = y.z.get_z_values()
+
+            # TODO: Bad use of a try/except - remove in future
             try:
                 ses = np.abs(np.diag(y.ihessian))
                 if len(ses[np.isnan(ses)]) != 0:
@@ -233,13 +248,13 @@ class TSM(object):
             starting_values = self.latent_variables.get_z_starting_values()
 
         if method == "M-H":
-            sampler = MetropolisHastings(self.neg_logposterior,scale,nsims,starting_values,cov_matrix=cov_matrix,model_object=None)
+            sampler = MetropolisHastings(self.neg_logposterior, scale, nsims, starting_values, 
+                cov_matrix=cov_matrix, model_object=None)
             chain, mean_est, median_est, upper_95_est, lower_95_est = sampler.sample()
         else:
             raise Exception("Method not recognized!")
 
         if len(self.latent_variables.z_list) == 1:
-            chain = self.latent_variables.z_list[0].prior.transform(chain)
             self.latent_variables.set_z_values(mean_est,'M-H',None,chain)
             mean_est = self.latent_variables.z_list[0].prior.transform(mean_est)
             median_est = self.latent_variables.z_list[0].prior.transform(median_est)
@@ -247,16 +262,15 @@ class TSM(object):
             lower_95_est = self.latent_variables.z_list[0].prior.transform(lower_95_est)        
 
         else:
-            for k in range(len(chain)):
-                chain[k] = self.latent_variables.z_list[k].prior.transform(chain[k])
-
-            self.latent_variables.set_z_values(mean_est,'M-H',None,chain)
+            self.latent_variables.set_z_values(mean_est, 'M-H', None, chain)
 
             for k in range(len(chain)):
                 mean_est[k] = self.latent_variables.z_list[k].prior.transform(mean_est[k])
                 median_est[k] = self.latent_variables.z_list[k].prior.transform(median_est[k])
                 upper_95_est[k] = self.latent_variables.z_list[k].prior.transform(upper_95_est[k])
                 lower_95_est[k] = self.latent_variables.z_list[k].prior.transform(lower_95_est[k])        
+
+        self.latent_variables.estimation_method = 'M-H'
 
         theta, Y, scores, states, states_var, X_names = self._categorize_model_output(mean_est)
     
@@ -300,6 +314,8 @@ class TSM(object):
         res_ses = np.power(np.abs(np.diag(ihessian)),0.5)
         ses = np.append(res_ses,np.ones([z.shape[0]-res_z.shape[0]]))
         self.latent_variables.set_z_values(z,method,ses,None)
+
+        self.latent_variables.estimation_method = 'OLS'
 
         theta, Y, scores, states, states_var, X_names = self._categorize_model_output(z)
 
@@ -362,6 +378,8 @@ class TSM(object):
             ses = None
             self.latent_variables.set_z_values(p.x,method,None,None)
 
+        self.latent_variables.estimation_method = method
+
         # Change this in future
         try:
             latent_variables_store = self.latent_variables.copy()
@@ -392,7 +410,10 @@ class TSM(object):
         nsims = kwargs.get('nsims', 10000)
         optimizer = kwargs.get('optimizer', 'RMSProp')
         batch_size = kwargs.get('batch_size', 12)
+        mini_batch = kwargs.get('mini_batch', None)
         map_start = kwargs.get('map_start', True)
+        learning_rate = kwargs.get('learning_rate', 0.001)
+        record_elbo = kwargs.get('record_elbo', None)
 
         if method is None:
             method = self.default_method
@@ -409,12 +430,17 @@ class TSM(object):
         elif method == "Laplace":
             return self._laplace_fit(self.neg_logposterior) 
         elif method == "BBVI":
-            return self._bbvi_fit(self.neg_logposterior, optimizer=optimizer, iterations=iterations,
-                batch_size=batch_size, map_start=map_start)
+            if mini_batch is None:
+                posterior = self.neg_logposterior
+            else:
+                posterior = self.mb_neg_logposterior
+            return self._bbvi_fit(posterior, optimizer=optimizer, iterations=iterations,
+                batch_size=batch_size, mini_batch=mini_batch, map_start=map_start, 
+                learning_rate=learning_rate, record_elbo=record_elbo)
         elif method == "OLS":
             return self._ols_fit()          
 
-    def neg_logposterior(self,beta):
+    def neg_logposterior(self, beta):
         """ Returns negative log posterior
 
         Parameters
@@ -428,6 +454,27 @@ class TSM(object):
         """
 
         post = self.neg_loglik(beta)
+        for k in range(0,self.z_no):
+            post += -self.latent_variables.z_list[k].prior.logpdf(beta[k])
+        return post
+
+    def mb_neg_logposterior(self, beta, mini_batch):
+        """ Returns negative log posterior
+
+        Parameters
+        ----------
+        beta : np.array
+            Contains untransformed starting values for latent variables
+
+        mini_batch : int
+            Batch size for the data
+
+        Returns
+        ----------
+        Negative log posterior
+        """
+
+        post = (self.data.shape[0]/mini_batch)*self.mb_neg_loglik(beta, mini_batch)
         for k in range(0,self.z_no):
             post += -self.latent_variables.z_list[k].prior.logpdf(beta[k])
         return post
@@ -515,7 +562,7 @@ class TSM(object):
         """
         return self.transformed_z()
 
-    def plot_z(self,indices=None,figsize=(15,5),**kwargs):
+    def plot_z(self, indices=None,figsize=(15,5),**kwargs):
         """ Plots latent variables by calling latent parameters object
 
         Returns
@@ -524,7 +571,7 @@ class TSM(object):
         """
         self.latent_variables.plot_z(indices=indices,figsize=figsize,**kwargs)
 
-    def plot_parameters(self,indices=None,figsize=(15,5),**kwargs):
+    def plot_parameters(self, indices=None,figsize=(15,5),**kwargs):
         """ Frequentist notation for plot_z (maybe remove in future)
 
         Returns
@@ -533,7 +580,7 @@ class TSM(object):
         """
         self.plot_z(indices,figsize,**kwargs)
 
-    def adjust_prior(self,index,prior):
+    def adjust_prior(self, index, prior):
         """ Adjusts priors for the latent variables
 
         Parameters
@@ -548,4 +595,26 @@ class TSM(object):
         ----------
         None (changes priors in LatentVariables object)
         """
-        self.latent_variables.adjust_prior(index=index,prior=prior)
+        self.latent_variables.adjust_prior(index=index, prior=prior)
+
+    def draw_latent_variables(self, nsims=5000):
+        """ Draws latent variables from the model (for Bayesian inference)
+
+        Parameters
+        ----------
+        nsims : int
+            How many draws to take
+
+        Returns
+        ----------
+        - np.ndarray of draws
+        """
+        if self.latent_variables.estimation_method is None:
+            raise Exception("No latent variables estimated!")
+        elif self.latent_variables.estimation_method == 'BBVI':
+            return np.array([i.q.draw_variable_local(size=nsims) for i in self.latent_variables.z_list])
+        elif self.latent_variables.estimation_method == "M-H":
+            chain = np.array([self.latent_variables.z_list[i].sample for i in range(len(self.latent_variables.z_list))])
+            return chain[:,np.random.choice(chain.shape[0], nsims)]
+        else:
+            raise Exception("No latent variables estimated through Bayesian inference")

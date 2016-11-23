@@ -230,10 +230,9 @@ class MLEResults(Results):
 
 class BBVIResults(Results):
 
-    def __init__(self,data_name,X_names,model_name,model_type,latent_variables, 
-        data,index,multivariate_model,objective_object,method,
-        z_hide,max_lag,ses,signal=None,scores=None,states=None,
-        states_var=None):
+    def __init__(self, data_name, X_names, model_name, model_type, latent_variables, 
+        data,index, multivariate_model, objective_object, method, z_hide, max_lag, ses,
+        signal=None, scores=None, elbo_records=None, states=None, states_var=None):
 
         self.data_name = data_name
         self.X_names = X_names
@@ -252,6 +251,7 @@ class BBVIResults(Results):
         self.signal = signal
         self.multivariate_model = multivariate_model
         self.z_hide = z_hide
+        self.elbo_records = elbo_records
 
         if self.multivariate_model is True:
             self.data_length = self.data[0].shape[0]
@@ -297,6 +297,18 @@ class BBVIResults(Results):
         print("Methods: ")
         print(".summary() : printed results")
         return("")
+
+    def plot_elbo(self, figsize=(15,7)):
+        """
+        Plots the ELBO progress (if present)
+        """
+        import matplotlib.pyplot as plt
+
+        plt.figure(figsize=figsize)
+        plt.plot(self.elbo_records)
+        plt.xlabel("Iterations")
+        plt.ylabel("ELBO")
+        plt.show()
 
     def summary(self, transformed=True):
         ihessian = np.diag(np.power(np.exp(self.ses),2))
