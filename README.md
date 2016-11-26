@@ -7,7 +7,7 @@
 
 __PyFlux__ is an open source time series library for Python. The library has a good array of modern time series models, as well as a flexible array of inference options (frequentist and Bayesian) that can be applied to these models. By combining breadth of models with breadth of inference, PyFlux allows for a probabilistic approach to time series modelling.
 
-See some examples, model explanations and documentation at [PyFlux.com](http://www.pyflux.com/). PyFlux is still only alpha software; this means you use it at your own risk, and also that some modules are still in need of being optimized.
+See some examples and documentation below. PyFlux is still only alpha software; this means you use it at your own risk, and also that some modules are still in need of being optimized.
 
 [Click here for a getting started guide](http://www.pyflux.com/docs/getting_started.html).
 
@@ -16,7 +16,7 @@ See some examples, model explanations and documentation at [PyFlux.com](http://w
 - [ARIMA models](http://www.pyflux.com/docs/arima.html)
  - [ARIMAX models](http://www.pyflux.com/docs/arimax.html)
  - [Dynamic Autoregression models](http://www.pyflux.com/docs/dar.html)
- - [Dynamic Paired Comparison models](http://www.pyflux.com/docs/gas-rank.html)
+- [Dynamic Paired Comparison models](http://www.pyflux.com/docs/gas-rank.html)
 - [GARCH models](http://www.pyflux.com/docs/garch.html)
  - [Beta-t-EGARCH models](http://www.pyflux.com/docs/egarch.html)
  - [EGARCH-in-mean models](http://www.pyflux.com/docs/egarchm.html)
