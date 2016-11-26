@@ -16,7 +16,7 @@ See some examples and documentation below. PyFlux is still only alpha software; 
 - [ARIMA models](http://www.pyflux.com/docs/arima.html)
  - [ARIMAX models](http://www.pyflux.com/docs/arimax.html)
  - [Dynamic Autoregression models](http://www.pyflux.com/docs/dar.html)
-- [Dynamic Paired Comparison models](http://www.pyflux.com/docs/gas-rank.html)
+- [Dynamic Paired Comparison models](http://www.pyflux.com/docs/gas_rank.html)
 - [GARCH models](http://www.pyflux.com/docs/garch.html)
  - [Beta-t-EGARCH models](http://www.pyflux.com/docs/egarch.html)
  - [EGARCH-in-mean models](http://www.pyflux.com/docs/egarchm.html)
