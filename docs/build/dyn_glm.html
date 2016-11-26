@@ -1,0 +1,604 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>Non-Gaussian Dynamic Regression Models &mdash; PyFlux 0.4.0 documentation</title>
+  
+
+  
+  
+
+  
+
+  
+  
+    
+
+  
+
+  
+  
+    <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
+  
+
+  
+
+  
+    <link rel="top" title="PyFlux 0.4.0 documentation" href="index.html"/>
+        <link rel="next" title="Non-Gaussian Local Level Models" href="nllm.html"/>
+        <link rel="prev" title="Gaussian Local Linear Trend models" href="llt.html"/> 
+
+  
+  <script src="_static/js/modernizr.min.js"></script>
+
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search">
+          
+
+          
+            <a href="index.html" class="icon icon-home"> PyFlux
+          
+
+          
+          </a>
+
+          
+            
+            
+              <div class="version">
+                0.4
+              </div>
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+                <ul>
+<li class="toctree-l1"><a class="reference internal" href="getting_started.html">Getting Started with Time Series</a></li>
+</ul>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="arima.html">ARIMA models</a></li>
+<li class="toctree-l1"><a class="reference internal" href="arimax.html">ARIMAX models</a></li>
+<li class="toctree-l1"><a class="reference internal" href="dar.html">DAR models</a></li>
+<li class="toctree-l1"><a class="reference internal" href="dyn_lin.html">Dynamic Linear regression models</a></li>
+<li class="toctree-l1"><a class="reference internal" href="egarch.html">Beta-t-EGARCH models</a></li>
+<li class="toctree-l1"><a class="reference internal" href="egarchm.html">Beta-t-EGARCH in-mean models</a></li>
+<li class="toctree-l1"><a class="reference internal" href="egarchmreg.html">Beta-t-EGARCH in-mean regression models</a></li>
+<li class="toctree-l1"><a class="reference internal" href="lmegarch.html">Beta-t-EGARCH long memory models</a></li>
+<li class="toctree-l1"><a class="reference internal" href="segarch.html">Beta Skew-t GARCH models</a></li>
+<li class="toctree-l1"><a class="reference internal" href="segarchm.html">Beta Skew-t in-mean GARCH models</a></li>
+<li class="toctree-l1"><a class="reference internal" href="garch.html">GARCH models</a></li>
+<li class="toctree-l1"><a class="reference internal" href="gas.html">GAS models</a></li>
+<li class="toctree-l1"><a class="reference internal" href="gas_llm.html">GAS local level models</a></li>
+<li class="toctree-l1"><a class="reference internal" href="gas_llt.html">GAS local linear trend models</a></li>
+<li class="toctree-l1"><a class="reference internal" href="gas_rank.html">GAS ranking models</a></li>
+<li class="toctree-l1"><a class="reference internal" href="gas_reg.html">GAS regression models</a></li>
+<li class="toctree-l1"><a class="reference internal" href="gasx.html">GASX models</a></li>
+<li class="toctree-l1"><a class="reference internal" href="gpnar.html">GP-NARX models</a></li>
+<li class="toctree-l1"><a class="reference internal" href="llm.html">Gaussian Local Level models</a></li>
+<li class="toctree-l1"><a class="reference internal" href="llt.html">Gaussian Local Linear Trend models</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Non-Gaussian Dynamic Regression Models</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#introduction">Introduction</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#example">Example</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#class-description">Class Description</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#references">References</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="nllm.html">Non-Gaussian Local Level Models</a></li>
+<li class="toctree-l1"><a class="reference internal" href="nllt.html">Non-Gaussian Local Linear Trend Models</a></li>
+<li class="toctree-l1"><a class="reference internal" href="var.html">VAR models</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="bayes.html">Bayesian Inference</a></li>
+<li class="toctree-l1"><a class="reference internal" href="classical.html">Classical Inference</a></li>
+<li class="toctree-l1"><a class="reference internal" href="families.html">Families</a></li>
+</ul>
+
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" role="navigation" aria-label="top navigation">
+        <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+        <a href="index.html">PyFlux</a>
+      </nav>
+
+
+      
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          
+
+ 
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href="index.html">Docs</a> &raquo;</li>
+      
+    <li>Non-Gaussian Dynamic Regression Models</li>
+      <li class="wy-breadcrumbs-aside">
+        
+          
+            <a href="_sources/dyn_glm.txt" rel="nofollow"> View page source</a>
+          
+        
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <div class="section" id="non-gaussian-dynamic-regression-models">
+<h1>Non-Gaussian Dynamic Regression Models<a class="headerlink" href="#non-gaussian-dynamic-regression-models" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="introduction">
+<h2>Introduction<a class="headerlink" href="#introduction" title="Permalink to this headline">¶</a></h2>
+<p>With Non-Gaussian state space models, we have the same basic setup as Gaussian state space models, but now a potentially non-Gaussian measurement density. That is we are interested in problems of the form:</p>
+<div class="math">
+\[p\left(y_{t}\mid{z}_{t}\right)\]</div>
+<div class="math">
+\[\theta_{t} = f\left(\alpha_{t}\right)\]</div>
+<div class="math">
+\[\alpha_{t} =  \alpha_{t-1} + \eta_{t}\]</div>
+<div class="math">
+\[\eta_{t} \sim N\left(0,\Sigma\right)\]</div>
+<p>Usually MCMC based schemes are the right way to tackle this problem. Currently PyFlux uses BBVI for speed, but the mean-field approximation means there can be some bias in the states (although the results are generally okay for prediction). In the future, PyFlux will use a more structured approximation.</p>
+<p>The <strong>Non-Gaussian dynamic regression model</strong> has the same form as a dynamic linear regression model, but with a non-Gaussian measurement density.</p>
+</div>
+<div class="section" id="example">
+<h2>Example<a class="headerlink" href="#example" title="Permalink to this headline">¶</a></h2>
+<p>See the notebook at <a class="reference external" href="https://github.com/RJT1990/talks/blob/master/PyDataTimeSeriesTalk.ipynb">https://github.com/RJT1990/talks/blob/master/PyDataTimeSeriesTalk.ipynb</a> and the example for non-Gaussian estimation of a beta coefficient for finance. The API is from an old version here, but shows a use of this model type.</p>
+</div>
+<div class="section" id="class-description">
+<h2>Class Description<a class="headerlink" href="#class-description" title="Permalink to this headline">¶</a></h2>
+<dl class="class">
+<dt id="NDynReg">
+<em class="property">class </em><code class="descname">NDynReg</code><span class="sig-paren">(</span><em>formula</em>, <em>data</em>, <em>family</em><span class="sig-paren">)</span><a class="headerlink" href="#NDynReg" title="Permalink to this definition">¶</a></dt>
+<dd><p><strong>Non-Gaussian Dynamic Regression models</strong></p>
+<table border="1" class="docutils">
+<colgroup>
+<col width="20%" />
+<col width="35%" />
+<col width="45%" />
+</colgroup>
+<thead valign="bottom">
+<tr class="row-odd"><th class="head">Parameter</th>
+<th class="head">Type</th>
+<th class="head">Description</th>
+</tr>
+</thead>
+<tbody valign="top">
+<tr class="row-even"><td>formula</td>
+<td>string</td>
+<td>Patsy notation specifying the regression</td>
+</tr>
+<tr class="row-odd"><td>data</td>
+<td>pd.DataFrame</td>
+<td>Contains the univariate time series</td>
+</tr>
+<tr class="row-even"><td>family</td>
+<td>pf.Family instance</td>
+<td>The distribution for the time series,
+e.g <code class="docutils literal"><span class="pre">pf.Normal()</span></code></td>
+</tr>
+</tbody>
+</table>
+<p><strong>Attributes</strong></p>
+<dl class="attribute">
+<dt id="NDynReg.latent_variables">
+<code class="descname">latent_variables</code><a class="headerlink" href="#NDynReg.latent_variables" title="Permalink to this definition">¶</a></dt>
+<dd><p>A pf.LatentVariables() object containing information on the model latent variables,
+prior settings. any fitted values, starting values, and other latent variable
+information. When a model is fitted, this is where the latent variables are updated/stored.
+Please see the documentation on Latent Variables for information on attributes within this
+object, as well as methods for accessing the latent variable information.</p>
+</dd></dl>
+
+<p><strong>Methods</strong></p>
+<dl class="method">
+<dt id="NDynReg.adjust_prior">
+<code class="descname">adjust_prior</code><span class="sig-paren">(</span><em>index</em>, <em>prior</em><span class="sig-paren">)</span><a class="headerlink" href="#NDynReg.adjust_prior" title="Permalink to this definition">¶</a></dt>
+<dd><p>Adjusts the priors for the model latent variables. The latent variables and their indices
+can be viewed by printing the <code class="docutils literal"><span class="pre">latent_variables</span></code> attribute attached to the model instance.</p>
+<table border="1" class="docutils">
+<colgroup>
+<col width="22%" />
+<col width="29%" />
+<col width="49%" />
+</colgroup>
+<thead valign="bottom">
+<tr class="row-odd"><th class="head">Parameter</th>
+<th class="head">Type</th>
+<th class="head">Description</th>
+</tr>
+</thead>
+<tbody valign="top">
+<tr class="row-even"><td>index</td>
+<td>int</td>
+<td>Index of the latent variable to change</td>
+</tr>
+<tr class="row-odd"><td>prior</td>
+<td>pf.Family instance</td>
+<td>Prior distribution, e.g. <code class="docutils literal"><span class="pre">pf.Normal()</span></code></td>
+</tr>
+</tbody>
+</table>
+<p><strong>Returns</strong>: void - changes the model <code class="docutils literal"><span class="pre">latent_variables</span></code> attribute</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="NDynReg.fit">
+<code class="descname">fit</code><span class="sig-paren">(</span><em>method</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="headerlink" href="#NDynReg.fit" title="Permalink to this definition">¶</a></dt>
+<dd><p>Estimates latent variables for the model. User chooses an inference option and the
+method returns a results object, as well as updating the model&#8217;s <code class="docutils literal"><span class="pre">latent_variables</span></code>
+attribute.</p>
+<table border="1" class="docutils">
+<colgroup>
+<col width="23%" />
+<col width="30%" />
+<col width="48%" />
+</colgroup>
+<thead valign="bottom">
+<tr class="row-odd"><th class="head">Parameter</th>
+<th class="head">Type</th>
+<th class="head">Description</th>
+</tr>
+</thead>
+<tbody valign="top">
+<tr class="row-even"><td>method</td>
+<td>str</td>
+<td>Inference option: e.g. &#8216;M-H&#8217; or &#8216;MLE&#8217;</td>
+</tr>
+</tbody>
+</table>
+<p>See Bayesian Inference and Classical Inference sections of the documentation for the
+full list of inference options. Optional parameters can be entered that are relevant
+to the particular mode of inference chosen.</p>
+<p><strong>Returns</strong>: pf.Results instance with information for the estimated latent variables</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="NDynReg.plot_fit">
+<code class="descname">plot_fit</code><span class="sig-paren">(</span><em>**kwargs</em><span class="sig-paren">)</span><a class="headerlink" href="#NDynReg.plot_fit" title="Permalink to this definition">¶</a></dt>
+<dd><p>Plots the fit of the model against the data. Optional arguments include <em>figsize</em>,
+the dimensions of the figure to plot.</p>
+<p><strong>Returns</strong> : void - shows a matplotlib plot</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="NDynReg.plot_ppc">
+<code class="descname">plot_ppc</code><span class="sig-paren">(</span><em>T</em>, <em>nsims</em><span class="sig-paren">)</span><a class="headerlink" href="#NDynReg.plot_ppc" title="Permalink to this definition">¶</a></dt>
+<dd><p>Plots a histogram for a posterior predictive check with a discrepancy measure of the
+user&#8217;s choosing. This method only works if you have fitted using Bayesian inference.</p>
+<table border="1" class="docutils">
+<colgroup>
+<col width="21%" />
+<col width="28%" />
+<col width="51%" />
+</colgroup>
+<thead valign="bottom">
+<tr class="row-odd"><th class="head">Parameter</th>
+<th class="head">Type</th>
+<th class="head">Description</th>
+</tr>
+</thead>
+<tbody valign="top">
+<tr class="row-even"><td>T</td>
+<td>function</td>
+<td>Discrepancy, e.g. <code class="docutils literal"><span class="pre">np.mean</span></code> or <code class="docutils literal"><span class="pre">np.max</span></code></td>
+</tr>
+<tr class="row-odd"><td>nsims</td>
+<td>int</td>
+<td>How many simulations for the PPC</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Returns</strong>: void - shows a matplotlib plot</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="NDynReg.plot_predict">
+<code class="descname">plot_predict</code><span class="sig-paren">(</span><em>h</em>, <em>oos_data</em>, <em>past_values</em>, <em>intervals</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="headerlink" href="#NDynReg.plot_predict" title="Permalink to this definition">¶</a></dt>
+<dd><p>Plots predictions of the model, along with intervals.</p>
+<table border="1" class="docutils">
+<colgroup>
+<col width="21%" />
+<col width="29%" />
+<col width="50%" />
+</colgroup>
+<thead valign="bottom">
+<tr class="row-odd"><th class="head">Parameter</th>
+<th class="head">Type</th>
+<th class="head">Description</th>
+</tr>
+</thead>
+<tbody valign="top">
+<tr class="row-even"><td>h</td>
+<td>int</td>
+<td>How many steps to forecast ahead</td>
+</tr>
+<tr class="row-odd"><td>oos_data</td>
+<td>pd.DataFrame</td>
+<td>Exogenous variables in a frame for h steps</td>
+</tr>
+<tr class="row-even"><td>past_values</td>
+<td>int</td>
+<td>How many past datapoints to plot</td>
+</tr>
+<tr class="row-odd"><td>intervals</td>
+<td>boolean</td>
+<td>Whether to plot intervals or not</td>
+</tr>
+</tbody>
+</table>
+<p>To be clear, the <em>oos_data</em> argument should be a DataFrame in the same format as the initial
+dataframe used to initialize the model instance. The reason is that to predict future values,
+you need to specify assumptions about exogenous variables for the future. For example, if you
+predict <em>h</em> steps ahead, the method will take the h first rows from <em>oos_data</em> and take the
+values for the exogenous variables that you asked for in the patsy formula.</p>
+<p>Optional arguments include <em>figsize</em> - the dimensions of the figure to plot. Please note
+that if you use Maximum Likelihood or Variational Inference, the intervals shown will not
+reflect latent variable uncertainty. Only Metropolis-Hastings will give you fully Bayesian
+prediction intervals. Bayesian intervals with variational inference are not shown because
+of the limitation of mean-field inference in not accounting for posterior correlations.</p>
+<p><strong>Returns</strong> : void - shows a matplotlib plot</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="NDynReg.plot_predict_is">
+<code class="descname">plot_predict_is</code><span class="sig-paren">(</span><em>h</em>, <em>fit_once</em>, <em>fit_method</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="headerlink" href="#NDynReg.plot_predict_is" title="Permalink to this definition">¶</a></dt>
+<dd><p>Plots in-sample rolling predictions for the model. This means that the user pretends a
+last subsection of data is out-of-sample, and forecasts after each period and assesses
+how well they did. The user can choose whether to fit parameters once at the beginning
+or every time step.</p>
+<table border="1" class="docutils">
+<colgroup>
+<col width="23%" />
+<col width="30%" />
+<col width="48%" />
+</colgroup>
+<thead valign="bottom">
+<tr class="row-odd"><th class="head">Parameter</th>
+<th class="head">Type</th>
+<th class="head">Description</th>
+</tr>
+</thead>
+<tbody valign="top">
+<tr class="row-even"><td>h</td>
+<td>int</td>
+<td>How many previous timesteps to use</td>
+</tr>
+<tr class="row-odd"><td>fit_once</td>
+<td>boolean</td>
+<td>Whether to fit once, or every timestep</td>
+</tr>
+<tr class="row-even"><td>fit_method</td>
+<td>str</td>
+<td>Which inference option, e.g. &#8216;MLE&#8217;</td>
+</tr>
+</tbody>
+</table>
+<p>Optional arguments include <em>figsize</em> - the dimensions of the figure to plot. <strong>h</strong> is an int of how many previous steps to simulate performance on.</p>
+<p><strong>Returns</strong> : void - shows a matplotlib plot</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="NDynReg.plot_z">
+<code class="descname">plot_z</code><span class="sig-paren">(</span><em>indices</em>, <em>figsize</em><span class="sig-paren">)</span><a class="headerlink" href="#NDynReg.plot_z" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns a plot of the latent variables and their associated uncertainty.</p>
+<table border="1" class="docutils">
+<colgroup>
+<col width="23%" />
+<col width="30%" />
+<col width="48%" />
+</colgroup>
+<thead valign="bottom">
+<tr class="row-odd"><th class="head">Parameter</th>
+<th class="head">Type</th>
+<th class="head">Description</th>
+</tr>
+</thead>
+<tbody valign="top">
+<tr class="row-even"><td>indices</td>
+<td>int or list</td>
+<td>Which latent variable indices to plot</td>
+</tr>
+<tr class="row-odd"><td>figsize</td>
+<td>tuple</td>
+<td>Size of the matplotlib figure</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Returns</strong> : void - shows a matplotlib plot</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="NDynReg.predict">
+<code class="descname">predict</code><span class="sig-paren">(</span><em>h</em>, <em>oos_data</em><span class="sig-paren">)</span><a class="headerlink" href="#NDynReg.predict" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns a DataFrame of model predictions.</p>
+<table border="1" class="docutils">
+<colgroup>
+<col width="21%" />
+<col width="29%" />
+<col width="50%" />
+</colgroup>
+<thead valign="bottom">
+<tr class="row-odd"><th class="head">Parameter</th>
+<th class="head">Type</th>
+<th class="head">Description</th>
+</tr>
+</thead>
+<tbody valign="top">
+<tr class="row-even"><td>h</td>
+<td>int</td>
+<td>How many steps to forecast ahead</td>
+</tr>
+<tr class="row-odd"><td>oos_data</td>
+<td>pd.DataFrame</td>
+<td>Exogenous variables in a frame for h steps</td>
+</tr>
+</tbody>
+</table>
+<p>To be clear, the <em>oos_data</em> argument should be a DataFrame in the same format as the initial
+dataframe used to initialize the model instance. The reason is that to predict future values,
+you need to specify assumptions about exogenous variables for the future. For example, if you
+predict <em>h</em> steps ahead, the method will take the 5 first rows from <em>oos_data</em> and take the
+values for the exogenous variables that you specified as exogenous variables in the patsy formula.</p>
+<p>Please note that if you use Maximum Likelihood or Variational Inference, the intervals shown
+will not reflect latent variable uncertainty. Only Metropolis-Hastings will give you fully
+Bayesian prediction intervals. Bayesian intervals with variational inference are not shown
+because of the limitation of mean-field inference in not accounting for posterior correlations.</p>
+<p><strong>Returns</strong> : pd.DataFrame - the model predictions</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="NDynReg.predict_is">
+<code class="descname">predict_is</code><span class="sig-paren">(</span><em>h</em>, <em>fit_once</em>, <em>fit_method</em><span class="sig-paren">)</span><a class="headerlink" href="#NDynReg.predict_is" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns DataFrame of in-sample rolling predictions for the model.</p>
+<table border="1" class="docutils">
+<colgroup>
+<col width="23%" />
+<col width="30%" />
+<col width="48%" />
+</colgroup>
+<thead valign="bottom">
+<tr class="row-odd"><th class="head">Parameter</th>
+<th class="head">Type</th>
+<th class="head">Description</th>
+</tr>
+</thead>
+<tbody valign="top">
+<tr class="row-even"><td>h</td>
+<td>int</td>
+<td>How many previous timesteps to use</td>
+</tr>
+<tr class="row-odd"><td>fit_once</td>
+<td>boolean</td>
+<td>Whether to fit once, or every timestep</td>
+</tr>
+<tr class="row-even"><td>fit_method</td>
+<td>str</td>
+<td>Which inference option, e.g. &#8216;MLE&#8217;</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Returns</strong> : pd.DataFrame - the model predictions</p>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+<div class="section" id="references">
+<h2>References<a class="headerlink" href="#references" title="Permalink to this headline">¶</a></h2>
+<p>Harvey, A. C. (1989). Forecasting, Structural Time Series Models and the Kalman Filter.
+Cambridge University Press, Cambridge.</p>
+<p>Ranganath, R., Gerrish, S., and Blei, D. M. (2014). Black box variational inference.
+In Artificial Intelligence and Statistics.</p>
+</div>
+</div>
+
+
+           </div>
+          </div>
+          <footer>
+  
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+      
+        <a href="nllm.html" class="btn btn-neutral float-right" title="Non-Gaussian Local Level Models" accesskey="n">Next <span class="fa fa-arrow-circle-right"></span></a>
+      
+      
+        <a href="llt.html" class="btn btn-neutral" title="Gaussian Local Linear Trend models" accesskey="p"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+      
+    </div>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2016, Ross Taylor.
+
+    </p>
+  </div>
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/snide/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  
+
+    <script type="text/javascript">
+        var DOCUMENTATION_OPTIONS = {
+            URL_ROOT:'./',
+            VERSION:'0.4.0',
+            COLLAPSE_INDEX:false,
+            FILE_SUFFIX:'.html',
+            HAS_SOURCE:  true
+        };
+    </script>
+      <script type="text/javascript" src="_static/jquery.js"></script>
+      <script type="text/javascript" src="_static/underscore.js"></script>
+      <script type="text/javascript" src="_static/doctools.js"></script>
+      <script type="text/javascript" src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+
+  
+
+  
+  
+    <script type="text/javascript" src="_static/js/theme.js"></script>
+  
+
+  
+  
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.StickyNav.enable();
+      });
+  </script>
+   
+
+</body>
+</html>

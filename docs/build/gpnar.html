@@ -31,7 +31,7 @@
 
   
     <link rel="top" title="PyFlux 0.4.0 documentation" href="index.html"/>
-        <link rel="next" title="Gaussian State Space models" href="ssm.html"/>
+        <link rel="next" title="Gaussian Local Level models" href="llm.html"/>
         <link rel="prev" title="GASX models" href="gasx.html"/> 
 
   
@@ -81,20 +81,26 @@
           
             
             
-                <ul class="current">
+                <ul>
+<li class="toctree-l1"><a class="reference internal" href="getting_started.html">Getting Started with Time Series</a></li>
+</ul>
+<ul class="current">
 <li class="toctree-l1"><a class="reference internal" href="arima.html">ARIMA models</a></li>
 <li class="toctree-l1"><a class="reference internal" href="arimax.html">ARIMAX models</a></li>
 <li class="toctree-l1"><a class="reference internal" href="dar.html">DAR models</a></li>
+<li class="toctree-l1"><a class="reference internal" href="dyn_lin.html">Dynamic Linear regression models</a></li>
 <li class="toctree-l1"><a class="reference internal" href="egarch.html">Beta-t-EGARCH models</a></li>
 <li class="toctree-l1"><a class="reference internal" href="egarchm.html">Beta-t-EGARCH in-mean models</a></li>
-<li class="toctree-l1"><a class="reference internal" href="egarchmreg.html">Beta-t-EGARCH-in-mean regression models</a></li>
-<li class="toctree-l1"><a class="reference internal" href="lmegarch.html">Beta-t-EGARCH Long Memory models</a></li>
+<li class="toctree-l1"><a class="reference internal" href="egarchmreg.html">Beta-t-EGARCH in-mean regression models</a></li>
+<li class="toctree-l1"><a class="reference internal" href="lmegarch.html">Beta-t-EGARCH long memory models</a></li>
+<li class="toctree-l1"><a class="reference internal" href="segarch.html">Beta Skew-t GARCH models</a></li>
+<li class="toctree-l1"><a class="reference internal" href="segarchm.html">Beta Skew-t in-mean GARCH models</a></li>
 <li class="toctree-l1"><a class="reference internal" href="garch.html">GARCH models</a></li>
-<li class="toctree-l1"><a class="reference internal" href="segarch.html">Skew-t EGARCH models</a></li>
-<li class="toctree-l1"><a class="reference internal" href="segarchm.html">Skew-t EGARCH in-mean models</a></li>
 <li class="toctree-l1"><a class="reference internal" href="gas.html">GAS models</a></li>
-<li class="toctree-l1"><a class="reference internal" href="gasreg.html">GAS Regression models</a></li>
-<li class="toctree-l1"><a class="reference internal" href="gasssm.html">GAS State Space models</a></li>
+<li class="toctree-l1"><a class="reference internal" href="gas_llm.html">GAS local level models</a></li>
+<li class="toctree-l1"><a class="reference internal" href="gas_llt.html">GAS local linear trend models</a></li>
+<li class="toctree-l1"><a class="reference internal" href="gas_rank.html">GAS ranking models</a></li>
+<li class="toctree-l1"><a class="reference internal" href="gas_reg.html">GAS regression models</a></li>
 <li class="toctree-l1"><a class="reference internal" href="gasx.html">GASX models</a></li>
 <li class="toctree-l1 current"><a class="current reference internal" href="#">GP-NARX models</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="#example">Example</a></li>
@@ -102,13 +108,17 @@
 <li class="toctree-l2"><a class="reference internal" href="#class-methods">Class Methods</a></li>
 </ul>
 </li>
-<li class="toctree-l1"><a class="reference internal" href="ssm.html">Gaussian State Space models</a></li>
-<li class="toctree-l1"><a class="reference internal" href="ngssm.html">Non-Gaussian State Space models</a></li>
+<li class="toctree-l1"><a class="reference internal" href="llm.html">Gaussian Local Level models</a></li>
+<li class="toctree-l1"><a class="reference internal" href="llt.html">Gaussian Local Linear Trend models</a></li>
+<li class="toctree-l1"><a class="reference internal" href="dyn_glm.html">Non-Gaussian Dynamic Regression Models</a></li>
+<li class="toctree-l1"><a class="reference internal" href="nllm.html">Non-Gaussian Local Level Models</a></li>
+<li class="toctree-l1"><a class="reference internal" href="nllt.html">Non-Gaussian Local Linear Trend Models</a></li>
 <li class="toctree-l1"><a class="reference internal" href="var.html">VAR models</a></li>
 </ul>
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="bayes.html">Bayesian Inference</a></li>
 <li class="toctree-l1"><a class="reference internal" href="classical.html">Classical Inference</a></li>
+<li class="toctree-l1"><a class="reference internal" href="families.html">Families</a></li>
 </ul>
 
             
@@ -217,7 +227,7 @@
 <dd><p>Adjusts the priors of the model. <strong>index</strong> can be an int or a list. <strong>prior</strong> is a prior object, such as Normal(0,3).</p>
 </dd></dl>
 
-<p>Here is example usage for <a class="reference internal" href="var.html#adjust_prior" title="adjust_prior"><code class="xref py py-func docutils literal"><span class="pre">adjust_prior()</span></code></a>:</p>
+<p>Here is example usage for <a class="reference internal" href="ssm.html#adjust_prior" title="adjust_prior"><code class="xref py py-func docutils literal"><span class="pre">adjust_prior()</span></code></a>:</p>
 <div class="highlight-python"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre>1
 2
 3
@@ -236,7 +246,7 @@
 <p>Optional arguments are specific to the <strong>method</strong> you choose - see the documentation for these methods for more detail.</p>
 </dd></dl>
 
-<p>Here is example usage for <a class="reference internal" href="var.html#fit" title="fit"><code class="xref py py-func docutils literal"><span class="pre">fit()</span></code></a>:</p>
+<p>Here is example usage for <a class="reference internal" href="ssm.html#fit" title="fit"><code class="xref py py-func docutils literal"><span class="pre">fit()</span></code></a>:</p>
 <div class="highlight-python"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre>1
 2
 3
@@ -295,7 +305,7 @@
   
     <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
       
-        <a href="ssm.html" class="btn btn-neutral float-right" title="Gaussian State Space models" accesskey="n">Next <span class="fa fa-arrow-circle-right"></span></a>
+        <a href="llm.html" class="btn btn-neutral float-right" title="Gaussian Local Level models" accesskey="n">Next <span class="fa fa-arrow-circle-right"></span></a>
       
       
         <a href="gasx.html" class="btn btn-neutral" title="GASX models" accesskey="p"><span class="fa fa-arrow-circle-left"></span> Previous</a>

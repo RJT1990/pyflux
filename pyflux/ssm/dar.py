@@ -471,3 +471,4 @@ class DAR(tsm.TSM):
         T, Z, R, Q, H = self._ss_matrices(beta)
         alpha, V = dl_univariate_KFS(data,Z,H,T,Q,R,0.0)
         return alpha, V
+

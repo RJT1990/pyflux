@@ -31,8 +31,8 @@
 
   
     <link rel="top" title="PyFlux 0.4.0 documentation" href="index.html"/>
-        <link rel="next" title="Beta Skew-t GARCH models" href="segarch.html"/>
-        <link rel="prev" title="Long memory Beta-t-EGARCH models" href="lmegarch.html"/> 
+        <link rel="next" title="GAS models" href="gas.html"/>
+        <link rel="prev" title="Beta Skew-t in-mean GARCH models" href="segarchm.html"/> 
 
   
   <script src="_static/js/modernizr.min.js"></script>
@@ -88,10 +88,13 @@
 <li class="toctree-l1"><a class="reference internal" href="arima.html">ARIMA models</a></li>
 <li class="toctree-l1"><a class="reference internal" href="arimax.html">ARIMAX models</a></li>
 <li class="toctree-l1"><a class="reference internal" href="dar.html">DAR models</a></li>
+<li class="toctree-l1"><a class="reference internal" href="dyn_lin.html">Dynamic Linear regression models</a></li>
 <li class="toctree-l1"><a class="reference internal" href="egarch.html">Beta-t-EGARCH models</a></li>
 <li class="toctree-l1"><a class="reference internal" href="egarchm.html">Beta-t-EGARCH in-mean models</a></li>
 <li class="toctree-l1"><a class="reference internal" href="egarchmreg.html">Beta-t-EGARCH in-mean regression models</a></li>
-<li class="toctree-l1"><a class="reference internal" href="lmegarch.html">Long memory Beta-t-EGARCH models</a></li>
+<li class="toctree-l1"><a class="reference internal" href="lmegarch.html">Beta-t-EGARCH long memory models</a></li>
+<li class="toctree-l1"><a class="reference internal" href="segarch.html">Beta Skew-t GARCH models</a></li>
+<li class="toctree-l1"><a class="reference internal" href="segarchm.html">Beta Skew-t in-mean GARCH models</a></li>
 <li class="toctree-l1 current"><a class="current reference internal" href="#">GARCH models</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="#introduction">Introduction</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#example">Example</a></li>
@@ -99,20 +102,24 @@
 <li class="toctree-l2"><a class="reference internal" href="#references">References</a></li>
 </ul>
 </li>
-<li class="toctree-l1"><a class="reference internal" href="segarch.html">Beta Skew-t GARCH models</a></li>
-<li class="toctree-l1"><a class="reference internal" href="segarchm.html">Beta Skew-t in-mean GARCH models</a></li>
 <li class="toctree-l1"><a class="reference internal" href="gas.html">GAS models</a></li>
-<li class="toctree-l1"><a class="reference internal" href="gasreg.html">GAS Regression models</a></li>
-<li class="toctree-l1"><a class="reference internal" href="gasssm.html">GAS State Space models</a></li>
+<li class="toctree-l1"><a class="reference internal" href="gas_llm.html">GAS local level models</a></li>
+<li class="toctree-l1"><a class="reference internal" href="gas_llt.html">GAS local linear trend models</a></li>
+<li class="toctree-l1"><a class="reference internal" href="gas_rank.html">GAS ranking models</a></li>
+<li class="toctree-l1"><a class="reference internal" href="gas_reg.html">GAS regression models</a></li>
 <li class="toctree-l1"><a class="reference internal" href="gasx.html">GASX models</a></li>
 <li class="toctree-l1"><a class="reference internal" href="gpnar.html">GP-NARX models</a></li>
-<li class="toctree-l1"><a class="reference internal" href="ssm.html">Gaussian State Space models</a></li>
-<li class="toctree-l1"><a class="reference internal" href="ngssm.html">Non-Gaussian State Space models</a></li>
+<li class="toctree-l1"><a class="reference internal" href="llm.html">Gaussian Local Level models</a></li>
+<li class="toctree-l1"><a class="reference internal" href="llt.html">Gaussian Local Linear Trend models</a></li>
+<li class="toctree-l1"><a class="reference internal" href="dyn_glm.html">Non-Gaussian Dynamic Regression Models</a></li>
+<li class="toctree-l1"><a class="reference internal" href="nllm.html">Non-Gaussian Local Level Models</a></li>
+<li class="toctree-l1"><a class="reference internal" href="nllt.html">Non-Gaussian Local Linear Trend Models</a></li>
 <li class="toctree-l1"><a class="reference internal" href="var.html">VAR models</a></li>
 </ul>
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="bayes.html">Bayesian Inference</a></li>
 <li class="toctree-l1"><a class="reference internal" href="classical.html">Classical Inference</a></li>
+<li class="toctree-l1"><a class="reference internal" href="families.html">Families</a></li>
 </ul>
 
             
@@ -227,20 +234,20 @@
 </pre></div>
 </div>
 <p>The standard errors are not shown for transformed variables. You can pass through a <code class="docutils literal"><span class="pre">transformed=False</span></code> argument to <code class="docutils literal"><span class="pre">summary</span></code> to obtain this information for untransformed variables.</p>
-<p>We can plot the GARCH latent variables with <code class="xref py py-func docutils literal"><span class="pre">plot_z()</span></code>:</p>
+<p>We can plot the GARCH latent variables with <a class="reference internal" href="gpnar.html#plot_z" title="plot_z"><code class="xref py py-func docutils literal"><span class="pre">plot_z()</span></code></a>:</p>
 <div class="highlight-python"><div class="highlight"><pre><span></span><span class="n">model</span><span class="o">.</span><span class="n">plot_z</span><span class="p">(</span><span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">15</span><span class="p">,</span><span class="mi">5</span><span class="p">))</span>
 </pre></div>
 </div>
 <img alt="http://www.pyflux.com/notebooks/GARCH/output_18_12.png" src="http://www.pyflux.com/notebooks/GARCH/output_18_12.png" />
-<p>We can plot the fit with <code class="xref py py-func docutils literal"><span class="pre">plot_fit()</span></code>:</p>
+<p>We can plot the fit with <a class="reference internal" href="ssm.html#plot_fit" title="plot_fit"><code class="xref py py-func docutils literal"><span class="pre">plot_fit()</span></code></a>:</p>
 <img alt="http://www.pyflux.com/notebooks/GARCH/output_20_02.png" src="http://www.pyflux.com/notebooks/GARCH/output_20_02.png" />
-<p>And plot predictions of future conditional volatility with <code class="xref py py-func docutils literal"><span class="pre">plot_predict()</span></code>:</p>
+<p>And plot predictions of future conditional volatility with <a class="reference internal" href="ssm.html#plot_predict" title="plot_predict"><code class="xref py py-func docutils literal"><span class="pre">plot_predict()</span></code></a>:</p>
 <div class="highlight-python"><div class="highlight"><pre><span></span><span class="n">model</span><span class="o">.</span><span class="n">plot_predict</span><span class="p">(</span><span class="n">h</span><span class="o">=</span><span class="mi">10</span><span class="p">)</span>
 </pre></div>
 </div>
 <img alt="http://www.pyflux.com/notebooks/GARCH/plot_predict_garch.png" src="http://www.pyflux.com/notebooks/GARCH/plot_predict_garch.png" />
-<p>If we had wanted predictions in DataFrame form, we could have used <code class="xref py py-func docutils literal"><span class="pre">predict()</span></code>:.</p>
-<p>We can view how well we predicted using in-sample rolling prediction with <code class="xref py py-func docutils literal"><span class="pre">plot_predict_is()</span></code>:</p>
+<p>If we had wanted predictions in DataFrame form, we could have used <a class="reference internal" href="ssm.html#predict" title="predict"><code class="xref py py-func docutils literal"><span class="pre">predict()</span></code></a>:.</p>
+<p>We can view how well we predicted using in-sample rolling prediction with <a class="reference internal" href="ssm.html#plot_predict_is" title="plot_predict_is"><code class="xref py py-func docutils literal"><span class="pre">plot_predict_is()</span></code></a>:</p>
 <div class="highlight-python"><div class="highlight"><pre><span></span><span class="n">model</span><span class="o">.</span><span class="n">plot_predict_is</span><span class="p">(</span><span class="n">h</span><span class="o">=</span><span class="mi">50</span><span class="p">,</span><span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">15</span><span class="p">,</span><span class="mi">5</span><span class="p">))</span>
 </pre></div>
 </div>
@@ -680,10 +687,10 @@ Estimates of the Variance of United Kingdom Inflation. Econometrica.
   
     <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
       
-        <a href="segarch.html" class="btn btn-neutral float-right" title="Beta Skew-t GARCH models" accesskey="n">Next <span class="fa fa-arrow-circle-right"></span></a>
+        <a href="gas.html" class="btn btn-neutral float-right" title="GAS models" accesskey="n">Next <span class="fa fa-arrow-circle-right"></span></a>
       
       
-        <a href="lmegarch.html" class="btn btn-neutral" title="Long memory Beta-t-EGARCH models" accesskey="p"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+        <a href="segarchm.html" class="btn btn-neutral" title="Beta Skew-t in-mean GARCH models" accesskey="p"><span class="fa fa-arrow-circle-left"></span> Previous</a>
       
     </div>
   

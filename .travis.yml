@@ -1,19 +1,24 @@
 language: python
 
-python:
-- '2.7'
-- '3.5.2'
+matrix:
+  include:
+    - python: 2.7
+    - python: 3.3
+    - python: 3.4
+    - python: 3.5
+
 install:
-- pip install --upgrade pip
-- pip install numpy
-- pip install scipy
-- pip install patsy
-- pip install coveralls
-- pip install .
-- pip install -r requirements.txt
-before_install:
-- pip install pytest pytest-cov
+  - wget http://repo.continuum.io/miniconda/Miniconda-latest-Linux-x86_64.sh -O miniconda.sh
+  - bash miniconda.sh -b -p $HOME/miniconda
+  - export PATH="$HOME/miniconda/bin:$PATH"
+  - conda config --set always_yes yes --set changeps1 no
+  - conda update conda
+
+  - conda create -n pyflux python=$TRAVIS_PYTHON_VERSION pytest numpy pandas numdifftools scipy patsy
+  - source activate pyflux
+
 script:
-- pytest
+- py.test -x --doctest-modules --pyargs pyflux
+
 after_success:
 - coveralls

@@ -87,6 +87,7 @@
 <li class="toctree-l1"><a class="reference internal" href="arima.html">ARIMA models</a></li>
 <li class="toctree-l1"><a class="reference internal" href="arimax.html">ARIMAX models</a></li>
 <li class="toctree-l1"><a class="reference internal" href="dar.html">DAR models</a></li>
+<li class="toctree-l1"><a class="reference internal" href="dyn_lin.html">Dynamic Linear regression models</a></li>
 <li class="toctree-l1"><a class="reference internal" href="egarch.html">Beta-t-EGARCH models</a></li>
 <li class="toctree-l1"><a class="reference internal" href="egarchm.html">Beta-t-EGARCH in-mean models</a></li>
 <li class="toctree-l1"><a class="reference internal" href="egarchmreg.html">Beta-t-EGARCH in-mean regression models</a></li>
@@ -101,13 +102,17 @@
 <li class="toctree-l1"><a class="reference internal" href="gas_reg.html">GAS regression models</a></li>
 <li class="toctree-l1"><a class="reference internal" href="gasx.html">GASX models</a></li>
 <li class="toctree-l1"><a class="reference internal" href="gpnar.html">GP-NARX models</a></li>
-<li class="toctree-l1"><a class="reference internal" href="ssm.html">Gaussian State Space models</a></li>
-<li class="toctree-l1"><a class="reference internal" href="ngssm.html">Non-Gaussian State Space models</a></li>
+<li class="toctree-l1"><a class="reference internal" href="llm.html">Gaussian Local Level models</a></li>
+<li class="toctree-l1"><a class="reference internal" href="llt.html">Gaussian Local Linear Trend models</a></li>
+<li class="toctree-l1"><a class="reference internal" href="dyn_glm.html">Non-Gaussian Dynamic Regression Models</a></li>
+<li class="toctree-l1"><a class="reference internal" href="nllm.html">Non-Gaussian Local Level Models</a></li>
+<li class="toctree-l1"><a class="reference internal" href="nllt.html">Non-Gaussian Local Linear Trend Models</a></li>
 <li class="toctree-l1"><a class="reference internal" href="var.html">VAR models</a></li>
 </ul>
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="bayes.html">Bayesian Inference</a></li>
 <li class="toctree-l1"><a class="reference internal" href="classical.html">Classical Inference</a></li>
+<li class="toctree-l1"><a class="reference internal" href="families.html">Families</a></li>
 </ul>
 
             
@@ -216,6 +221,14 @@
   </dt>
 
         
+  <dt><a href="dar.html#DAR.adjust_prior">(DAR method)</a>
+  </dt>
+
+        
+  <dt><a href="dyn_lin.html#DynLin.adjust_prior">(DynLin method)</a>
+  </dt>
+
+        
   <dt><a href="egarch.html#EGARCH.adjust_prior">(EGARCH method)</a>
   </dt>
 
@@ -256,7 +269,27 @@
   </dt>
 
         
+  <dt><a href="llm.html#LLEV.adjust_prior">(LLEV method)</a>
+  </dt>
+
+        
+  <dt><a href="llt.html#LLT.adjust_prior">(LLT method)</a>
+  </dt>
+
+        
   <dt><a href="lmegarch.html#LMGARCHM.adjust_prior">(LMGARCHM method)</a>
+  </dt>
+
+        
+  <dt><a href="dyn_glm.html#NDynReg.adjust_prior">(NDynReg method)</a>
+  </dt>
+
+        
+  <dt><a href="nllm.html#NLLEV.adjust_prior">(NLLEV method)</a>
+  </dt>
+
+        
+  <dt><a href="nllt.html#NLLT.adjust_prior">(NLLT method)</a>
   </dt>
 
         
@@ -268,7 +301,11 @@
   </dt>
 
         
-  <dt><a href="bayes.html#adjust_prior">(built-in function)</a>, <a href="dar.html#adjust_prior">[1]</a>, <a href="gasssm.html#adjust_prior">[2]</a>, <a href="gpnar.html#adjust_prior">[3]</a>, <a href="ngssm.html#adjust_prior">[4]</a>, <a href="ssm.html#adjust_prior">[5]</a>, <a href="var.html#adjust_prior">[6]</a>
+  <dt><a href="var.html#VAR.adjust_prior">(VAR method)</a>
+  </dt>
+
+        
+  <dt><a href="bayes.html#adjust_prior">(built-in function)</a>, <a href="gasssm.html#adjust_prior">[1]</a>, <a href="gpnar.html#adjust_prior">[2]</a>, <a href="ngssm.html#adjust_prior">[3]</a>, <a href="ssm.html#adjust_prior">[4]</a>
   </dt>
 
       </dl></dd>
@@ -279,15 +316,9 @@
   </dl></td>
   <td style="width: 33%" valign="top"><dl>
       
-  <dt><a href="dar.html#DAR.ar">ar (DAR attribute)</a>
+  <dt><a href="gpnar.html#GPNARX.ar">ar (GPNARX attribute)</a>
   </dt>
 
-      <dd><dl>
-        
-  <dt><a href="gpnar.html#GPNARX.ar">(GPNARX attribute)</a>
-  </dt>
-
-      </dl></dd>
       
   <dt><a href="arima.html#ARIMA">ARIMA (built-in class)</a>
   </dt>
@@ -313,7 +344,7 @@
 <table style="width: 100%" class="indextable genindextable"><tr>
   <td style="width: 33%" valign="top"><dl>
       
-  <dt><a href="var.html#construct_wishart">construct_wishart() (built-in function)</a>
+  <dt><a href="families.html#Cauchy">Cauchy (built-in class)</a>
   </dt>
 
   </dl></td>
@@ -327,14 +358,10 @@
   </dt>
 
       
-  <dt><a href="dar.html#DAR.data">data (DAR attribute)</a>
+  <dt><a href="ssm.html#DynReg.data">data (DynReg attribute)</a>
   </dt>
 
       <dd><dl>
-        
-  <dt><a href="ssm.html#DynReg.data">(DynReg attribute)</a>
-  </dt>
-
         
   <dt><a href="gasssm.html#GASLLEV.data">(GASLLEV attribute)</a>
   </dt>
@@ -367,13 +394,13 @@
   <dt><a href="ngssm.html#NLLT.data">(NLLT attribute)</a>
   </dt>
 
-        
-  <dt><a href="var.html#VAR.data">(VAR attribute)</a>
-  </dt>
-
       </dl></dd>
   </dl></td>
   <td style="width: 33%" valign="top"><dl>
+      
+  <dt><a href="dyn_lin.html#DynLin">DynLin (built-in class)</a>
+  </dt>
+
       
   <dt><a href="ssm.html#DynReg">DynReg (built-in class)</a>
   </dt>
@@ -396,6 +423,10 @@
   <td style="width: 33%" valign="top"><dl>
       
   <dt><a href="egarchmreg.html#EGARCHMReg">EGARCHMReg (built-in class)</a>
+  </dt>
+
+      
+  <dt><a href="families.html#Exponential">Exponential (built-in class)</a>
   </dt>
 
   </dl></td>
@@ -421,6 +452,14 @@
       <dd><dl>
         
   <dt><a href="arimax.html#ARIMAX.fit">(ARIMAX method)</a>
+  </dt>
+
+        
+  <dt><a href="dar.html#DAR.fit">(DAR method)</a>
+  </dt>
+
+        
+  <dt><a href="dyn_lin.html#DynLin.fit">(DynLin method)</a>
   </dt>
 
         
@@ -464,7 +503,27 @@
   </dt>
 
         
+  <dt><a href="llm.html#LLEV.fit">(LLEV method)</a>
+  </dt>
+
+        
+  <dt><a href="llt.html#LLT.fit">(LLT method)</a>
+  </dt>
+
+        
   <dt><a href="lmegarch.html#LMGARCHM.fit">(LMGARCHM method)</a>
+  </dt>
+
+        
+  <dt><a href="dyn_glm.html#NDynReg.fit">(NDynReg method)</a>
+  </dt>
+
+        
+  <dt><a href="nllm.html#NLLEV.fit">(NLLEV method)</a>
+  </dt>
+
+        
+  <dt><a href="nllt.html#NLLT.fit">(NLLT method)</a>
   </dt>
 
         
@@ -476,12 +535,20 @@
   </dt>
 
         
-  <dt><a href="dar.html#fit">(built-in function)</a>, <a href="gasssm.html#fit">[1]</a>, <a href="gpnar.html#fit">[2]</a>, <a href="ngssm.html#fit">[3]</a>, <a href="ssm.html#fit">[4]</a>, <a href="var.html#fit">[5]</a>
+  <dt><a href="var.html#VAR.fit">(VAR method)</a>
+  </dt>
+
+        
+  <dt><a href="gasssm.html#fit">(built-in function)</a>, <a href="gpnar.html#fit">[1]</a>, <a href="ngssm.html#fit">[2]</a>, <a href="ssm.html#fit">[3]</a>
   </dt>
 
       </dl></dd>
   </dl></td>
   <td style="width: 33%" valign="top"><dl>
+      
+  <dt><a href="families.html#Flat">Flat (built-in class)</a>
+  </dt>
+
       
   <dt><a href="ssm.html#DynReg.formula">formula (DynReg attribute)</a>
   </dt>
@@ -539,14 +606,10 @@
 <table style="width: 100%" class="indextable genindextable"><tr>
   <td style="width: 33%" valign="top"><dl>
       
-  <dt><a href="dar.html#DAR.integ">integ (DAR attribute)</a>
+  <dt><a href="gasssm.html#GASLLEV.integ">integ (GASLLEV attribute)</a>
   </dt>
 
       <dd><dl>
-        
-  <dt><a href="gasssm.html#GASLLEV.integ">(GASLLEV attribute)</a>
-  </dt>
-
         
   <dt><a href="gasssm.html#GASLLT.integ">(GASLLT attribute)</a>
   </dt>
@@ -571,15 +634,15 @@
   <dt><a href="ngssm.html#NLLT.integ">(NLLT attribute)</a>
   </dt>
 
-        
-  <dt><a href="var.html#VAR.integ">(VAR attribute)</a>
+      </dl></dd>
+      
+  <dt><a href="bayes.html#InverseGamma">InverseGamma (built-in class)</a>, <a href="families.html#InverseGamma">[1]</a>
   </dt>
 
-      </dl></dd>
   </dl></td>
   <td style="width: 33%" valign="top"><dl>
       
-  <dt><a href="bayes.html#InverseGamma">InverseGamma (built-in class)</a>
+  <dt><a href="families.html#InverseWishart">InverseWishart (built-in class)</a>
   </dt>
 
   </dl></td>
@@ -599,7 +662,7 @@
 <table style="width: 100%" class="indextable genindextable"><tr>
   <td style="width: 33%" valign="top"><dl>
       
-  <dt><a href="var.html#VAR.lags">lags (VAR attribute)</a>
+  <dt><a href="families.html#Laplace">Laplace (built-in class)</a>
   </dt>
 
       
@@ -609,6 +672,14 @@
       <dd><dl>
         
   <dt><a href="arimax.html#ARIMAX.latent_variables">(ARIMAX attribute)</a>
+  </dt>
+
+        
+  <dt><a href="dar.html#DAR.latent_variables">(DAR attribute)</a>
+  </dt>
+
+        
+  <dt><a href="dyn_lin.html#DynLin.latent_variables">(DynLin attribute)</a>
   </dt>
 
         
@@ -652,7 +723,27 @@
   </dt>
 
         
+  <dt><a href="llm.html#LLEV.latent_variables">(LLEV attribute)</a>
+  </dt>
+
+        
+  <dt><a href="llt.html#LLT.latent_variables">(LLT attribute)</a>
+  </dt>
+
+        
   <dt><a href="lmegarch.html#LMGARCHM.latent_variables">(LMGARCHM attribute)</a>
+  </dt>
+
+        
+  <dt><a href="dyn_glm.html#NDynReg.latent_variables">(NDynReg attribute)</a>
+  </dt>
+
+        
+  <dt><a href="nllm.html#NLLEV.latent_variables">(NLLEV attribute)</a>
+  </dt>
+
+        
+  <dt><a href="nllt.html#NLLT.latent_variables">(NLLT attribute)</a>
   </dt>
 
         
@@ -663,15 +754,19 @@
   <dt><a href="segarchm.html#SEGARCHM.latent_variables">(SEGARCHM attribute)</a>
   </dt>
 
+        
+  <dt><a href="var.html#VAR.latent_variables">(VAR attribute)</a>
+  </dt>
+
       </dl></dd>
       
-  <dt><a href="ssm.html#LLEV">LLEV (built-in class)</a>
+  <dt><a href="llm.html#LLEV">LLEV (built-in class)</a>, <a href="ssm.html#LLEV">[1]</a>
   </dt>
 
   </dl></td>
   <td style="width: 33%" valign="top"><dl>
       
-  <dt><a href="ssm.html#LLT">LLT (built-in class)</a>
+  <dt><a href="llt.html#LLT">LLT (built-in class)</a>, <a href="ssm.html#LLT">[1]</a>
   </dt>
 
       
@@ -705,17 +800,21 @@
   </dt>
 
       
-  <dt><a href="ngssm.html#NLLEV">NLLEV (built-in class)</a>
+  <dt><a href="dyn_glm.html#NDynReg">NDynReg (built-in class)</a>
+  </dt>
+
+      
+  <dt><a href="ngssm.html#NLLEV">NLLEV (built-in class)</a>, <a href="nllm.html#NLLEV">[1]</a>
   </dt>
 
   </dl></td>
   <td style="width: 33%" valign="top"><dl>
       
-  <dt><a href="ngssm.html#NLLT">NLLT (built-in class)</a>
+  <dt><a href="ngssm.html#NLLT">NLLT (built-in class)</a>, <a href="nllt.html#NLLT">[1]</a>
   </dt>
 
       
-  <dt><a href="bayes.html#Normal">Normal (built-in class)</a>
+  <dt><a href="bayes.html#Normal">Normal (built-in class)</a>, <a href="families.html#Normal">[1]</a>
   </dt>
 
   </dl></td>
@@ -735,6 +834,14 @@
       <dd><dl>
         
   <dt><a href="arimax.html#ARIMAX.plot_fit">(ARIMAX method)</a>
+  </dt>
+
+        
+  <dt><a href="dar.html#DAR.plot_fit">(DAR method)</a>
+  </dt>
+
+        
+  <dt><a href="dyn_lin.html#DynLin.plot_fit">(DynLin method)</a>
   </dt>
 
         
@@ -778,7 +885,27 @@
   </dt>
 
         
+  <dt><a href="llm.html#LLEV.plot_fit">(LLEV method)</a>
+  </dt>
+
+        
+  <dt><a href="llt.html#LLT.plot_fit">(LLT method)</a>
+  </dt>
+
+        
   <dt><a href="lmegarch.html#LMGARCHM.plot_fit">(LMGARCHM method)</a>
+  </dt>
+
+        
+  <dt><a href="dyn_glm.html#NDynReg.plot_fit">(NDynReg method)</a>
+  </dt>
+
+        
+  <dt><a href="nllm.html#NLLEV.plot_fit">(NLLEV method)</a>
+  </dt>
+
+        
+  <dt><a href="nllt.html#NLLT.plot_fit">(NLLT method)</a>
   </dt>
 
         
@@ -790,7 +917,11 @@
   </dt>
 
         
-  <dt><a href="dar.html#plot_fit">(built-in function)</a>, <a href="gasssm.html#plot_fit">[1]</a>, <a href="gpnar.html#plot_fit">[2]</a>, <a href="ngssm.html#plot_fit">[3]</a>, <a href="ssm.html#plot_fit">[4]</a>, <a href="var.html#plot_fit">[5]</a>
+  <dt><a href="var.html#VAR.plot_fit">(VAR method)</a>
+  </dt>
+
+        
+  <dt><a href="gasssm.html#plot_fit">(built-in function)</a>, <a href="gpnar.html#plot_fit">[1]</a>, <a href="ngssm.html#plot_fit">[2]</a>, <a href="ssm.html#plot_fit">[3]</a>
   </dt>
 
       </dl></dd>
@@ -805,6 +936,10 @@
       <dd><dl>
         
   <dt><a href="arimax.html#ARIMAX.plot_ppc">(ARIMAX method)</a>
+  </dt>
+
+        
+  <dt><a href="dyn_lin.html#DynLin.plot_ppc">(DynLin method)</a>
   </dt>
 
         
@@ -844,7 +979,19 @@
   </dt>
 
         
+  <dt><a href="llm.html#LLEV.plot_ppc">(LLEV method)</a>
+  </dt>
+
+        
+  <dt><a href="llt.html#LLT.plot_ppc">(LLT method)</a>
+  </dt>
+
+        
   <dt><a href="lmegarch.html#LMGARCHM.plot_ppc">(LMGARCHM method)</a>
+  </dt>
+
+        
+  <dt><a href="dyn_glm.html#NDynReg.plot_ppc">(NDynReg method)</a>
   </dt>
 
         
@@ -863,6 +1010,14 @@
       <dd><dl>
         
   <dt><a href="arimax.html#ARIMAX.plot_predict">(ARIMAX method)</a>
+  </dt>
+
+        
+  <dt><a href="dar.html#DAR.plot_predict">(DAR method)</a>
+  </dt>
+
+        
+  <dt><a href="dyn_lin.html#DynLin.plot_predict">(DynLin method)</a>
   </dt>
 
         
@@ -902,7 +1057,27 @@
   </dt>
 
         
+  <dt><a href="llm.html#LLEV.plot_predict">(LLEV method)</a>
+  </dt>
+
+        
+  <dt><a href="llt.html#LLT.plot_predict">(LLT method)</a>
+  </dt>
+
+        
   <dt><a href="lmegarch.html#LMGARCHM.plot_predict">(LMGARCHM method)</a>
+  </dt>
+
+        
+  <dt><a href="dyn_glm.html#NDynReg.plot_predict">(NDynReg method)</a>
+  </dt>
+
+        
+  <dt><a href="nllm.html#NLLEV.plot_predict">(NLLEV method)</a>
+  </dt>
+
+        
+  <dt><a href="nllt.html#NLLT.plot_predict">(NLLT method)</a>
   </dt>
 
         
@@ -914,7 +1089,11 @@
   </dt>
 
         
-  <dt><a href="dar.html#plot_predict">(built-in function)</a>, <a href="gasssm.html#plot_predict">[1]</a>, <a href="gpnar.html#plot_predict">[2]</a>, <a href="ngssm.html#plot_predict">[3]</a>, <a href="ssm.html#plot_predict">[4]</a>, <a href="var.html#plot_predict">[5]</a>
+  <dt><a href="var.html#VAR.plot_predict">(VAR method)</a>
+  </dt>
+
+        
+  <dt><a href="gasssm.html#plot_predict">(built-in function)</a>, <a href="gpnar.html#plot_predict">[1]</a>, <a href="ngssm.html#plot_predict">[2]</a>, <a href="ssm.html#plot_predict">[3]</a>
   </dt>
 
       </dl></dd>
@@ -925,6 +1104,14 @@
       <dd><dl>
         
   <dt><a href="arimax.html#ARIMAX.plot_predict_is">(ARIMAX method)</a>
+  </dt>
+
+        
+  <dt><a href="dar.html#DAR.plot_predict_is">(DAR method)</a>
+  </dt>
+
+        
+  <dt><a href="dyn_lin.html#DynLin.plot_predict_is">(DynLin method)</a>
   </dt>
 
         
@@ -964,7 +1151,27 @@
   </dt>
 
         
+  <dt><a href="llm.html#LLEV.plot_predict_is">(LLEV method)</a>
+  </dt>
+
+        
+  <dt><a href="llt.html#LLT.plot_predict_is">(LLT method)</a>
+  </dt>
+
+        
   <dt><a href="lmegarch.html#LMGARCHM.plot_predict_is">(LMGARCHM method)</a>
+  </dt>
+
+        
+  <dt><a href="dyn_glm.html#NDynReg.plot_predict_is">(NDynReg method)</a>
+  </dt>
+
+        
+  <dt><a href="nllm.html#NLLEV.plot_predict_is">(NLLEV method)</a>
+  </dt>
+
+        
+  <dt><a href="nllt.html#NLLT.plot_predict_is">(NLLT method)</a>
   </dt>
 
         
@@ -976,7 +1183,11 @@
   </dt>
 
         
-  <dt><a href="dar.html#plot_predict_is">(built-in function)</a>, <a href="gasssm.html#plot_predict_is">[1]</a>, <a href="gpnar.html#plot_predict_is">[2]</a>, <a href="ngssm.html#plot_predict_is">[3]</a>, <a href="ssm.html#plot_predict_is">[4]</a>, <a href="var.html#plot_predict_is">[5]</a>
+  <dt><a href="var.html#VAR.plot_predict_is">(VAR method)</a>
+  </dt>
+
+        
+  <dt><a href="gasssm.html#plot_predict_is">(built-in function)</a>, <a href="gpnar.html#plot_predict_is">[1]</a>, <a href="ngssm.html#plot_predict_is">[2]</a>, <a href="ssm.html#plot_predict_is">[3]</a>
   </dt>
 
       </dl></dd>
@@ -989,6 +1200,10 @@
       <dd><dl>
         
   <dt><a href="arimax.html#ARIMAX.plot_sample">(ARIMAX method)</a>
+  </dt>
+
+        
+  <dt><a href="dyn_lin.html#DynLin.plot_sample">(DynLin method)</a>
   </dt>
 
         
@@ -1028,6 +1243,14 @@
   </dt>
 
         
+  <dt><a href="llm.html#LLEV.plot_sample">(LLEV method)</a>
+  </dt>
+
+        
+  <dt><a href="llt.html#LLT.plot_sample">(LLT method)</a>
+  </dt>
+
+        
   <dt><a href="lmegarch.html#LMGARCHM.plot_sample">(LMGARCHM method)</a>
   </dt>
 
@@ -1047,6 +1270,14 @@
       <dd><dl>
         
   <dt><a href="arimax.html#ARIMAX.plot_z">(ARIMAX method)</a>
+  </dt>
+
+        
+  <dt><a href="dar.html#DAR.plot_z">(DAR method)</a>
+  </dt>
+
+        
+  <dt><a href="dyn_lin.html#DynLin.plot_z">(DynLin method)</a>
   </dt>
 
         
@@ -1090,7 +1321,27 @@
   </dt>
 
         
+  <dt><a href="llm.html#LLEV.plot_z">(LLEV method)</a>
+  </dt>
+
+        
+  <dt><a href="llt.html#LLT.plot_z">(LLT method)</a>
+  </dt>
+
+        
   <dt><a href="lmegarch.html#LMGARCHM.plot_z">(LMGARCHM method)</a>
+  </dt>
+
+        
+  <dt><a href="dyn_glm.html#NDynReg.plot_z">(NDynReg method)</a>
+  </dt>
+
+        
+  <dt><a href="nllm.html#NLLEV.plot_z">(NLLEV method)</a>
+  </dt>
+
+        
+  <dt><a href="nllt.html#NLLT.plot_z">(NLLT method)</a>
   </dt>
 
         
@@ -1102,10 +1353,18 @@
   </dt>
 
         
-  <dt><a href="dar.html#plot_z">(built-in function)</a>, <a href="gasssm.html#plot_z">[1]</a>, <a href="gpnar.html#plot_z">[2]</a>, <a href="var.html#plot_z">[3]</a>
+  <dt><a href="var.html#VAR.plot_z">(VAR method)</a>
+  </dt>
+
+        
+  <dt><a href="gasssm.html#plot_z">(built-in function)</a>, <a href="gpnar.html#plot_z">[1]</a>
   </dt>
 
       </dl></dd>
+      
+  <dt><a href="families.html#Poisson">Poisson (built-in class)</a>
+  </dt>
+
       
   <dt><a href="arima.html#ARIMA.ppc">ppc() (ARIMA method)</a>
   </dt>
@@ -1113,6 +1372,10 @@
       <dd><dl>
         
   <dt><a href="arimax.html#ARIMAX.ppc">(ARIMAX method)</a>
+  </dt>
+
+        
+  <dt><a href="dyn_lin.html#DynLin.ppc">(DynLin method)</a>
   </dt>
 
         
@@ -1152,6 +1415,14 @@
   </dt>
 
         
+  <dt><a href="llm.html#LLEV.ppc">(LLEV method)</a>
+  </dt>
+
+        
+  <dt><a href="llt.html#LLT.ppc">(LLT method)</a>
+  </dt>
+
+        
   <dt><a href="lmegarch.html#LMGARCHM.ppc">(LMGARCHM method)</a>
   </dt>
 
@@ -1171,6 +1442,14 @@
       <dd><dl>
         
   <dt><a href="arimax.html#ARIMAX.predict">(ARIMAX method)</a>
+  </dt>
+
+        
+  <dt><a href="dar.html#DAR.predict">(DAR method)</a>
+  </dt>
+
+        
+  <dt><a href="dyn_lin.html#DynLin.predict">(DynLin method)</a>
   </dt>
 
         
@@ -1214,7 +1493,27 @@
   </dt>
 
         
+  <dt><a href="llm.html#LLEV.predict">(LLEV method)</a>
+  </dt>
+
+        
+  <dt><a href="llt.html#LLT.predict">(LLT method)</a>
+  </dt>
+
+        
   <dt><a href="lmegarch.html#LMGARCHM.predict">(LMGARCHM method)</a>
+  </dt>
+
+        
+  <dt><a href="dyn_glm.html#NDynReg.predict">(NDynReg method)</a>
+  </dt>
+
+        
+  <dt><a href="nllm.html#NLLEV.predict">(NLLEV method)</a>
+  </dt>
+
+        
+  <dt><a href="nllt.html#NLLT.predict">(NLLT method)</a>
   </dt>
 
         
@@ -1226,7 +1525,11 @@
   </dt>
 
         
-  <dt><a href="dar.html#predict">(built-in function)</a>, <a href="gasssm.html#predict">[1]</a>, <a href="gpnar.html#predict">[2]</a>, <a href="ngssm.html#predict">[3]</a>, <a href="ssm.html#predict">[4]</a>, <a href="var.html#predict">[5]</a>
+  <dt><a href="var.html#VAR.predict">(VAR method)</a>
+  </dt>
+
+        
+  <dt><a href="gasssm.html#predict">(built-in function)</a>, <a href="gpnar.html#predict">[1]</a>, <a href="ngssm.html#predict">[2]</a>, <a href="ssm.html#predict">[3]</a>
   </dt>
 
       </dl></dd>
@@ -1237,6 +1540,14 @@
       <dd><dl>
         
   <dt><a href="arimax.html#ARIMAX.predict_is">(ARIMAX method)</a>
+  </dt>
+
+        
+  <dt><a href="dar.html#DAR.predict_is">(DAR method)</a>
+  </dt>
+
+        
+  <dt><a href="dyn_lin.html#DynLin.predict_is">(DynLin method)</a>
   </dt>
 
         
@@ -1276,7 +1587,27 @@
   </dt>
 
         
+  <dt><a href="llm.html#LLEV.predict_is">(LLEV method)</a>
+  </dt>
+
+        
+  <dt><a href="llt.html#LLT.predict_is">(LLT method)</a>
+  </dt>
+
+        
   <dt><a href="lmegarch.html#LMGARCHM.predict_is">(LMGARCHM method)</a>
+  </dt>
+
+        
+  <dt><a href="dyn_glm.html#NDynReg.predict_is">(NDynReg method)</a>
+  </dt>
+
+        
+  <dt><a href="nllm.html#NLLEV.predict_is">(NLLEV method)</a>
+  </dt>
+
+        
+  <dt><a href="nllt.html#NLLT.predict_is">(NLLT method)</a>
   </dt>
 
         
@@ -1288,7 +1619,11 @@
   </dt>
 
         
-  <dt><a href="dar.html#predict_is">(built-in function)</a>, <a href="gasssm.html#predict_is">[1]</a>, <a href="gpnar.html#predict_is">[2]</a>, <a href="ngssm.html#predict_is">[3]</a>, <a href="ssm.html#predict_is">[4]</a>, <a href="var.html#predict_is">[5]</a>
+  <dt><a href="var.html#VAR.predict_is">(VAR method)</a>
+  </dt>
+
+        
+  <dt><a href="gasssm.html#predict_is">(built-in function)</a>, <a href="gpnar.html#predict_is">[1]</a>, <a href="ngssm.html#predict_is">[2]</a>, <a href="ssm.html#predict_is">[3]</a>
   </dt>
 
       </dl></dd>
@@ -1305,6 +1640,10 @@
       <dd><dl>
         
   <dt><a href="arimax.html#ARIMAX.sample">(ARIMAX method)</a>
+  </dt>
+
+        
+  <dt><a href="dyn_lin.html#DynLin.sample">(DynLin method)</a>
   </dt>
 
         
@@ -1344,6 +1683,14 @@
   </dt>
 
         
+  <dt><a href="llm.html#LLEV.sample">(LLEV method)</a>
+  </dt>
+
+        
+  <dt><a href="llt.html#LLT.sample">(LLT method)</a>
+  </dt>
+
+        
   <dt><a href="lmegarch.html#LMGARCHM.sample">(LMGARCHM method)</a>
   </dt>
 
@@ -1380,6 +1727,32 @@
   <dt><a href="ngssm.html#simulation_smoother">simulation_smoother() (built-in function)</a>, <a href="ssm.html#simulation_smoother">[1]</a>
   </dt>
 
+      <dd><dl>
+        
+  <dt><a href="dar.html#DAR.simulation_smoother">(DAR method)</a>
+  </dt>
+
+        
+  <dt><a href="dyn_lin.html#DynLin.simulation_smoother">(DynLin method)</a>
+  </dt>
+
+        
+  <dt><a href="llm.html#LLEV.simulation_smoother">(LLEV method)</a>
+  </dt>
+
+        
+  <dt><a href="llt.html#LLT.simulation_smoother">(LLT method)</a>
+  </dt>
+
+        
+  <dt><a href="var.html#VAR.simulation_smoother">(VAR method)</a>
+  </dt>
+
+      </dl></dd>
+      
+  <dt><a href="families.html#Skewt">Skewt (built-in class)</a>
+  </dt>
+
   </dl></td>
 </tr></table>
 
@@ -1387,14 +1760,14 @@
 <table style="width: 100%" class="indextable genindextable"><tr>
   <td style="width: 33%" valign="top"><dl>
       
-  <dt><a href="dar.html#DAR.target">target (DAR attribute)</a>
+  <dt><a href="families.html#t">t (built-in class)</a>
+  </dt>
+
+      
+  <dt><a href="gasssm.html#GASLLEV.target">target (GASLLEV attribute)</a>
   </dt>
 
       <dd><dl>
-        
-  <dt><a href="gasssm.html#GASLLEV.target">(GASLLEV attribute)</a>
-  </dt>
-
         
   <dt><a href="gasssm.html#GASLLT.target">(GASLLT attribute)</a>
   </dt>
@@ -1419,11 +1792,9 @@
   <dt><a href="ngssm.html#NLLT.target">(NLLT attribute)</a>
   </dt>
 
-        
-  <dt><a href="var.html#VAR.target">(VAR attribute)</a>
-  </dt>
-
       </dl></dd>
+  </dl></td>
+  <td style="width: 33%" valign="top"><dl>
       
   <dt><a href="bayes.html#InverseGamma.transform">transform (InverseGamma attribute)</a>
   </dt>
@@ -1442,10 +1813,8 @@
   </dt>
 
       </dl></dd>
-  </dl></td>
-  <td style="width: 33%" valign="top"><dl>
       
-  <dt><a href="bayes.html#TruncatedNormal">TruncatedNormal (built-in class)</a>
+  <dt><a href="bayes.html#TruncatedNormal">TruncatedNormal (built-in class)</a>, <a href="families.html#TruncatedNormal">[1]</a>
   </dt>
 
   </dl></td>

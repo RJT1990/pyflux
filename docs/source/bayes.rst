@@ -52,6 +52,9 @@ Performs Black Box Variational Inference. Currently the fixed assumption is mean
 * *iterations* : (default : 3000) number of iterations to run
 * *optimizer* : (default: RMSProp) RMSProp or ADAM (stochastic optimizers)
 * *map_start*: (default: True) if True, starts latent variables using a MAP/PML estimate
+* *mini_batch*: (default: None) if an int, then will sample mini-batches from the data of the size selected (e.g. 32). This option does not work for some model types.
+* *learning_rate*: (default: 0.001) the learning rate for the optimizer
+* *record_elbo* : (default: False) if True, will record ELBO during optimization, which can is stored as ``x.elbo_records`` for a ``BBVIResults()`` object ``x``.
 
 **Laplace Approximation**
 
@@ -64,7 +67,7 @@ Performs a Laplace approximation on the posterior.
 
 **Metropolis-Hastings**
 
-Performs Metropolis-Hastings MCMC. Currently uses 'one long chain' which is not ideal, but works okay for most of the models available.
+Performs Metropolis-Hastings MCMC. Currently uses 'one long chain' which is not ideal, but works okay for most of the models available. This method applies a warm-up period of half the number of simulations and applies thinning by removing every other sample to reduce correlation.
 
 .. code-block:: python
    :linenos:

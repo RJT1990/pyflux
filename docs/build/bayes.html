@@ -82,23 +82,32 @@
             
             
                 <ul>
+<li class="toctree-l1"><a class="reference internal" href="getting_started.html">Getting Started with Time Series</a></li>
+</ul>
+<ul>
 <li class="toctree-l1"><a class="reference internal" href="arima.html">ARIMA models</a></li>
 <li class="toctree-l1"><a class="reference internal" href="arimax.html">ARIMAX models</a></li>
 <li class="toctree-l1"><a class="reference internal" href="dar.html">DAR models</a></li>
+<li class="toctree-l1"><a class="reference internal" href="dyn_lin.html">Dynamic Linear regression models</a></li>
 <li class="toctree-l1"><a class="reference internal" href="egarch.html">Beta-t-EGARCH models</a></li>
 <li class="toctree-l1"><a class="reference internal" href="egarchm.html">Beta-t-EGARCH in-mean models</a></li>
-<li class="toctree-l1"><a class="reference internal" href="egarchmreg.html">Beta-t-EGARCH-in-mean regression models</a></li>
-<li class="toctree-l1"><a class="reference internal" href="lmegarch.html">Beta-t-EGARCH Long Memory models</a></li>
+<li class="toctree-l1"><a class="reference internal" href="egarchmreg.html">Beta-t-EGARCH in-mean regression models</a></li>
+<li class="toctree-l1"><a class="reference internal" href="lmegarch.html">Beta-t-EGARCH long memory models</a></li>
+<li class="toctree-l1"><a class="reference internal" href="segarch.html">Beta Skew-t GARCH models</a></li>
+<li class="toctree-l1"><a class="reference internal" href="segarchm.html">Beta Skew-t in-mean GARCH models</a></li>
 <li class="toctree-l1"><a class="reference internal" href="garch.html">GARCH models</a></li>
-<li class="toctree-l1"><a class="reference internal" href="segarch.html">Skew-t EGARCH models</a></li>
-<li class="toctree-l1"><a class="reference internal" href="segarchm.html">Skew-t EGARCH in-mean models</a></li>
 <li class="toctree-l1"><a class="reference internal" href="gas.html">GAS models</a></li>
-<li class="toctree-l1"><a class="reference internal" href="gasreg.html">GAS Regression models</a></li>
-<li class="toctree-l1"><a class="reference internal" href="gasssm.html">GAS State Space models</a></li>
+<li class="toctree-l1"><a class="reference internal" href="gas_llm.html">GAS local level models</a></li>
+<li class="toctree-l1"><a class="reference internal" href="gas_llt.html">GAS local linear trend models</a></li>
+<li class="toctree-l1"><a class="reference internal" href="gas_rank.html">GAS ranking models</a></li>
+<li class="toctree-l1"><a class="reference internal" href="gas_reg.html">GAS regression models</a></li>
 <li class="toctree-l1"><a class="reference internal" href="gasx.html">GASX models</a></li>
 <li class="toctree-l1"><a class="reference internal" href="gpnar.html">GP-NARX models</a></li>
-<li class="toctree-l1"><a class="reference internal" href="ssm.html">Gaussian State Space models</a></li>
-<li class="toctree-l1"><a class="reference internal" href="ngssm.html">Non-Gaussian State Space models</a></li>
+<li class="toctree-l1"><a class="reference internal" href="llm.html">Gaussian Local Level models</a></li>
+<li class="toctree-l1"><a class="reference internal" href="llt.html">Gaussian Local Linear Trend models</a></li>
+<li class="toctree-l1"><a class="reference internal" href="dyn_glm.html">Non-Gaussian Dynamic Regression Models</a></li>
+<li class="toctree-l1"><a class="reference internal" href="nllm.html">Non-Gaussian Local Level Models</a></li>
+<li class="toctree-l1"><a class="reference internal" href="nllt.html">Non-Gaussian Local Linear Trend Models</a></li>
 <li class="toctree-l1"><a class="reference internal" href="var.html">VAR models</a></li>
 </ul>
 <ul class="current">
@@ -109,6 +118,7 @@
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="classical.html">Classical Inference</a></li>
+<li class="toctree-l1"><a class="reference internal" href="families.html">Families</a></li>
 </ul>
 
             
@@ -172,10 +182,10 @@
 <dl class="function">
 <dt id="adjust_prior">
 <code class="descname">adjust_prior</code><span class="sig-paren">(</span><em>index</em>, <em>prior</em><span class="sig-paren">)</span><a class="headerlink" href="#adjust_prior" title="Permalink to this definition">¶</a></dt>
-<dd><p>Adjusts the priors of the model. <strong>index</strong> can be an int or a list. <strong>prior</strong> is a prior object, such as <a class="reference internal" href="#Normal" title="Normal"><code class="xref py py-class docutils literal"><span class="pre">Normal</span></code></a>.</p>
+<dd><p>Adjusts the priors of the model. <strong>index</strong> can be an int or a list. <strong>prior</strong> is a prior object, such as <a class="reference internal" href="families.html#Normal" title="Normal"><code class="xref py py-class docutils literal"><span class="pre">Normal</span></code></a>.</p>
 </dd></dl>
 
-<p>Here is example usage for <a class="reference internal" href="var.html#adjust_prior" title="adjust_prior"><code class="xref py py-func docutils literal"><span class="pre">adjust_prior()</span></code></a>:</p>
+<p>Here is example usage for <a class="reference internal" href="ssm.html#adjust_prior" title="adjust_prior"><code class="xref py py-func docutils literal"><span class="pre">adjust_prior()</span></code></a>:</p>
 <div class="highlight-python"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre>1
 2
 3
@@ -190,7 +200,7 @@
 </div>
 <div class="section" id="methods">
 <h2>Methods<a class="headerlink" href="#methods" title="Permalink to this headline">¶</a></h2>
-<p>There are a number of Bayesian inference options using the <a class="reference internal" href="var.html#fit" title="fit"><code class="xref py py-func docutils literal"><span class="pre">fit()</span></code></a>: method. These can be chosen with the method argument.</p>
+<p>There are a number of Bayesian inference options using the <a class="reference internal" href="ssm.html#fit" title="fit"><code class="xref py py-func docutils literal"><span class="pre">fit()</span></code></a>: method. These can be chosen with the method argument.</p>
 <p><strong>Black-Box Variational Inference</strong></p>
 <p>Performs Black Box Variational Inference. Currently the fixed assumption is mean-field variational inference with normal approximate distributions. The gradient used in this implementation is the score function gradient. By default we use 24 samples for the gradient which is quite intense (other implementations use 2-8 samples). For your application, less samples may be as effective and quicker. One of the limitations of the implementation right now is BBVI here does not support using mini-batches of data. It is not clear yet how mini-batches would work with model types that have an underlying sequence of latent states - if it is shown to be effective, then this option will be included in future.</p>
 <div class="highlight-python"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre>1</pre></div></td><td class="code"><div class="highlight"><pre><span></span><span class="n">model</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">method</span><span class="o">=</span><span class="s1">&#39;BBVI&#39;</span><span class="p">,</span> <span class="n">iterations</span><span class="o">=</span><span class="s1">&#39;10000&#39;</span><span class="p">,</span> <span class="n">optimizer</span><span class="o">=</span><span class="s1">&#39;ADAM&#39;</span><span class="p">)</span>
@@ -201,6 +211,9 @@
 <li><em>iterations</em> : (default : 3000) number of iterations to run</li>
 <li><em>optimizer</em> : (default: RMSProp) RMSProp or ADAM (stochastic optimizers)</li>
 <li><em>map_start</em>: (default: True) if True, starts latent variables using a MAP/PML estimate</li>
+<li><em>mini_batch</em>: (default: None) if an int, then will sample mini-batches from the data of the size selected (e.g. 32). This option does not work for some model types.</li>
+<li><em>learning_rate</em>: (default: 0.001) the learning rate for the optimizer</li>
+<li><em>record_elbo</em> : (default: False) if True, will record ELBO during optimization, which can is stored as <code class="docutils literal"><span class="pre">x.elbo_records</span></code> for a <code class="docutils literal"><span class="pre">BBVIResults()</span></code> object <code class="docutils literal"><span class="pre">x</span></code>.</li>
 </ul>
 <p><strong>Laplace Approximation</strong></p>
 <p>Performs a Laplace approximation on the posterior.</p>
@@ -208,7 +221,7 @@
 </pre></div>
 </td></tr></table></div>
 <p><strong>Metropolis-Hastings</strong></p>
-<p>Performs Metropolis-Hastings MCMC. Currently uses &#8216;one long chain&#8217; which is not ideal, but works okay for most of the models available.</p>
+<p>Performs Metropolis-Hastings MCMC. Currently uses &#8216;one long chain&#8217; which is not ideal, but works okay for most of the models available. This method applies a warm-up period of half the number of simulations and applies thinning by removing every other sample to reduce correlation.</p>
 <div class="highlight-python"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre>1</pre></div></td><td class="code"><div class="highlight"><pre><span></span><span class="n">model</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">method</span><span class="o">=</span><span class="s1">&#39;M-H&#39;</span><span class="p">)</span>
 </pre></div>
 </td></tr></table></div>

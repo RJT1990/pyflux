@@ -32,7 +32,7 @@
   
     <link rel="top" title="PyFlux 0.4.0 documentation" href="index.html"/>
         <link rel="next" title="GP-NARX models" href="gpnar.html"/>
-        <link rel="prev" title="GAS State Space models" href="gasssm.html"/> 
+        <link rel="prev" title="GAS regression models" href="gas_reg.html"/> 
 
   
   <script src="_static/js/modernizr.min.js"></script>
@@ -88,16 +88,19 @@
 <li class="toctree-l1"><a class="reference internal" href="arima.html">ARIMA models</a></li>
 <li class="toctree-l1"><a class="reference internal" href="arimax.html">ARIMAX models</a></li>
 <li class="toctree-l1"><a class="reference internal" href="dar.html">DAR models</a></li>
+<li class="toctree-l1"><a class="reference internal" href="dyn_lin.html">Dynamic Linear regression models</a></li>
 <li class="toctree-l1"><a class="reference internal" href="egarch.html">Beta-t-EGARCH models</a></li>
 <li class="toctree-l1"><a class="reference internal" href="egarchm.html">Beta-t-EGARCH in-mean models</a></li>
 <li class="toctree-l1"><a class="reference internal" href="egarchmreg.html">Beta-t-EGARCH in-mean regression models</a></li>
-<li class="toctree-l1"><a class="reference internal" href="lmegarch.html">Long memory Beta-t-EGARCH models</a></li>
-<li class="toctree-l1"><a class="reference internal" href="garch.html">GARCH models</a></li>
+<li class="toctree-l1"><a class="reference internal" href="lmegarch.html">Beta-t-EGARCH long memory models</a></li>
 <li class="toctree-l1"><a class="reference internal" href="segarch.html">Beta Skew-t GARCH models</a></li>
 <li class="toctree-l1"><a class="reference internal" href="segarchm.html">Beta Skew-t in-mean GARCH models</a></li>
+<li class="toctree-l1"><a class="reference internal" href="garch.html">GARCH models</a></li>
 <li class="toctree-l1"><a class="reference internal" href="gas.html">GAS models</a></li>
-<li class="toctree-l1"><a class="reference internal" href="gasreg.html">GAS Regression models</a></li>
-<li class="toctree-l1"><a class="reference internal" href="gasssm.html">GAS State Space models</a></li>
+<li class="toctree-l1"><a class="reference internal" href="gas_llm.html">GAS local level models</a></li>
+<li class="toctree-l1"><a class="reference internal" href="gas_llt.html">GAS local linear trend models</a></li>
+<li class="toctree-l1"><a class="reference internal" href="gas_rank.html">GAS ranking models</a></li>
+<li class="toctree-l1"><a class="reference internal" href="gas_reg.html">GAS regression models</a></li>
 <li class="toctree-l1 current"><a class="current reference internal" href="#">GASX models</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="#introduction">Introduction</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#example">Example</a></li>
@@ -106,13 +109,17 @@
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="gpnar.html">GP-NARX models</a></li>
-<li class="toctree-l1"><a class="reference internal" href="ssm.html">Gaussian State Space models</a></li>
-<li class="toctree-l1"><a class="reference internal" href="ngssm.html">Non-Gaussian State Space models</a></li>
+<li class="toctree-l1"><a class="reference internal" href="llm.html">Gaussian Local Level models</a></li>
+<li class="toctree-l1"><a class="reference internal" href="llt.html">Gaussian Local Linear Trend models</a></li>
+<li class="toctree-l1"><a class="reference internal" href="dyn_glm.html">Non-Gaussian Dynamic Regression Models</a></li>
+<li class="toctree-l1"><a class="reference internal" href="nllm.html">Non-Gaussian Local Level Models</a></li>
+<li class="toctree-l1"><a class="reference internal" href="nllt.html">Non-Gaussian Local Linear Trend Models</a></li>
 <li class="toctree-l1"><a class="reference internal" href="var.html">VAR models</a></li>
 </ul>
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="bayes.html">Bayesian Inference</a></li>
 <li class="toctree-l1"><a class="reference internal" href="classical.html">Classical Inference</a></li>
+<li class="toctree-l1"><a class="reference internal" href="families.html">Families</a></li>
 </ul>
 
             
@@ -229,7 +236,7 @@
 <span class="n">Workaround</span> <span class="mi">2</span><span class="p">:</span> <span class="n">Use</span> <span class="n">M</span><span class="o">-</span><span class="n">H</span> <span class="ow">or</span> <span class="n">BBVI</span> <span class="n">inference</span> <span class="k">for</span> <span class="n">Skew</span> <span class="n">t</span> <span class="n">distribution</span>
 </pre></div>
 </div>
-<p>The results table warns us about using the Skew t distribution. This choice of family can sometimes be unstable, so we may want to opt for a t-distribution instead. But in this case, we seem to have obtained sensible results. We can plot the constant and the GAS latent variables by referencing their indices with <code class="xref py py-func docutils literal"><span class="pre">plot_z()</span></code>:</p>
+<p>The results table warns us about using the Skew t distribution. This choice of family can sometimes be unstable, so we may want to opt for a t-distribution instead. But in this case, we seem to have obtained sensible results. We can plot the constant and the GAS latent variables by referencing their indices with <a class="reference internal" href="gpnar.html#plot_z" title="plot_z"><code class="xref py py-func docutils literal"><span class="pre">plot_z()</span></code></a>:</p>
 <div class="highlight-python"><div class="highlight"><pre><span></span><span class="n">model</span><span class="o">.</span><span class="n">plot_z</span><span class="p">(</span><span class="n">indices</span><span class="o">=</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">2</span><span class="p">])</span>
 </pre></div>
 </div>
@@ -239,7 +246,7 @@
 </pre></div>
 </div>
 <img alt="http://www.pyflux.com/notebooks/GAS/output_34_02.png" src="http://www.pyflux.com/notebooks/GAS/output_34_02.png" />
-<p>Our <span class="math">\(\beta_{AMZN}\)</span> estimate is above 1.0 (fairly strong systematic risk). Let us plot the model fit and the systematic component of returns with <code class="xref py py-func docutils literal"><span class="pre">plot_fit()</span></code>:</p>
+<p>Our <span class="math">\(\beta_{AMZN}\)</span> estimate is above 1.0 (fairly strong systematic risk). Let us plot the model fit and the systematic component of returns with <a class="reference internal" href="ssm.html#plot_fit" title="plot_fit"><code class="xref py py-func docutils literal"><span class="pre">plot_fit()</span></code></a>:</p>
 <div class="highlight-python"><div class="highlight"><pre><span></span><span class="n">model</span><span class="o">.</span><span class="n">plot_fit</span><span class="p">(</span><span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">15</span><span class="p">,</span><span class="mi">10</span><span class="p">))</span>
 </pre></div>
 </div>
@@ -447,8 +454,8 @@ user&#8217;s choosing. This method only works if you have fitted using Bayesian 
 <p>To be clear, the <em>oos_data</em> argument should be a DataFrame in the same format as the initial
 dataframe used to initialize the model instance. The reason is that to predict future values,
 you need to specify assumptions about exogenous variables for the future. For example, if you
-predict <em>h</em> steps ahead, the method will take the 5 first rows from <em>oos_data</em> and take the
-values for the exogenous variables that you specified as exogenous variables in the patsy formula.</p>
+predict <em>h</em> steps ahead, the method will take the h first rows from <em>oos_data</em> and take the
+values for the exogenous variables that you asked for in the patsy formula.</p>
 <p>Optional arguments include <em>figsize</em> - the dimensions of the figure to plot. Please note
 that if you use Maximum Likelihood or Variational Inference, the intervals shown will not
 reflect latent variable uncertainty. Only Metropolis-Hastings will give you fully Bayesian
@@ -713,7 +720,7 @@ Financial and Economic Time Series. Cambridge University Press.</p>
         <a href="gpnar.html" class="btn btn-neutral float-right" title="GP-NARX models" accesskey="n">Next <span class="fa fa-arrow-circle-right"></span></a>
       
       
-        <a href="gasssm.html" class="btn btn-neutral" title="GAS State Space models" accesskey="p"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+        <a href="gas_reg.html" class="btn btn-neutral" title="GAS regression models" accesskey="p"><span class="fa fa-arrow-circle-left"></span> Previous</a>
       
     </div>
   

@@ -27,6 +27,8 @@ class InverseGamma(Family):
         """
         super(InverseGamma, self).__init__(transform)
         self.covariance_prior = False
+        self.alpha = alpha
+        self.beta = beta
 
     def logpdf(self, x):
         """

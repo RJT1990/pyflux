@@ -38,6 +38,10 @@ Here :math:`\gamma` represents the power ranking of the second component. The se
 
    \gamma_{k,j} = \gamma_{k-1,j} - \eta{U_2}_{k-1,j}
 
+Developer Note
+----------
+- This model type has yet to be cythonized, so performance can be slow.
+
 Example
 ----------
 

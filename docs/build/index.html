@@ -87,6 +87,7 @@
 <li class="toctree-l1"><a class="reference internal" href="arima.html">ARIMA models</a></li>
 <li class="toctree-l1"><a class="reference internal" href="arimax.html">ARIMAX models</a></li>
 <li class="toctree-l1"><a class="reference internal" href="dar.html">DAR models</a></li>
+<li class="toctree-l1"><a class="reference internal" href="dyn_lin.html">Dynamic Linear regression models</a></li>
 <li class="toctree-l1"><a class="reference internal" href="egarch.html">Beta-t-EGARCH models</a></li>
 <li class="toctree-l1"><a class="reference internal" href="egarchm.html">Beta-t-EGARCH in-mean models</a></li>
 <li class="toctree-l1"><a class="reference internal" href="egarchmreg.html">Beta-t-EGARCH in-mean regression models</a></li>
@@ -101,13 +102,17 @@
 <li class="toctree-l1"><a class="reference internal" href="gas_reg.html">GAS regression models</a></li>
 <li class="toctree-l1"><a class="reference internal" href="gasx.html">GASX models</a></li>
 <li class="toctree-l1"><a class="reference internal" href="gpnar.html">GP-NARX models</a></li>
-<li class="toctree-l1"><a class="reference internal" href="ssm.html">Gaussian State Space models</a></li>
-<li class="toctree-l1"><a class="reference internal" href="ngssm.html">Non-Gaussian State Space models</a></li>
+<li class="toctree-l1"><a class="reference internal" href="llm.html">Gaussian Local Level models</a></li>
+<li class="toctree-l1"><a class="reference internal" href="llt.html">Gaussian Local Linear Trend models</a></li>
+<li class="toctree-l1"><a class="reference internal" href="dyn_glm.html">Non-Gaussian Dynamic Regression Models</a></li>
+<li class="toctree-l1"><a class="reference internal" href="nllm.html">Non-Gaussian Local Level Models</a></li>
+<li class="toctree-l1"><a class="reference internal" href="nllt.html">Non-Gaussian Local Linear Trend Models</a></li>
 <li class="toctree-l1"><a class="reference internal" href="var.html">VAR models</a></li>
 </ul>
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="bayes.html">Bayesian Inference</a></li>
 <li class="toctree-l1"><a class="reference internal" href="classical.html">Classical Inference</a></li>
+<li class="toctree-l1"><a class="reference internal" href="families.html">Families</a></li>
 </ul>
 
             
@@ -277,9 +282,17 @@ Normal Scale              16.6720            16.6551            (15.5171 | 17.86
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="dar.html">DAR models</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="dar.html#introduction">Introduction</a></li>
 <li class="toctree-l2"><a class="reference internal" href="dar.html#example">Example</a></li>
-<li class="toctree-l2"><a class="reference internal" href="dar.html#class-arguments">Class Arguments</a></li>
-<li class="toctree-l2"><a class="reference internal" href="dar.html#class-methods">Class Methods</a></li>
+<li class="toctree-l2"><a class="reference internal" href="dar.html#class-description">Class Description</a></li>
+<li class="toctree-l2"><a class="reference internal" href="dar.html#references">References</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="dyn_lin.html">Dynamic Linear regression models</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="dyn_lin.html#introduction">Introduction</a></li>
+<li class="toctree-l2"><a class="reference internal" href="dyn_lin.html#example">Example</a></li>
+<li class="toctree-l2"><a class="reference internal" href="dyn_lin.html#class-description">Class Description</a></li>
+<li class="toctree-l2"><a class="reference internal" href="dyn_lin.html#references">References</a></li>
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="egarch.html">Beta-t-EGARCH models</a><ul>
@@ -360,6 +373,7 @@ Normal Scale              16.6720            16.6551            (15.5171 | 17.86
 </li>
 <li class="toctree-l1"><a class="reference internal" href="gas_rank.html">GAS ranking models</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="gas_rank.html#introduction">Introduction</a></li>
+<li class="toctree-l2"><a class="reference internal" href="gas_rank.html#developer-note">Developer Note</a></li>
 <li class="toctree-l2"><a class="reference internal" href="gas_rank.html#example">Example</a></li>
 <li class="toctree-l2"><a class="reference internal" href="gas_rank.html#class-description">Class Description</a></li>
 <li class="toctree-l2"><a class="reference internal" href="gas_rank.html#references">References</a></li>
@@ -385,22 +399,46 @@ Normal Scale              16.6720            16.6551            (15.5171 | 17.86
 <li class="toctree-l2"><a class="reference internal" href="gpnar.html#class-methods">Class Methods</a></li>
 </ul>
 </li>
-<li class="toctree-l1"><a class="reference internal" href="ssm.html">Gaussian State Space models</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="ssm.html#example">Example</a></li>
-<li class="toctree-l2"><a class="reference internal" href="ssm.html#class-arguments">Class Arguments</a></li>
-<li class="toctree-l2"><a class="reference internal" href="ssm.html#class-methods">Class Methods</a></li>
+<li class="toctree-l1"><a class="reference internal" href="llm.html">Gaussian Local Level models</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="llm.html#introduction">Introduction</a></li>
+<li class="toctree-l2"><a class="reference internal" href="llm.html#example">Example</a></li>
+<li class="toctree-l2"><a class="reference internal" href="llm.html#class-description">Class Description</a></li>
+<li class="toctree-l2"><a class="reference internal" href="llm.html#references">References</a></li>
 </ul>
 </li>
-<li class="toctree-l1"><a class="reference internal" href="ngssm.html">Non-Gaussian State Space models</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="ngssm.html#example">Example</a></li>
-<li class="toctree-l2"><a class="reference internal" href="ngssm.html#class-arguments">Class Arguments</a></li>
-<li class="toctree-l2"><a class="reference internal" href="ngssm.html#class-methods">Class Methods</a></li>
+<li class="toctree-l1"><a class="reference internal" href="llt.html">Gaussian Local Linear Trend models</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="llt.html#introduction">Introduction</a></li>
+<li class="toctree-l2"><a class="reference internal" href="llt.html#example">Example</a></li>
+<li class="toctree-l2"><a class="reference internal" href="llt.html#class-description">Class Description</a></li>
+<li class="toctree-l2"><a class="reference internal" href="llt.html#references">References</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="dyn_glm.html">Non-Gaussian Dynamic Regression Models</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="dyn_glm.html#introduction">Introduction</a></li>
+<li class="toctree-l2"><a class="reference internal" href="dyn_glm.html#example">Example</a></li>
+<li class="toctree-l2"><a class="reference internal" href="dyn_glm.html#class-description">Class Description</a></li>
+<li class="toctree-l2"><a class="reference internal" href="dyn_glm.html#references">References</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="nllm.html">Non-Gaussian Local Level Models</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="nllm.html#introduction">Introduction</a></li>
+<li class="toctree-l2"><a class="reference internal" href="nllm.html#example">Example</a></li>
+<li class="toctree-l2"><a class="reference internal" href="nllm.html#class-description">Class Description</a></li>
+<li class="toctree-l2"><a class="reference internal" href="nllm.html#references">References</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="nllt.html">Non-Gaussian Local Linear Trend Models</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="nllt.html#introduction">Introduction</a></li>
+<li class="toctree-l2"><a class="reference internal" href="nllt.html#example">Example</a></li>
+<li class="toctree-l2"><a class="reference internal" href="nllt.html#class-description">Class Description</a></li>
+<li class="toctree-l2"><a class="reference internal" href="nllt.html#references">References</a></li>
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="var.html">VAR models</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="var.html#introduction">Introduction</a></li>
 <li class="toctree-l2"><a class="reference internal" href="var.html#example">Example</a></li>
-<li class="toctree-l2"><a class="reference internal" href="var.html#class-arguments">Class Arguments</a></li>
-<li class="toctree-l2"><a class="reference internal" href="var.html#class-methods">Class Methods</a></li>
+<li class="toctree-l2"><a class="reference internal" href="var.html#class-description">Class Description</a></li>
+<li class="toctree-l2"><a class="reference internal" href="var.html#references">References</a></li>
 </ul>
 </li>
 </ul>
@@ -418,6 +456,11 @@ Normal Scale              16.6720            16.6551            (15.5171 | 17.86
 </li>
 <li class="toctree-l1"><a class="reference internal" href="classical.html">Classical Inference</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="classical.html#methods">Methods</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="families.html">Families</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="families.html#introduction">Introduction</a></li>
+<li class="toctree-l2"><a class="reference internal" href="families.html#family-guidebook">Family Guidebook</a></li>
 </ul>
 </li>
 </ul>

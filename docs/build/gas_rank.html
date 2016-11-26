@@ -88,6 +88,7 @@
 <li class="toctree-l1"><a class="reference internal" href="arima.html">ARIMA models</a></li>
 <li class="toctree-l1"><a class="reference internal" href="arimax.html">ARIMAX models</a></li>
 <li class="toctree-l1"><a class="reference internal" href="dar.html">DAR models</a></li>
+<li class="toctree-l1"><a class="reference internal" href="dyn_lin.html">Dynamic Linear regression models</a></li>
 <li class="toctree-l1"><a class="reference internal" href="egarch.html">Beta-t-EGARCH models</a></li>
 <li class="toctree-l1"><a class="reference internal" href="egarchm.html">Beta-t-EGARCH in-mean models</a></li>
 <li class="toctree-l1"><a class="reference internal" href="egarchmreg.html">Beta-t-EGARCH in-mean regression models</a></li>
@@ -100,6 +101,7 @@
 <li class="toctree-l1"><a class="reference internal" href="gas_llt.html">GAS local linear trend models</a></li>
 <li class="toctree-l1 current"><a class="current reference internal" href="#">GAS ranking models</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="#introduction">Introduction</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#developer-note">Developer Note</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#example">Example</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#class-description">Class Description</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#references">References</a></li>
@@ -108,13 +110,17 @@
 <li class="toctree-l1"><a class="reference internal" href="gas_reg.html">GAS regression models</a></li>
 <li class="toctree-l1"><a class="reference internal" href="gasx.html">GASX models</a></li>
 <li class="toctree-l1"><a class="reference internal" href="gpnar.html">GP-NARX models</a></li>
-<li class="toctree-l1"><a class="reference internal" href="ssm.html">Gaussian State Space models</a></li>
-<li class="toctree-l1"><a class="reference internal" href="ngssm.html">Non-Gaussian State Space models</a></li>
+<li class="toctree-l1"><a class="reference internal" href="llm.html">Gaussian Local Level models</a></li>
+<li class="toctree-l1"><a class="reference internal" href="llt.html">Gaussian Local Linear Trend models</a></li>
+<li class="toctree-l1"><a class="reference internal" href="dyn_glm.html">Non-Gaussian Dynamic Regression Models</a></li>
+<li class="toctree-l1"><a class="reference internal" href="nllm.html">Non-Gaussian Local Level Models</a></li>
+<li class="toctree-l1"><a class="reference internal" href="nllt.html">Non-Gaussian Local Linear Trend Models</a></li>
 <li class="toctree-l1"><a class="reference internal" href="var.html">VAR models</a></li>
 </ul>
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="bayes.html">Bayesian Inference</a></li>
 <li class="toctree-l1"><a class="reference internal" href="classical.html">Classical Inference</a></li>
+<li class="toctree-l1"><a class="reference internal" href="families.html">Families</a></li>
 </ul>
 
             
@@ -180,6 +186,12 @@
 \[\gamma_{k,i} = \gamma_{k-1,i} + \eta{U_2}_{k-1,i}\]</div>
 <div class="math">
 \[\gamma_{k,j} = \gamma_{k-1,j} - \eta{U_2}_{k-1,j}\]</div>
+</div>
+<div class="section" id="developer-note">
+<h2>Developer Note<a class="headerlink" href="#developer-note" title="Permalink to this headline">¶</a></h2>
+<ul class="simple">
+<li>This model type has yet to be cythonized, so performance can be slow.</li>
+</ul>
 </div>
 <div class="section" id="example">
 <h2>Example<a class="headerlink" href="#example" title="Permalink to this headline">¶</a></h2>
@@ -253,7 +265,7 @@
 </pre></div>
 </div>
 <img alt="http://www.pyflux.com/notebooks/GASRank/output_6_0.png" src="http://www.pyflux.com/notebooks/GASRank/output_6_0.png" />
-<p>We can predict the point difference between two competitors in the future using <code class="xref py py-func docutils literal"><span class="pre">predict()</span></code>:</p>
+<p>We can predict the point difference between two competitors in the future using <a class="reference internal" href="ssm.html#predict" title="predict"><code class="xref py py-func docutils literal"><span class="pre">predict()</span></code></a>:</p>
 <div class="highlight-python"><div class="highlight"><pre><span></span><span class="n">model</span><span class="o">.</span><span class="n">predict</span><span class="p">(</span><span class="s2">&quot;Denver Broncos&quot;</span><span class="p">,</span><span class="s2">&quot;Carolina Panthers&quot;</span><span class="p">,</span><span class="n">neutral</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
 <span class="n">array</span><span class="p">(</span><span class="o">-</span><span class="mf">4.886816685966575</span><span class="p">)</span>
 </pre></div>
@@ -284,7 +296,7 @@
 </pre></div>
 </div>
 <img alt="http://www.pyflux.com/notebooks/GASRank/output_9_0.png" src="http://www.pyflux.com/notebooks/GASRank/output_9_0.png" />
-<p>We can predict the point difference between two competitors in the future using <code class="xref py py-func docutils literal"><span class="pre">predict()</span></code>:</p>
+<p>We can predict the point difference between two competitors in the future using <a class="reference internal" href="ssm.html#predict" title="predict"><code class="xref py py-func docutils literal"><span class="pre">predict()</span></code></a>:</p>
 <div class="highlight-python"><div class="highlight"><pre><span></span><span class="n">model</span><span class="o">.</span><span class="n">predict</span><span class="p">(</span><span class="s2">&quot;Denver Broncos&quot;</span><span class="p">,</span><span class="s2">&quot;Carolina Panthers&quot;</span><span class="p">,</span><span class="s2">&quot;Peyton Manning&quot;</span><span class="p">,</span><span class="s2">&quot;Cam Newton&quot;</span><span class="p">,</span><span class="n">neutral</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
 <span class="n">array</span><span class="p">(</span><span class="o">-</span><span class="mf">7.33759714587138</span><span class="p">)</span>
 </pre></div>

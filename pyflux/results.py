@@ -116,7 +116,7 @@ class MLEResults(Results):
 
         data = []
 
-        for i in range(len(self.z.z_list)-self.z_hide):
+        for i in range(len(self.z.z_list)-int(self.z_hide)):
             if self.z.z_list[i].prior.transform == np.array:
                 data.append({
                     'z_name': self.z.z_list[i].name, 
@@ -328,7 +328,7 @@ class BBVIResults(Results):
 
         data = []
 
-        for i in range(len(self.z.z_list)-self.z_hide):
+        for i in range(len(self.z.z_list)-int(self.z_hide)):
             data.append({
                 'z_name': self.z.z_list[i].name, 
                 'z_mean': np.round(mean_est[i],self.rounding_points),
@@ -374,7 +374,7 @@ class BBVISSResults(Results):
     def __init__(self,data_name,X_names,model_name,model_type,latent_variables, 
         data,index,multivariate_model,objective,method,
         z_hide,max_lag,ses,signal=None,scores=None,states=None,
-        states_var=None):
+        states_var=None,elbo_records=None):
 
         self.data_name = data_name
         self.X_names = X_names
@@ -393,6 +393,7 @@ class BBVISSResults(Results):
         self.signal = signal
         self.multivariate_model = multivariate_model
         self.z_hide = z_hide
+        self.elbo_records = elbo_records
 
         if self.multivariate_model is True:
             self.data_length = self.data[0].shape[0]
@@ -439,6 +440,18 @@ class BBVISSResults(Results):
         print(".summary() : printed results")
         return("")
 
+    def plot_elbo(self, figsize=(15,7)):
+        """
+        Plots the ELBO progress (if present)
+        """
+        import matplotlib.pyplot as plt
+
+        plt.figure(figsize=figsize)
+        plt.plot(self.elbo_records)
+        plt.xlabel("Iterations")
+        plt.ylabel("ELBO")
+        plt.show()
+
     def summary(self, transformed=True):
         ihessian = np.diag(np.power(np.exp(self.ses),2))
         z_values = self.z.get_z_values(transformed=False)
@@ -457,7 +470,7 @@ class BBVISSResults(Results):
 
         data = []
 
-        for i in range(len(self.z.z_list)-self.z_hide):
+        for i in range(len(self.z.z_list)-int(self.z_hide)):
             data.append({
                 'z_name': self.z.z_list[i].name, 
                 'z_mean': np.round(mean_est[i],self.rounding_points),
@@ -584,7 +597,7 @@ class LaplaceResults(Results):
 
         data = []
 
-        for i in range(len(self.z.z_list)-self.z_hide):
+        for i in range(len(self.z.z_list)-int(self.z_hide)):
             data.append({
                 'z_name': self.z.z_list[i].name, 
                 'z_mean': np.round(mean_est[i],self.rounding_points),
@@ -703,7 +716,7 @@ class MCMCResults(Results):
 
         data = []
 
-        for i in range(len(self.z.z_list)-self.z_hide):
+        for i in range(len(self.z.z_list)-int(self.z_hide)):
             data.append({
                 'z_name': self.z.z_list[i].name, 
                 'z_mean': np.round(self.mean_est[i],self.rounding_points),

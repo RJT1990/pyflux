@@ -133,6 +133,7 @@ Model Guide
    arima
    arimax
    dar
+   dyn_lin
    egarch
    egarchm
    egarchmreg
@@ -147,8 +148,11 @@ Model Guide
    gas_reg
    gasx
    gpnar
-   ssm
-   ngssm
+   llm
+   llt
+   dyn_glm
+   nllm
+   nllt
    var
 
 Inference Guide
@@ -159,6 +163,7 @@ Inference Guide
 
    bayes
    classical
+   families
 
 Acknowledgements by the Author
 ----------

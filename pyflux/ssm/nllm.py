@@ -512,6 +512,7 @@ class NLLEV(tsm.TSM):
         animate = kwargs.get('animate', False)
         batch_size = kwargs.get('batch_size', 24) 
         learning_rate = kwargs.get('learning_rate', default_learning_rate) 
+        record_elbo = kwargs.get('record_elbo', False) 
 
         # Starting values
         gaussian_latents = self._preoptimize_model() # find parameters for Gaussian model
@@ -520,7 +521,7 @@ class NLLEV(tsm.TSM):
 
         # PERFORM BBVI
         bbvi_obj = ifr.CBBVI(self.neg_logposterior, self.log_p_blanket, q_list, batch_size, 
-            optimizer, iterations, learning_rate)
+            optimizer, iterations, learning_rate, record_elbo)
 
         if print_progress is False:
             bbvi_obj.printer = False
@@ -529,7 +530,7 @@ class NLLEV(tsm.TSM):
             q, q_params, q_ses, stored_z, stored_predictive_likelihood = bbvi_obj.run_and_store()
             self._animate_bbvi(stored_z,stored_predictive_likelihood)
         else:
-            q, q_params, q_ses = bbvi_obj.run()
+            q, q_params, q_ses, elbo_records = bbvi_obj.run()
 
         self.latent_variables.set_z_values(q_params[:self.z_no],'BBVI',np.exp(q_ses[:self.z_no]),None)    
 
@@ -550,7 +551,7 @@ class NLLEV(tsm.TSM):
         return res.BBVISSResults(data_name=self.data_name,X_names=X_names,model_name=self.model_name,
             model_type=self.model_type, latent_variables=self.latent_variables,data=Y,index=self.index,
             multivariate_model=self.multivariate_model,objective=self.neg_logposterior(q_params), 
-            method='BBVI',ses=q_ses[:self.z_no],signal=theta,scores=scores,
+            method='BBVI',ses=q_ses[:self.z_no],signal=theta,scores=scores,elbo_records=elbo_records,
             z_hide=self._z_hide,max_lag=self.max_lag,states=states,states_var=np.power(states_ses,2))
 
     def plot_predict(self,h=5,past_values=20,intervals=True,**kwargs):      
@@ -571,7 +572,7 @@ class NLLEV(tsm.TSM):
         ----------
         - Plot of the forecast
         """
-        import matplotlib.pyplot as pltv
+        import matplotlib.pyplot as plt
 
         figsize = kwargs.get('figsize',(10,7))
 

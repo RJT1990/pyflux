@@ -31,7 +31,7 @@
 
   
     <link rel="top" title="PyFlux 0.4.0 documentation" href="index.html"/>
-        <link rel="next" title="GASX models" href="gasx.html"/>
+        <link rel="next" title="GAS ranking models" href="gas_rank.html"/>
         <link rel="prev" title="GAS local level models" href="gas_llm.html"/> 
 
   
@@ -88,15 +88,15 @@
 <li class="toctree-l1"><a class="reference internal" href="arima.html">ARIMA models</a></li>
 <li class="toctree-l1"><a class="reference internal" href="arimax.html">ARIMAX models</a></li>
 <li class="toctree-l1"><a class="reference internal" href="dar.html">DAR models</a></li>
+<li class="toctree-l1"><a class="reference internal" href="dyn_lin.html">Dynamic Linear regression models</a></li>
 <li class="toctree-l1"><a class="reference internal" href="egarch.html">Beta-t-EGARCH models</a></li>
 <li class="toctree-l1"><a class="reference internal" href="egarchm.html">Beta-t-EGARCH in-mean models</a></li>
 <li class="toctree-l1"><a class="reference internal" href="egarchmreg.html">Beta-t-EGARCH in-mean regression models</a></li>
 <li class="toctree-l1"><a class="reference internal" href="lmegarch.html">Beta-t-EGARCH long memory models</a></li>
-<li class="toctree-l1"><a class="reference internal" href="garch.html">GARCH models</a></li>
 <li class="toctree-l1"><a class="reference internal" href="segarch.html">Beta Skew-t GARCH models</a></li>
 <li class="toctree-l1"><a class="reference internal" href="segarchm.html">Beta Skew-t in-mean GARCH models</a></li>
+<li class="toctree-l1"><a class="reference internal" href="garch.html">GARCH models</a></li>
 <li class="toctree-l1"><a class="reference internal" href="gas.html">GAS models</a></li>
-<li class="toctree-l1"><a class="reference internal" href="gasreg.html">GAS Regression models</a></li>
 <li class="toctree-l1"><a class="reference internal" href="gas_llm.html">GAS local level models</a></li>
 <li class="toctree-l1 current"><a class="current reference internal" href="#">GAS local linear trend models</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="#introduction">Introduction</a></li>
@@ -105,15 +105,21 @@
 <li class="toctree-l2"><a class="reference internal" href="#references">References</a></li>
 </ul>
 </li>
+<li class="toctree-l1"><a class="reference internal" href="gas_rank.html">GAS ranking models</a></li>
+<li class="toctree-l1"><a class="reference internal" href="gas_reg.html">GAS regression models</a></li>
 <li class="toctree-l1"><a class="reference internal" href="gasx.html">GASX models</a></li>
 <li class="toctree-l1"><a class="reference internal" href="gpnar.html">GP-NARX models</a></li>
-<li class="toctree-l1"><a class="reference internal" href="ssm.html">Gaussian State Space models</a></li>
-<li class="toctree-l1"><a class="reference internal" href="ngssm.html">Non-Gaussian State Space models</a></li>
+<li class="toctree-l1"><a class="reference internal" href="llm.html">Gaussian Local Level models</a></li>
+<li class="toctree-l1"><a class="reference internal" href="llt.html">Gaussian Local Linear Trend models</a></li>
+<li class="toctree-l1"><a class="reference internal" href="dyn_glm.html">Non-Gaussian Dynamic Regression Models</a></li>
+<li class="toctree-l1"><a class="reference internal" href="nllm.html">Non-Gaussian Local Level Models</a></li>
+<li class="toctree-l1"><a class="reference internal" href="nllt.html">Non-Gaussian Local Linear Trend Models</a></li>
 <li class="toctree-l1"><a class="reference internal" href="var.html">VAR models</a></li>
 </ul>
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="bayes.html">Bayesian Inference</a></li>
 <li class="toctree-l1"><a class="reference internal" href="classical.html">Classical Inference</a></li>
+<li class="toctree-l1"><a class="reference internal" href="families.html">Families</a></li>
 </ul>
 
             
@@ -211,7 +217,7 @@
 </pre></div>
 </div>
 <img alt="http://www.pyflux.com/notebooks/GASLLT/output_2_0.png" src="http://www.pyflux.com/notebooks/GASLLT/output_2_0.png" />
-<p>We can plot the latent variables with <code class="xref py py-func docutils literal"><span class="pre">plot_z()</span></code>:</p>
+<p>We can plot the latent variables with <a class="reference internal" href="gpnar.html#plot_z" title="plot_z"><code class="xref py py-func docutils literal"><span class="pre">plot_z()</span></code></a>:</p>
 <div class="highlight-python"><div class="highlight"><pre><span></span><span class="n">model</span><span class="o">.</span><span class="n">plot_z</span><span class="p">([</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">3</span><span class="p">])</span>
 </pre></div>
 </div>
@@ -673,7 +679,7 @@ Financial and Economic Time Series. Cambridge University Press.</p>
   
     <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
       
-        <a href="gasx.html" class="btn btn-neutral float-right" title="GASX models" accesskey="n">Next <span class="fa fa-arrow-circle-right"></span></a>
+        <a href="gas_rank.html" class="btn btn-neutral float-right" title="GAS ranking models" accesskey="n">Next <span class="fa fa-arrow-circle-right"></span></a>
       
       
         <a href="gas_llm.html" class="btn btn-neutral" title="GAS local level models" accesskey="p"><span class="fa fa-arrow-circle-left"></span> Previous</a>

@@ -170,7 +170,7 @@ We can also plot samples from the posterior predictive density:
 
 .. image:: http://www.pyflux.com/welcome_pack/introduction/plot_sample.png
 
-We can see that the samples (colored) appaer to be picking up variation in the data (the square datapoints). 
+We can see that the samples (colored) appear to be picking up variation in the data (the square datapoints). 
 
 We can also perform a posterior predictive check (PPC) on features of the generated series, for example the kurtosis:
 

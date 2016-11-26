@@ -188,8 +188,8 @@ Class Description
       To be clear, the *oos_data* argument should be a DataFrame in the same format as the initial
       dataframe used to initialize the model instance. The reason is that to predict future values,
       you need to specify assumptions about exogenous variables for the future. For example, if you
-      predict *h* steps ahead, the method will take the 5 first rows from *oos_data* and take the 
-      values for the exogenous variables that you specified as exogenous variables in the patsy formula.
+      predict *h* steps ahead, the method will take the h first rows from *oos_data* and take the 
+      values for the exogenous variables that you asked for in the patsy formula.
 
       Optional arguments include *figsize* - the dimensions of the figure to plot. Please note
       that if you use Maximum Likelihood or Variational Inference, the intervals shown will not

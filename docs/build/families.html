@@ -1,0 +1,669 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>Families &mdash; PyFlux 0.4.0 documentation</title>
+  
+
+  
+  
+
+  
+
+  
+  
+    
+
+  
+
+  
+  
+    <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
+  
+
+  
+
+  
+    <link rel="top" title="PyFlux 0.4.0 documentation" href="index.html"/>
+        <link rel="prev" title="Classical Inference" href="classical.html"/> 
+
+  
+  <script src="_static/js/modernizr.min.js"></script>
+
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search">
+          
+
+          
+            <a href="index.html" class="icon icon-home"> PyFlux
+          
+
+          
+          </a>
+
+          
+            
+            
+              <div class="version">
+                0.4
+              </div>
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+                <ul>
+<li class="toctree-l1"><a class="reference internal" href="getting_started.html">Getting Started with Time Series</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="arima.html">ARIMA models</a></li>
+<li class="toctree-l1"><a class="reference internal" href="arimax.html">ARIMAX models</a></li>
+<li class="toctree-l1"><a class="reference internal" href="dar.html">DAR models</a></li>
+<li class="toctree-l1"><a class="reference internal" href="dyn_lin.html">Dynamic Linear regression models</a></li>
+<li class="toctree-l1"><a class="reference internal" href="egarch.html">Beta-t-EGARCH models</a></li>
+<li class="toctree-l1"><a class="reference internal" href="egarchm.html">Beta-t-EGARCH in-mean models</a></li>
+<li class="toctree-l1"><a class="reference internal" href="egarchmreg.html">Beta-t-EGARCH in-mean regression models</a></li>
+<li class="toctree-l1"><a class="reference internal" href="lmegarch.html">Beta-t-EGARCH long memory models</a></li>
+<li class="toctree-l1"><a class="reference internal" href="segarch.html">Beta Skew-t GARCH models</a></li>
+<li class="toctree-l1"><a class="reference internal" href="segarchm.html">Beta Skew-t in-mean GARCH models</a></li>
+<li class="toctree-l1"><a class="reference internal" href="garch.html">GARCH models</a></li>
+<li class="toctree-l1"><a class="reference internal" href="gas.html">GAS models</a></li>
+<li class="toctree-l1"><a class="reference internal" href="gas_llm.html">GAS local level models</a></li>
+<li class="toctree-l1"><a class="reference internal" href="gas_llt.html">GAS local linear trend models</a></li>
+<li class="toctree-l1"><a class="reference internal" href="gas_rank.html">GAS ranking models</a></li>
+<li class="toctree-l1"><a class="reference internal" href="gas_reg.html">GAS regression models</a></li>
+<li class="toctree-l1"><a class="reference internal" href="gasx.html">GASX models</a></li>
+<li class="toctree-l1"><a class="reference internal" href="gpnar.html">GP-NARX models</a></li>
+<li class="toctree-l1"><a class="reference internal" href="llm.html">Gaussian Local Level models</a></li>
+<li class="toctree-l1"><a class="reference internal" href="llt.html">Gaussian Local Linear Trend models</a></li>
+<li class="toctree-l1"><a class="reference internal" href="dyn_glm.html">Non-Gaussian Dynamic Regression Models</a></li>
+<li class="toctree-l1"><a class="reference internal" href="nllm.html">Non-Gaussian Local Level Models</a></li>
+<li class="toctree-l1"><a class="reference internal" href="nllt.html">Non-Gaussian Local Linear Trend Models</a></li>
+<li class="toctree-l1"><a class="reference internal" href="var.html">VAR models</a></li>
+</ul>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="bayes.html">Bayesian Inference</a></li>
+<li class="toctree-l1"><a class="reference internal" href="classical.html">Classical Inference</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Families</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#introduction">Introduction</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#family-guidebook">Family Guidebook</a></li>
+</ul>
+</li>
+</ul>
+
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" role="navigation" aria-label="top navigation">
+        <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+        <a href="index.html">PyFlux</a>
+      </nav>
+
+
+      
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          
+
+ 
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href="index.html">Docs</a> &raquo;</li>
+      
+    <li>Families</li>
+      <li class="wy-breadcrumbs-aside">
+        
+          
+            <a href="_sources/families.txt" rel="nofollow"> View page source</a>
+          
+        
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <div class="section" id="families">
+<h1>Families<a class="headerlink" href="#families" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="introduction">
+<h2>Introduction<a class="headerlink" href="#introduction" title="Permalink to this headline">¶</a></h2>
+<p>PyFlux uses a unified family API that can be used for specifying model measurement densities as well as the priors on latent variables in the model. This guide shows the various distributions available and their uses.</p>
+</div>
+<div class="section" id="family-guidebook">
+<h2>Family Guidebook<a class="headerlink" href="#family-guidebook" title="Permalink to this headline">¶</a></h2>
+<dl class="class">
+<dt id="Cauchy">
+<em class="property">class </em><code class="descname">Cauchy</code><span class="sig-paren">(</span><em>loc</em>, <em>scale</em>, <em>transform</em><span class="sig-paren">)</span><a class="headerlink" href="#Cauchy" title="Permalink to this definition">¶</a></dt>
+<dd><p><strong>Cauchy Family</strong></p>
+<table border="1" class="docutils">
+<colgroup>
+<col width="21%" />
+<col width="36%" />
+<col width="44%" />
+</colgroup>
+<thead valign="bottom">
+<tr class="row-odd"><th class="head">Parameter</th>
+<th class="head">Type</th>
+<th class="head">Description</th>
+</tr>
+</thead>
+<tbody valign="top">
+<tr class="row-even"><td>loc</td>
+<td>float</td>
+<td>Location parameter for Cauchy family</td>
+</tr>
+<tr class="row-odd"><td>scale</td>
+<td>float</td>
+<td>Scale for Cauchy family</td>
+</tr>
+<tr class="row-even"><td>transform</td>
+<td>string</td>
+<td>Whether to transform lmd (e.g. &#8216;exp&#8217;)</td>
+</tr>
+</tbody>
+</table>
+<p>This class can be used for priors and model measurement densities. For example:</p>
+<div class="highlight-python"><div class="highlight"><pre><span></span><span class="n">model</span> <span class="o">=</span> <span class="n">pf</span><span class="o">.</span><span class="n">ARIMA</span><span class="p">(</span><span class="n">ar</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span><span class="n">ma</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span><span class="n">data</span><span class="o">=</span><span class="n">my_data</span><span class="p">,</span> <span class="n">family</span><span class="o">=</span><span class="n">pf</span><span class="o">.</span><span class="n">Cauchy</span><span class="p">())</span>
+</pre></div>
+</div>
+<div class="highlight-python"><div class="highlight"><pre><span></span><span class="n">model</span><span class="o">.</span><span class="n">adjust_prior</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">pf</span><span class="o">.</span><span class="n">Cauchy</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">))</span>
+</pre></div>
+</div>
+</dd></dl>
+
+<dl class="class">
+<dt id="Exponential">
+<em class="property">class </em><code class="descname">Exponential</code><span class="sig-paren">(</span><em>lmd</em>, <em>transform</em><span class="sig-paren">)</span><a class="headerlink" href="#Exponential" title="Permalink to this definition">¶</a></dt>
+<dd><p><strong>Exponential Family</strong></p>
+<table border="1" class="docutils">
+<colgroup>
+<col width="20%" />
+<col width="34%" />
+<col width="46%" />
+</colgroup>
+<thead valign="bottom">
+<tr class="row-odd"><th class="head">Parameter</th>
+<th class="head">Type</th>
+<th class="head">Description</th>
+</tr>
+</thead>
+<tbody valign="top">
+<tr class="row-even"><td>lmd</td>
+<td>float</td>
+<td>Rate parameter for the Exponential family</td>
+</tr>
+<tr class="row-odd"><td>transform</td>
+<td>string</td>
+<td>Whether to transform lmd (e.g. &#8216;exp&#8217;)</td>
+</tr>
+</tbody>
+</table>
+<p>This class can be used for model measurement densities. For example:</p>
+<div class="highlight-python"><div class="highlight"><pre><span></span><span class="n">model</span> <span class="o">=</span> <span class="n">pf</span><span class="o">.</span><span class="n">ARIMA</span><span class="p">(</span><span class="n">ar</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span><span class="n">ma</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span><span class="n">data</span><span class="o">=</span><span class="n">my_data</span><span class="p">,</span> <span class="n">family</span><span class="o">=</span><span class="n">pf</span><span class="o">.</span><span class="n">Exponential</span><span class="p">())</span>
+</pre></div>
+</div>
+</dd></dl>
+
+<dl class="class">
+<dt id="Flat">
+<em class="property">class </em><code class="descname">Flat</code><span class="sig-paren">(</span><em>lmd</em>, <em>transform</em><span class="sig-paren">)</span><a class="headerlink" href="#Flat" title="Permalink to this definition">¶</a></dt>
+<dd><p><strong>Flat Family</strong></p>
+<table border="1" class="docutils">
+<colgroup>
+<col width="21%" />
+<col width="36%" />
+<col width="44%" />
+</colgroup>
+<thead valign="bottom">
+<tr class="row-odd"><th class="head">Parameter</th>
+<th class="head">Type</th>
+<th class="head">Description</th>
+</tr>
+</thead>
+<tbody valign="top">
+<tr class="row-even"><td>transform</td>
+<td>string</td>
+<td>Whether to transform the parameter</td>
+</tr>
+</tbody>
+</table>
+<p>This class can be used as an non-informative prior distribution.</p>
+<div class="highlight-python"><div class="highlight"><pre><span></span><span class="n">model</span><span class="o">.</span><span class="n">adjust_prior</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">pf</span><span class="o">.</span><span class="n">Flat</span><span class="p">())</span>
+</pre></div>
+</div>
+</dd></dl>
+
+<dl class="class">
+<dt id="InverseGamma">
+<em class="property">class </em><code class="descname">InverseGamma</code><span class="sig-paren">(</span><em>alpha</em>, <em>beta</em>, <em>transform</em><span class="sig-paren">)</span><a class="headerlink" href="#InverseGamma" title="Permalink to this definition">¶</a></dt>
+<dd><p><strong>Inverse Gamma Family</strong></p>
+<table border="1" class="docutils">
+<colgroup>
+<col width="21%" />
+<col width="36%" />
+<col width="44%" />
+</colgroup>
+<thead valign="bottom">
+<tr class="row-odd"><th class="head">Parameter</th>
+<th class="head">Type</th>
+<th class="head">Description</th>
+</tr>
+</thead>
+<tbody valign="top">
+<tr class="row-even"><td>alpha</td>
+<td>float</td>
+<td>Alpha parameter for the IGamma family</td>
+</tr>
+<tr class="row-odd"><td>beta</td>
+<td>float</td>
+<td>Beta parameter for the IGamma family</td>
+</tr>
+<tr class="row-even"><td>transform</td>
+<td>string</td>
+<td>Whether to transform the parameter</td>
+</tr>
+</tbody>
+</table>
+<p>This class can be used as a prior distribution.</p>
+<div class="highlight-python"><div class="highlight"><pre><span></span><span class="n">model</span><span class="o">.</span><span class="n">adjust_prior</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">pf</span><span class="o">.</span><span class="n">InverseGamma</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">))</span>
+</pre></div>
+</div>
+</dd></dl>
+
+<dl class="class">
+<dt id="InverseWishart">
+<em class="property">class </em><code class="descname">InverseWishart</code><span class="sig-paren">(</span><em>v</em>, <em>Psi</em>, <em>transform</em><span class="sig-paren">)</span><a class="headerlink" href="#InverseWishart" title="Permalink to this definition">¶</a></dt>
+<dd><p><strong>Inverse Wishart Family</strong></p>
+<table border="1" class="docutils">
+<colgroup>
+<col width="21%" />
+<col width="36%" />
+<col width="44%" />
+</colgroup>
+<thead valign="bottom">
+<tr class="row-odd"><th class="head">Parameter</th>
+<th class="head">Type</th>
+<th class="head">Description</th>
+</tr>
+</thead>
+<tbody valign="top">
+<tr class="row-even"><td>v</td>
+<td>float</td>
+<td>v parameter for the family</td>
+</tr>
+<tr class="row-odd"><td>Psi</td>
+<td>float</td>
+<td>Psi covariance matrix for the family</td>
+</tr>
+<tr class="row-even"><td>transform</td>
+<td>string</td>
+<td>Whether to transform the parameter</td>
+</tr>
+</tbody>
+</table>
+<p>This class can be used as a prior distribution.</p>
+<div class="highlight-python"><div class="highlight"><pre><span></span><span class="n">my_covariance_prior</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">eye</span><span class="p">(</span><span class="mi">3</span><span class="p">)</span>
+<span class="n">model</span><span class="o">.</span><span class="n">adjust_prior</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">pf</span><span class="o">.</span><span class="n">InverseWishart</span><span class="p">(</span><span class="mi">3</span><span class="p">,</span> <span class="n">my_covariance_prior</span><span class="p">))</span>
+</pre></div>
+</div>
+</dd></dl>
+
+<dl class="class">
+<dt id="Laplace">
+<em class="property">class </em><code class="descname">Laplace</code><span class="sig-paren">(</span><em>loc</em>, <em>scale</em>, <em>transform</em><span class="sig-paren">)</span><a class="headerlink" href="#Laplace" title="Permalink to this definition">¶</a></dt>
+<dd><p><strong>Laplace Family</strong></p>
+<table border="1" class="docutils">
+<colgroup>
+<col width="21%" />
+<col width="36%" />
+<col width="44%" />
+</colgroup>
+<thead valign="bottom">
+<tr class="row-odd"><th class="head">Parameter</th>
+<th class="head">Type</th>
+<th class="head">Description</th>
+</tr>
+</thead>
+<tbody valign="top">
+<tr class="row-even"><td>loc</td>
+<td>float</td>
+<td>Location parameter for Laplace family</td>
+</tr>
+<tr class="row-odd"><td>scale</td>
+<td>float</td>
+<td>Scale for Laplace family</td>
+</tr>
+<tr class="row-even"><td>transform</td>
+<td>string</td>
+<td>Whether to transform loc (e.g. &#8216;exp&#8217;)</td>
+</tr>
+</tbody>
+</table>
+<p>This class can be used for priors and model measurement densities. For example:</p>
+<div class="highlight-python"><div class="highlight"><pre><span></span><span class="n">model</span> <span class="o">=</span> <span class="n">pf</span><span class="o">.</span><span class="n">ARIMA</span><span class="p">(</span><span class="n">ar</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span><span class="n">ma</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span><span class="n">data</span><span class="o">=</span><span class="n">my_data</span><span class="p">,</span> <span class="n">family</span><span class="o">=</span><span class="n">pf</span><span class="o">.</span><span class="n">Laplace</span><span class="p">())</span>
+</pre></div>
+</div>
+<div class="highlight-python"><div class="highlight"><pre><span></span><span class="n">model</span><span class="o">.</span><span class="n">adjust_prior</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">pf</span><span class="o">.</span><span class="n">Laplace</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">))</span>
+</pre></div>
+</div>
+</dd></dl>
+
+<dl class="class">
+<dt id="Normal">
+<em class="property">class </em><code class="descname">Normal</code><span class="sig-paren">(</span><em>mu</em>, <em>sigma</em>, <em>transform</em><span class="sig-paren">)</span><a class="headerlink" href="#Normal" title="Permalink to this definition">¶</a></dt>
+<dd><p><strong>Normal Family</strong></p>
+<table border="1" class="docutils">
+<colgroup>
+<col width="21%" />
+<col width="36%" />
+<col width="44%" />
+</colgroup>
+<thead valign="bottom">
+<tr class="row-odd"><th class="head">Parameter</th>
+<th class="head">Type</th>
+<th class="head">Description</th>
+</tr>
+</thead>
+<tbody valign="top">
+<tr class="row-even"><td>mu</td>
+<td>float</td>
+<td>Location parameter for Normal family</td>
+</tr>
+<tr class="row-odd"><td>sigma</td>
+<td>float</td>
+<td>Standard deviation for Normal family</td>
+</tr>
+<tr class="row-even"><td>transform</td>
+<td>string</td>
+<td>Whether to transform mu (e.g. &#8216;exp&#8217;)</td>
+</tr>
+</tbody>
+</table>
+<p>This class can be used for priors and model measurement densities. For example:</p>
+<div class="highlight-python"><div class="highlight"><pre><span></span><span class="n">model</span> <span class="o">=</span> <span class="n">pf</span><span class="o">.</span><span class="n">ARIMA</span><span class="p">(</span><span class="n">ar</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span><span class="n">ma</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span><span class="n">data</span><span class="o">=</span><span class="n">my_data</span><span class="p">,</span> <span class="n">family</span><span class="o">=</span><span class="n">pf</span><span class="o">.</span><span class="n">Normal</span><span class="p">())</span>
+</pre></div>
+</div>
+<div class="highlight-python"><div class="highlight"><pre><span></span><span class="n">model</span><span class="o">.</span><span class="n">adjust_prior</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">pf</span><span class="o">.</span><span class="n">Normal</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">))</span>
+</pre></div>
+</div>
+</dd></dl>
+
+<dl class="class">
+<dt id="Poisson">
+<em class="property">class </em><code class="descname">Poisson</code><span class="sig-paren">(</span><em>lmd</em>, <em>transform</em><span class="sig-paren">)</span><a class="headerlink" href="#Poisson" title="Permalink to this definition">¶</a></dt>
+<dd><p><strong>Poisson Family</strong></p>
+<table border="1" class="docutils">
+<colgroup>
+<col width="21%" />
+<col width="36%" />
+<col width="44%" />
+</colgroup>
+<thead valign="bottom">
+<tr class="row-odd"><th class="head">Parameter</th>
+<th class="head">Type</th>
+<th class="head">Description</th>
+</tr>
+</thead>
+<tbody valign="top">
+<tr class="row-even"><td>lmd</td>
+<td>float</td>
+<td>Rate parameter for the Poisson family</td>
+</tr>
+<tr class="row-odd"><td>transform</td>
+<td>string</td>
+<td>Whether to transform mu (e.g. &#8216;exp&#8217;)</td>
+</tr>
+</tbody>
+</table>
+<p>This class can be used for model measurement densities. For example:</p>
+<div class="highlight-python"><div class="highlight"><pre><span></span><span class="n">model</span> <span class="o">=</span> <span class="n">pf</span><span class="o">.</span><span class="n">ARIMA</span><span class="p">(</span><span class="n">ar</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span><span class="n">ma</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span><span class="n">data</span><span class="o">=</span><span class="n">my_data</span><span class="p">,</span> <span class="n">family</span><span class="o">=</span><span class="n">pf</span><span class="o">.</span><span class="n">Poisson</span><span class="p">())</span>
+</pre></div>
+</div>
+</dd></dl>
+
+<dl class="class">
+<dt id="t">
+<em class="property">class </em><code class="descname">t</code><span class="sig-paren">(</span><em>loc</em>, <em>scale</em>, <em>df</em>, <em>transform</em><span class="sig-paren">)</span><a class="headerlink" href="#t" title="Permalink to this definition">¶</a></dt>
+<dd><p><strong>Student-t Family</strong></p>
+<table border="1" class="docutils">
+<colgroup>
+<col width="21%" />
+<col width="36%" />
+<col width="44%" />
+</colgroup>
+<thead valign="bottom">
+<tr class="row-odd"><th class="head">Parameter</th>
+<th class="head">Type</th>
+<th class="head">Description</th>
+</tr>
+</thead>
+<tbody valign="top">
+<tr class="row-even"><td>loc</td>
+<td>float</td>
+<td>Location parameter for t family</td>
+</tr>
+<tr class="row-odd"><td>scale</td>
+<td>float</td>
+<td>Standard deviation for t family</td>
+</tr>
+<tr class="row-even"><td>df</td>
+<td>float</td>
+<td>Degrees of freedom for t family</td>
+</tr>
+<tr class="row-odd"><td>transform</td>
+<td>string</td>
+<td>Whether to transform mu (e.g. &#8216;exp&#8217;)</td>
+</tr>
+</tbody>
+</table>
+<p>This class can be used for priors and model measurement densities. For example:</p>
+<div class="highlight-python"><div class="highlight"><pre><span></span><span class="n">model</span> <span class="o">=</span> <span class="n">pf</span><span class="o">.</span><span class="n">ARIMA</span><span class="p">(</span><span class="n">ar</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span><span class="n">ma</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span><span class="n">data</span><span class="o">=</span><span class="n">my_data</span><span class="p">,</span> <span class="n">family</span><span class="o">=</span><span class="n">pf</span><span class="o">.</span><span class="n">t</span><span class="p">())</span>
+</pre></div>
+</div>
+<div class="highlight-python"><div class="highlight"><pre><span></span><span class="n">model</span><span class="o">.</span><span class="n">adjust_prior</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">pf</span><span class="o">.</span><span class="n">t</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">3</span><span class="p">))</span>
+</pre></div>
+</div>
+</dd></dl>
+
+<dl class="class">
+<dt id="Skewt">
+<em class="property">class </em><code class="descname">Skewt</code><span class="sig-paren">(</span><em>loc</em>, <em>scale</em>, <em>df</em>, <em>gamma</em>, <em>transform</em><span class="sig-paren">)</span><a class="headerlink" href="#Skewt" title="Permalink to this definition">¶</a></dt>
+<dd><p><strong>Skewed Student-t Family</strong></p>
+<table border="1" class="docutils">
+<colgroup>
+<col width="21%" />
+<col width="36%" />
+<col width="44%" />
+</colgroup>
+<thead valign="bottom">
+<tr class="row-odd"><th class="head">Parameter</th>
+<th class="head">Type</th>
+<th class="head">Description</th>
+</tr>
+</thead>
+<tbody valign="top">
+<tr class="row-even"><td>loc</td>
+<td>float</td>
+<td>Location parameter for t family</td>
+</tr>
+<tr class="row-odd"><td>scale</td>
+<td>float</td>
+<td>Standard deviation for t family</td>
+</tr>
+<tr class="row-even"><td>df</td>
+<td>float</td>
+<td>Degrees of freedom for t family</td>
+</tr>
+<tr class="row-odd"><td>gamma</td>
+<td>float</td>
+<td>Skewness parameter for t family</td>
+</tr>
+<tr class="row-even"><td>transform</td>
+<td>string</td>
+<td>Whether to transform mu (e.g. &#8216;exp&#8217;)</td>
+</tr>
+</tbody>
+</table>
+<p>This class can be used for priors and model measurement densities. For example:</p>
+<div class="highlight-python"><div class="highlight"><pre><span></span><span class="n">model</span> <span class="o">=</span> <span class="n">pf</span><span class="o">.</span><span class="n">ARIMA</span><span class="p">(</span><span class="n">ar</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span><span class="n">ma</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span><span class="n">data</span><span class="o">=</span><span class="n">my_data</span><span class="p">,</span> <span class="n">family</span><span class="o">=</span><span class="n">pf</span><span class="o">.</span><span class="n">Skewt</span><span class="p">())</span>
+</pre></div>
+</div>
+<div class="highlight-python"><div class="highlight"><pre><span></span><span class="n">model</span><span class="o">.</span><span class="n">adjust_prior</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">pf</span><span class="o">.</span><span class="n">Skewt</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mf">0.9</span><span class="p">))</span>
+</pre></div>
+</div>
+</dd></dl>
+
+<dl class="class">
+<dt id="TruncatedNormal">
+<em class="property">class </em><code class="descname">TruncatedNormal</code><span class="sig-paren">(</span><em>mu</em>, <em>sigma</em>, <em>lower</em>, <em>upper</em>, <em>transform</em><span class="sig-paren">)</span><a class="headerlink" href="#TruncatedNormal" title="Permalink to this definition">¶</a></dt>
+<dd><p><strong>Truncated Normal Family</strong></p>
+<table border="1" class="docutils">
+<colgroup>
+<col width="21%" />
+<col width="36%" />
+<col width="44%" />
+</colgroup>
+<thead valign="bottom">
+<tr class="row-odd"><th class="head">Parameter</th>
+<th class="head">Type</th>
+<th class="head">Description</th>
+</tr>
+</thead>
+<tbody valign="top">
+<tr class="row-even"><td>mu</td>
+<td>float</td>
+<td>Location parameter for TNormal family</td>
+</tr>
+<tr class="row-odd"><td>sigma</td>
+<td>float</td>
+<td>Standard deviation for TNormal family</td>
+</tr>
+<tr class="row-even"><td>lower</td>
+<td>float</td>
+<td>Lower limit for the truncation</td>
+</tr>
+<tr class="row-odd"><td>upper</td>
+<td>float</td>
+<td>Upper limit for the truncation</td>
+</tr>
+<tr class="row-even"><td>transform</td>
+<td>string</td>
+<td>Whether to transform mu (e.g. &#8216;exp&#8217;)</td>
+</tr>
+</tbody>
+</table>
+<p>This class can be used as a prior. For example:</p>
+<div class="highlight-python"><div class="highlight"><pre><span></span><span class="n">model</span><span class="o">.</span><span class="n">adjust_prior</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">pf</span><span class="o">.</span><span class="n">TruncatedNormal</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="n">lower</span><span class="o">=</span><span class="mf">0.0</span><span class="p">,</span> <span class="n">upper</span><span class="o">=</span><span class="mf">1.0</span><span class="p">))</span>
+</pre></div>
+</div>
+</dd></dl>
+
+</div>
+</div>
+
+
+           </div>
+          </div>
+          <footer>
+  
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+      
+      
+        <a href="classical.html" class="btn btn-neutral" title="Classical Inference" accesskey="p"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+      
+    </div>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2016, Ross Taylor.
+
+    </p>
+  </div>
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/snide/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  
+
+    <script type="text/javascript">
+        var DOCUMENTATION_OPTIONS = {
+            URL_ROOT:'./',
+            VERSION:'0.4.0',
+            COLLAPSE_INDEX:false,
+            FILE_SUFFIX:'.html',
+            HAS_SOURCE:  true
+        };
+    </script>
+      <script type="text/javascript" src="_static/jquery.js"></script>
+      <script type="text/javascript" src="_static/underscore.js"></script>
+      <script type="text/javascript" src="_static/doctools.js"></script>
+      <script type="text/javascript" src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+
+  
+
+  
+  
+    <script type="text/javascript" src="_static/js/theme.js"></script>
+  
+
+  
+  
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.StickyNav.enable();
+      });
+  </script>
+   
+
+</body>
+</html>

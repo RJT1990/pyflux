@@ -505,7 +505,7 @@ class VAR(tsm.TSM):
                 plt.ylabel(self.data_name[variable])
                 plt.show()
 
-    def predict_is(self,h=5):
+    def predict_is(self, h=5, fit_once=False, fit_method='OLS', **kwargs):
         """ Makes dynamic in-sample predictions with the estimated model
 
         Parameters
@@ -513,20 +513,45 @@ class VAR(tsm.TSM):
         h : int (default : 5)
             How many steps would you like to forecast?
 
+        fit_once : boolean
+            Whether to fit the model once at the beginning (True), or fit every iteration (False)
+
+        fit_method : string
+            Which method to fit the model with
+
         Returns
         ----------
         - pd.DataFrame with predicted values
         """     
 
+        iterations = kwargs.get('iterations', 1000)
+
         predictions = []
 
         for t in range(0,h):
-            new_data = self.data_original.iloc[::-h]
-            x = VAR(lags=self.lags,integ=self.integ,data=new_data)
-            x.fit()
+            new_data = self.data_original.iloc[::-h+t]
+            x = VAR(lags=self.lags, integ=self.integ, data=new_data)
+            
+            if fit_once is False:
+                if fit_method == 'BBVI':
+                    x.fit(fit_method='BBVI', iterations=iterations)
+                else:
+                    x.fit(fit_method=fit_method)
+
             if t == 0:
+
+                if fit_once is True:
+                    if fit_method == 'BBVI':
+                        x.fit(fit_method='BBVI', iterations=iterations)
+                    else:
+                        x.fit(fit_method=fit_method)
+                    saved_lvs = x.latent_variables
+
                 predictions = x.predict(1)
             else:
+                if fit_once is True:
+                    x.latent_variables = saved_lvs
+                    
                 predictions = pd.concat([predictions,x.predict(1)])
         
         #predictions.rename(columns={0:self.data_name}, inplace=True)

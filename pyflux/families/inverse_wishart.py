@@ -30,9 +30,12 @@ class InverseWishart(Family):
             Whether to apply a transformation - e.g. 'exp' or 'logit'
         """
         super(InverseWishart, self).__init__(transform)
-        self.covariance_prior = True
 
-    def logpdf(self, x):
+        self.covariance_prior = True
+        self.v = v
+        self.Psi = Psi
+
+    def logpdf(self, X):
         """
         Log PDF for Inverse Wishart prior
 
@@ -47,7 +50,7 @@ class InverseWishart(Family):
         """
         return invwishart.logpdf(X, df=self.v, scale=self.Psi)
 
-    def pdf(self, x):
+    def pdf(self, X):
         """
         PDF for Inverse Wishart prior
 
