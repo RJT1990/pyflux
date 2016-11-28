@@ -2,9 +2,8 @@ import numpy as np
 import scipy.stats as ss
 import scipy.special as sp
 
-from .. import families as fam
-
 from .family import Family
+from .flat import Flat
 
 from .gas_recursions import gas_recursion_normal_orderone, gas_recursion_normal_ordertwo
 from .gas_recursions import gasx_recursion_normal_orderone, gasx_recursion_normal_ordertwo
@@ -122,7 +121,7 @@ class Normal(Family):
         - A list of lists (each sub-list contains latent variable information)
         """
         lvs_to_build = []
-        lvs_to_build.append(['Normal Scale', fam.Flat(transform='exp'), fam.Normal(0, 3), 0.0])
+        lvs_to_build.append(['Normal Scale', Flat(transform='exp'), Normal(0, 3), 0.0])
         return lvs_to_build
 
     @staticmethod

@@ -2,10 +2,10 @@ import numpy as np
 import scipy.stats as ss
 import scipy.special as sp
 
-from .. import families as fam
-
 from .poisson_kalman_recursions import nl_univariate_KFS, nld_univariate_KFS
 from .family import Family
+from .flat import Flat
+from .normal import Normal
 
 from .gas_recursions import gas_recursion_poisson_orderone, gas_recursion_poisson_ordertwo
 from .gas_recursions import gasx_recursion_poisson_orderone, gasx_recursion_poisson_ordertwo

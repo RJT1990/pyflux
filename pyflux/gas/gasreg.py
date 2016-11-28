@@ -13,7 +13,7 @@ from .. import families as fam
 from .. import tsm as tsm
 from .. import data_check as dc
 
-from .gas_recursions import gas_reg_recursion
+from .gas_core_recursions import gas_reg_recursion
 
 class GASReg(tsm.TSM):
     """ Inherits time series methods from TSM class.

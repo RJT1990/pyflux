@@ -8,7 +8,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>Bayesian Inference &mdash; PyFlux 0.4.0 documentation</title>
+  <title>Bayesian Inference &mdash; PyFlux 0.4.6 documentation</title>
   
 
   
@@ -30,7 +30,7 @@
   
 
   
-    <link rel="top" title="PyFlux 0.4.0 documentation" href="index.html"/>
+    <link rel="top" title="PyFlux 0.4.6 documentation" href="index.html"/>
         <link rel="next" title="Classical Inference" href="classical.html"/>
         <link rel="prev" title="VAR models" href="var.html"/> 
 
@@ -114,7 +114,6 @@
 <li class="toctree-l1 current"><a class="current reference internal" href="#">Bayesian Inference</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="#interface">Interface</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#methods">Methods</a></li>
-<li class="toctree-l2"><a class="reference internal" href="#priors">Priors</a></li>
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="classical.html">Classical Inference</a></li>
@@ -238,91 +237,6 @@
 <li><em>preopt_search</em> : (default : True) if True will use a preoptimization stage to find good starting values (if the model type has no available preoptimization method, this argument will be ignored). Turning this off will speed up optimization at the risk of obtaining an inferior solution.</li>
 </ul>
 </div>
-<div class="section" id="priors">
-<h2>Priors<a class="headerlink" href="#priors" title="Permalink to this headline">¶</a></h2>
-<p>Priors are contained as classes in the inference module. The following priors are supported:</p>
-<dl class="class">
-<dt id="InverseGamma">
-<em class="property">class </em><code class="descname">InverseGamma</code><span class="sig-paren">(</span><em>alpha</em>, <em>beta</em>, <em>transform</em><span class="sig-paren">)</span><a class="headerlink" href="#InverseGamma" title="Permalink to this definition">¶</a></dt>
-<dd><dl class="attribute">
-<dt id="InverseGamma.alpha">
-<code class="descname">alpha</code><a class="headerlink" href="#InverseGamma.alpha" title="Permalink to this definition">¶</a></dt>
-<dd><p>the shape parameter for the prior</p>
-</dd></dl>
-
-<dl class="attribute">
-<dt id="InverseGamma.beta">
-<code class="descname">beta</code><a class="headerlink" href="#InverseGamma.beta" title="Permalink to this definition">¶</a></dt>
-<dd><p>the scale parameter for the prior</p>
-</dd></dl>
-
-<dl class="attribute">
-<dt id="InverseGamma.transform">
-<code class="descname">transform</code><a class="headerlink" href="#InverseGamma.transform" title="Permalink to this definition">¶</a></dt>
-<dd><p>(default: None) one of [&#8216;exp&#8217;,&#8217;logit&#8217;,tanh&#8217;] - changes the support of the latent variable.</p>
-</dd></dl>
-
-</dd></dl>
-
-<dl class="class">
-<dt id="Normal">
-<em class="property">class </em><code class="descname">Normal</code><span class="sig-paren">(</span><em>mu0</em>, <em>sigma0</em>, <em>transform</em><span class="sig-paren">)</span><a class="headerlink" href="#Normal" title="Permalink to this definition">¶</a></dt>
-<dd><dl class="attribute">
-<dt id="Normal.mu0">
-<code class="descname">mu0</code><a class="headerlink" href="#Normal.mu0" title="Permalink to this definition">¶</a></dt>
-<dd><p>the location parameter for the prior</p>
-</dd></dl>
-
-<dl class="attribute">
-<dt id="Normal.sigma0">
-<code class="descname">sigma0</code><a class="headerlink" href="#Normal.sigma0" title="Permalink to this definition">¶</a></dt>
-<dd><p>the scale parameter for the prior</p>
-</dd></dl>
-
-<dl class="attribute">
-<dt id="Normal.transform">
-<code class="descname">transform</code><a class="headerlink" href="#Normal.transform" title="Permalink to this definition">¶</a></dt>
-<dd><p>(default: None) one of [&#8216;exp&#8217;, &#8216;logit&#8217;, &#8216;tanh&#8217;] - changes the support of the latent variable.</p>
-</dd></dl>
-
-</dd></dl>
-
-<dl class="class">
-<dt id="TruncatedNormal">
-<em class="property">class </em><code class="descname">TruncatedNormal</code><span class="sig-paren">(</span><em>mu0</em>, <em>sigma0</em>, <em>lower</em>, <em>upper</em>, <em>transform</em><span class="sig-paren">)</span><a class="headerlink" href="#TruncatedNormal" title="Permalink to this definition">¶</a></dt>
-<dd><dl class="attribute">
-<dt id="TruncatedNormal.mu0">
-<code class="descname">mu0</code><a class="headerlink" href="#TruncatedNormal.mu0" title="Permalink to this definition">¶</a></dt>
-<dd><p>the location parameter for the prior</p>
-</dd></dl>
-
-<dl class="attribute">
-<dt id="TruncatedNormal.sigma0">
-<code class="descname">sigma0</code><a class="headerlink" href="#TruncatedNormal.sigma0" title="Permalink to this definition">¶</a></dt>
-<dd><p>the scale parameter for the prior</p>
-</dd></dl>
-
-<dl class="attribute">
-<dt id="TruncatedNormal.transform">
-<code class="descname">transform</code><a class="headerlink" href="#TruncatedNormal.transform" title="Permalink to this definition">¶</a></dt>
-<dd><p>(default: None) one of [&#8216;exp&#8217;, &#8216;logit&#8217;, &#8216;tanh&#8217;] - changes the support of the latent variable.</p>
-</dd></dl>
-
-</dd></dl>
-
-<dl class="class">
-<dt id="Uniform">
-<em class="property">class </em><code class="descname">Uniform</code><span class="sig-paren">(</span><em>transform</em><span class="sig-paren">)</span><a class="headerlink" href="#Uniform" title="Permalink to this definition">¶</a></dt>
-<dd><dl class="attribute">
-<dt id="Uniform.transform">
-<code class="descname">transform</code><a class="headerlink" href="#Uniform.transform" title="Permalink to this definition">¶</a></dt>
-<dd><p>(default: None) one of [&#8216;exp&#8217;, &#8216;logit, &#8216;tanh&#8217;] - changes the support of the latent variable.</p>
-</dd></dl>
-
-</dd></dl>
-
-<p><em>transform</em> has implications beyond the prior. For example, if you set an AR(1) prior to a &#8216;tanh&#8217; transformation, then the tanh transformation will also carry across to the likelihood, so the parameter that is optimized/estimated is tanh(x) instead of x. This therefore affects models that use Maximum Likelihood (although the prior parameters themselves won&#8217;t affect the Maximum Likelihood estimate).</p>
-</div>
 </div>
 
 
@@ -366,7 +280,7 @@
     <script type="text/javascript">
         var DOCUMENTATION_OPTIONS = {
             URL_ROOT:'./',
-            VERSION:'0.4.0',
+            VERSION:'0.4.6',
             COLLAPSE_INDEX:false,
             FILE_SUFFIX:'.html',
             HAS_SOURCE:  true

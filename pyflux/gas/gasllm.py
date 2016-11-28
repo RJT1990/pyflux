@@ -12,9 +12,7 @@ from .. import families as fam
 from .. import tsm as tsm
 from .. import data_check as dc
 
-from .gasmodels import *
-
-from .gas_recursions import gas_llev_recursion
+from .gas_core_recursions import gas_llev_recursion
 
 class GASLLEV(tsm.TSM):
     """ Inherits time series methods from TSM class.

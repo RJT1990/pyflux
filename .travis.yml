@@ -14,8 +14,9 @@ install:
   - conda config --set always_yes yes --set changeps1 no
   - conda update conda
 
-  - conda create -n pyflux python=$TRAVIS_PYTHON_VERSION pytest numpy pandas numdifftools scipy patsy
+  - conda create -n pyflux python=$TRAVIS_PYTHON_VERSION pytest numpy pandas scipy patsy
   - source activate pyflux
+  - conda install -c omnia numdifftools=0.9.14
 
 script:
 - py.test -x --doctest-modules --pyargs pyflux

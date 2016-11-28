@@ -2,9 +2,9 @@ import numpy as np
 import scipy.stats as ss
 import scipy.special as sp
 
-from .. import families as fam
-
 from .family import Family
+from .flat import Flat
+from .normal import Normal
 
 from .gas_recursions import gas_recursion_exponential_orderone, gas_recursion_exponential_ordertwo
 from .gas_recursions import gasx_recursion_exponential_orderone, gasx_recursion_exponential_ordertwo
