@@ -529,7 +529,7 @@ class VAR(tsm.TSM):
         predictions = []
 
         for t in range(0,h):
-            new_data = self.data_original.iloc[::-h+t]
+            new_data = self.data_original.iloc[:-h+t]
             x = VAR(lags=self.lags, integ=self.integ, data=new_data)
             
             if fit_once is False:
