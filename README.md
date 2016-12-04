@@ -26,7 +26,7 @@ See some examples and documentation below. PyFlux is still only alpha software; 
  - [Skew-t-EGARCH-in-mean models](http://www.pyflux.com/docs/segarchm.html)
 - [GAS models](http://www.pyflux.com/docs/gas.html)
  - [GASX models](http://www.pyflux.com/docs/gasx.html)
-- [GAS State Space models](http://www.pyflux.com/docs/gasllm.html)
+- [GAS State Space models](http://www.pyflux.com/docs/gas_llm.html)
 - [Gaussian State Space models](http://www.pyflux.com/docs/llm.html)
 - [Non-Gaussian State Space models](http://www.pyflux.com/docs/nllm.html)
 - [VAR models](http://www.pyflux.com/docs/var.html)

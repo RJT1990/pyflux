@@ -3,7 +3,6 @@ language: python
 matrix:
   include:
     - python: 2.7
-    - python: 3.3
     - python: 3.4
     - python: 3.5
 
@@ -19,7 +18,7 @@ install:
   - conda install -c omnia numdifftools=0.9.14
 
 script:
-- py.test -x --doctest-modules --pyargs pyflux
+- py.test -s --cov=pyflux --pyargs pyflux
 
 after_success:
 - coveralls
