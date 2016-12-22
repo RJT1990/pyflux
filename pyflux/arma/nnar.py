@@ -5,7 +5,6 @@ if sys.version_info < (3,):
 import numpy as np
 import pandas as pd
 import scipy.stats as ss
-import matplotlib.pyplot as plt
 import seaborn as sns
 
 from .. import families as fam
@@ -48,9 +47,15 @@ class NNAR(tsm.TSM):
     family: family object
         E.g. pf.Normal()
 
+    activation : function
+        Non-linear transformation for the weights, e.g. np.tanh
+
+    initialize_random : boolean
+        Whether to initialzie the weights with N(0,1) random variables
     """
 
-    def __init__(self, data, ar, units, layers, integ=0,  target=None, family=fam.Normal()):
+    def __init__(self, data, ar, units, layers, integ=0,  target=None, family=fam.Normal(), 
+        activation=np.tanh, initialize_random=True):
 
         # Initialize TSM object
         super(NNAR, self).__init__('NNAR')
@@ -61,13 +66,13 @@ class NNAR(tsm.TSM):
         self.layers = layers
         self.integ = integ
         self.target = target
+        self.activation = activation
         self.z_no = self.ar + 2
         self.max_lag = self.ar
         self._z_hide = 0 # Whether to cutoff latent variables from results table
         self.supported_methods = ["BBVI"]
         self.default_method = "BBVI"
         self.multivariate_model = False
-        self.activation = np.tanh
 
         # Format the data
         self.data, self.data_name, self.is_pandas, self.index = dc.data_check(data,target)
@@ -102,8 +107,9 @@ class NNAR(tsm.TSM):
         self.family_z_no = len(self.family.build_latent_variables())
 
         # Initialize with random weights
-        for var_no in range(len(self.latent_variables.z_list)-self.family_z_no):
-            self.latent_variables.z_list[var_no].start = np.random.normal()
+        if initialize_random is True:
+            for var_no in range(len(self.latent_variables.z_list)-self.family_z_no):
+                self.latent_variables.z_list[var_no].start = np.random.normal()
 
         if isinstance(self.family, fam.Normal):
             self.neg_loglik = self.normal_neg_loglik
@@ -120,10 +126,10 @@ class NNAR(tsm.TSM):
 
         """
         Y = np.array(self.data[self.max_lag:self.data.shape[0]])
-        X = np.ones(Y.shape[0])
+        X = self.data[(self.max_lag-1):-1]
 
         if self.ar != 0:
-            for i in range(0, self.ar):
+            for i in range(1, self.ar):
                 X = np.vstack((X,self.data[(self.max_lag-i-1):-i-1]))
 
         return X
@@ -136,22 +142,17 @@ class NNAR(tsm.TSM):
         None (changes model attributes)
         """
 
-        # Input layer
-        for unit in range(self.units):
-            self.latent_variables.add_z('Constant | Layer ' + str(1) + ' | Unit ' + str(unit+1), fam.Cauchy(0,1,transform=None), fam.Normal(0, 3))
+        no_of_features = self.ar
 
-            for ar_term in range(self.ar):
-                self.latent_variables.add_z('AR' + str(ar_term+1) + ' | Layer ' + str(1) + ' | Unit ' + str(unit+1), fam.Cauchy(0,1,transform=None), fam.Normal(0, 3))
+        self.latent_variables.create(name='Bias', dim=[self.layers, self.units], prior=fam.Cauchy(0, 1, transform=None), q=fam.Normal(0, 3))
 
-        # Hidden layers
-        for layer in range(1, self.layers):
-            for unit in range(self.units):
-                for weight in range(self.units):
-                    self.latent_variables.add_z('Weight ' + str(weight+1) + ' | Layer ' + str(layer+1) + ' | Unit ' + str(unit+1), fam.Cauchy(0,1,transform=None), fam.Normal(0, 3))
+        self.latent_variables.create(name='Output bias', dim=[1], prior=fam.Cauchy(0, 1, transform=None), q=fam.Normal(0, 3))
 
-        # Output layer
-        for weight in range(self.units):
-            self.latent_variables.add_z('Output Weight ' + str(weight+1), fam.Cauchy(0,1,transform=None), fam.Normal(0, 3))
+        self.latent_variables.create(name='Input weight', dim=[self.units, self.ar], prior=fam.Cauchy(0, 1, transform=None), q=fam.Normal(0, 3))
+
+        self.latent_variables.create(name='Hidden weight', dim=[self.layers-1, self.units, self.units], prior=fam.Cauchy(0, 1, transform=None), q=fam.Normal(0, 3))
+
+        self.latent_variables.create(name='Output weight', dim=[self.units], prior=fam.Cauchy(0, 1, transform=None), q=fam.Normal(0, 3))
 
     def _get_scale_and_shape(self,parm):
         """ Obtains appropriate model scale and shape latent variables
@@ -234,13 +235,28 @@ class NNAR(tsm.TSM):
             Contains the length-adjusted time series (accounting for lags)
         """     
 
-
         Y = np.array(self.data[self.max_lag:])
 
         # Transform latent variables
         z = np.array([self.latent_variables.z_list[k].prior.transform(beta[k]) for k in range(beta.shape[0])])
+        bias = z[self.latent_variables.z_indices['Bias']['start']:self.latent_variables.z_indices['Bias']['end']+1]
+        bias = np.reshape(bias, (-1, self.units))
+        output_bias = z[self.latent_variables.z_indices['Output bias']['start']]
+        input_weights = z[self.latent_variables.z_indices['Input weight']['start']:self.latent_variables.z_indices['Input weight']['end']+1]
+        input_weights = np.reshape(input_weights, (-1, self.units))
+        output_weights = z[self.latent_variables.z_indices['Output weight']['start']:self.latent_variables.z_indices['Output weight']['end']+1]
 
-        return neural_network_tanh(Y, self.X, z, self.units, self.layers, self.ar), Y
+        # Construct neural network
+        h = self.activation(self.X.T.dot(input_weights) + bias[0])
+
+        if self.layers > 1:
+            hidden_weights = z[self.latent_variables.z_indices['Hidden weight']['start']:self.latent_variables.z_indices['Hidden weight']['end']+1]
+            hidden_weights = np.reshape(hidden_weights, (self.layers-1, self.units, -1))
+
+            for k in range(0, self.layers-1):
+                h = self.activation(h.dot(hidden_weights[k]) + bias[1+k])
+
+        return h.dot(output_weights) + output_bias, Y
 
     def _mb_model(self, beta, mini_batch):
         """ Creates the structure of the model (model matrices etc) for mini batch model
@@ -271,38 +287,46 @@ class NNAR(tsm.TSM):
 
         # Transform latent variables
         z = np.array([self.latent_variables.z_list[k].prior.transform(beta[k]) for k in range(beta.shape[0])])
+        bias = z[self.latent_variables.z_indices['Bias']['start']:self.latent_variables.z_indices['Bias']['end']+1]
+        bias = np.reshape(bias, (-1, self.units))
+        output_bias = z[self.latent_variables.z_indices['Output bias']['start']]
+        input_weights = z[self.latent_variables.z_indices['Input weight']['start']:self.latent_variables.z_indices['Input weight']['end']+1]
+        input_weights = np.reshape(input_weights, (-1, self.units))
+        output_weights = z[self.latent_variables.z_indices['Output weight']['start']:self.latent_variables.z_indices['Output weight']['end']+1]
 
-        return neural_network_tanh_mb(Y, X, z, self.units, self.layers, self.ar), Y
+        # Construct neural network
+        h = self.activation(X.T.dot(input_weights) + bias[0])
+
+        if self.layers > 1:
+            hidden_weights = z[self.latent_variables.z_indices['Hidden weight']['start']:self.latent_variables.z_indices['Hidden weight']['end']+1]
+            hidden_weights = np.reshape(hidden_weights, (self.layers-1, self.units, -1))
+
+            for k in range(0, self.layers-1):
+                h = self.activation(h.dot(hidden_weights[k]) + bias[1+k])
+
+        return h.dot(output_weights) + output_bias, Y
 
     def predict_new(self, X, z):
 
-        first_layer_output = np.zeros(self.units)
-        
-        for unit in range(self.units):
-            first_layer_output[unit] = self.activation(np.matmul(np.transpose(X), z[unit*(self.ar+1):((unit+1)*(self.ar+1))]))
+        # Transform latent variables
+        bias = z[self.latent_variables.z_indices['Bias']['start']:self.latent_variables.z_indices['Bias']['end']+1]
+        bias = np.reshape(bias, (-1, self.units))
+        output_bias = z[self.latent_variables.z_indices['Output bias']['start']]
+        input_weights = z[self.latent_variables.z_indices['Input weight']['start']:self.latent_variables.z_indices['Input weight']['end']+1]
+        input_weights = np.reshape(input_weights, (-1, self.units))
+        output_weights = z[self.latent_variables.z_indices['Output weight']['start']:self.latent_variables.z_indices['Output weight']['end']+1]
 
-        params_used = ((self.units)*(self.ar+1))
+        # Construct neural network
+        h = self.activation(X.T.dot(input_weights) + bias[0])
 
-        # Hidden layers
-        hidden_layer_output = np.zeros((self.units, self.layers-1))
-        for layer in range(1, self.layers):
-            for unit in range(self.units):
-                if layer == 1:
-                    hidden_layer_output[unit,layer-1] = self.activation(np.matmul(first_layer_output,
-                        z[params_used+unit*(self.units)+((layer-1)*self.units**2):((params_used+(unit+1)*self.units)+((layer-1)*self.units**2))]))
-                else:
-                    hidden_layer_output[unit,layer-1] = self.activation(np.matmul(hidden_layer_output[:,layer-1],
-                        z[params_used+unit*(self.units)+((layer-1)*self.units**2):((params_used+(unit+1)*self.units)+((layer-1)*self.units**2))]))
+        if self.layers > 1:
+            hidden_weights = z[self.latent_variables.z_indices['Hidden weight']['start']:self.latent_variables.z_indices['Hidden weight']['end']+1]
+            hidden_weights = np.reshape(hidden_weights, (self.layers-1, self.units, -1))
 
-        params_used = params_used + (self.layers-1)*self.units**2
+            for k in range(0, self.layers-1):
+                h = self.activation(h.dot(hidden_weights[k]) + bias[1+k])
 
-        # Output layer
-        if self.layers == 1:
-            mu = np.matmul(first_layer_output, z[params_used:params_used+self.units])
-        else:
-            mu = np.matmul(hidden_layer_output[:,-1], z[params_used:params_used+self.units])
-
-        return mu
+        return h.dot(output_weights) + output_bias
 
     def _mean_prediction(self, mu, Y, h, t_z):
         """ Creates a h-step ahead mean prediction
@@ -331,14 +355,7 @@ class NNAR(tsm.TSM):
 
         # Loop over h time periods          
         for t in range(0,h):
-
-            if self.ar != 0:
-                Y_exp_normalized = (Y_exp[-self.ar:][::-1] - self._norm_mean) / self._norm_std
-                new_value = self.predict_new(np.append(1.0, Y_exp_normalized), self.latent_variables.get_z_values())
-
-            else:  
-                new_value = self.predict_new(np.array([1.0]), self.latent_variables.get_z_values())
-
+            new_value = self.predict_new(Y_exp[-self.ar:][::-1], self.latent_variables.get_z_values())
             Y_exp = np.append(Y_exp, [self.link(new_value)])
 
         return Y_exp
@@ -378,13 +395,7 @@ class NNAR(tsm.TSM):
             # Loop over h time periods          
             for t in range(0,h):
 
-                if self.ar != 0:
-                    Y_exp_normalized = (Y_exp[-self.ar:][::-1] - self._norm_mean) / self._norm_std
-                    new_value = self.predict_new(np.append(1.0, Y_exp_normalized), self.latent_variables.get_z_values())
-
-                else:
-                    new_value = self.predict_new(np.array([1.0]), self.latent_variables.get_z_values())
-
+                new_value = self.predict_new(Y_exp[-self.ar:][::-1], self.latent_variables.get_z_values())
                 new_value += np.random.randn(1)*t_z[-1]
 
                 if self.model_name2 == "Exponential":
@@ -491,7 +502,8 @@ class NNAR(tsm.TSM):
         """ 
         Plots the fit of the model against the data
         """
-
+        import matplotlib.pyplot as plt
+        
         figsize = kwargs.get('figsize',(10,7))
         plt.figure(figsize=figsize)
         date_index = self.index[self.ar:self.data.shape[0]]
@@ -526,6 +538,8 @@ class NNAR(tsm.TSM):
         if self.latent_variables.estimated is False:
             raise Exception("No latent variables estimated!")
         else:
+            import matplotlib.pyplot as plt
+
             # Retrieve data, dates and (transformed) latent variables
             mu, Y = self._model(self.latent_variables.get_z_values())         
             date_index = self.shift_dates(h)
@@ -616,6 +630,7 @@ class NNAR(tsm.TSM):
         ----------
         - Plot of the forecast against data 
         """     
+        import matplotlib.pyplot as plt
 
         figsize = kwargs.get('figsize',(10,7))
         plt.figure(figsize=figsize)

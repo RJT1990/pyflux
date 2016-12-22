@@ -18,6 +18,7 @@ class LatentVariables(object):
     def __init__(self,model_name):
         self.model_name = model_name
         self.z_list = []
+        self.z_indices = {}
         self.estimated = False
         self.estimation_method = None
 
@@ -44,7 +45,7 @@ class LatentVariables(object):
                 'z_vardist': vardist_names[z], 'z_transform': transforms[z]})
         return( TablePrinter(fmt, ul='=')(z_row) )
 
-    def add_z(self,name,prior,q):
+    def add_z(self, name, prior, q, index=True):
         """ Adds latent variable
 
         Parameters
@@ -58,12 +59,60 @@ class LatentVariables(object):
         q : Distribution object
             Which distribution to use for variational approximation
 
+        index : boolean
+            Whether to index the variable in the z_indices dictionary
+
         Returns
         ----------
         None (changes priors in LatentVariables object)
         """
 
         self.z_list.append(LatentVariable(name,len(self.z_list),prior,q))
+        if index is True:
+            self.z_indices[name] = {'start': len(self.z_list)-1, 'end': len(self.z_list)-1}
+
+    def create(self, name, dim, prior, q):
+        """ Creates multiple latent variables
+
+        Parameters
+        ----------
+        name : str
+            Name of the latent variable
+
+        dim : list
+            Dimension of the latent variable arrays
+
+        prior : Prior object
+            Which prior distribution? E.g. Normal(0,1)
+
+        q : Distribution object
+            Which distribution to use for variational approximation
+
+        Returns
+        ----------
+        None (changes priors in LatentVariables object)
+        """   
+
+        def rec(dim, prev=[]):
+           if len(dim) > 0:
+               return [rec(dim[1:], prev + [i]) for i in range(dim[0])]
+           else:
+               return "(" + ",".join([str(j) for j in prev]) + ")" 
+
+        indices = rec(dim)
+
+        for f_dim in range(1, len(dim)):
+            indices = sum(indices, [])
+
+        if self.z_list is None:
+            starting_index = 0
+        else:
+            starting_index = len(self.z_list)
+
+        self.z_indices[name] = {'start': starting_index, 'end': starting_index+len(indices)-1, 'dim': len(dim)}
+
+        for index in indices:
+            self.add_z(name + " " + index, prior, q, index=False)
 
     def adjust_prior(self,index,prior):
         """ Adjusts priors for the latent variables
