@@ -10,7 +10,7 @@ LONG_DESCRIPTION = DESCRIPTION
 AUTHOR = "Ross Taylor"
 AUTHOR_EMAIL = "rj-taylor@live.co.uk"
 URL = 'https://github.com/rjt1990/pyflux'
-DOWNLOAD_URL = 'https://github.com/rjt1990/pyflux/tarball/0.4.10'
+DOWNLOAD_URL = 'https://github.com/rjt1990/pyflux/tarball/0.4.11'
 LICENSE = 'BSD'
 
 def version(package, encoding='utf-8'):
@@ -81,7 +81,7 @@ def setup_package():
               license=LICENSE,
               configuration=configuration,
               keywords = ['time series','machine learning','bayesian statistics'],
-              install_requires=['numpy', 'pandas', 'scipy', 'matplotlib', 'seaborn','numdifftools','patsy'])
+              install_requires=['numpy', 'pandas', 'scipy', 'numdifftools','patsy'])
     finally:
         del sys.path[0]
         os.chdir(old_path)
