@@ -7,7 +7,6 @@ import numpy as np
 import pandas as pd
 import scipy.stats as ss
 import scipy.special as sp
-import seaborn as sns
 
 from .. import families as fam
 from .. import tsm as tsm
@@ -663,6 +662,7 @@ class GAS(tsm.TSM):
         None (plots data and the fit)
         """
         import matplotlib.pyplot as plt
+        import seaborn as sns
 
         figsize = kwargs.get('figsize',(10,7))
 
@@ -718,6 +718,7 @@ class GAS(tsm.TSM):
         - Plot of the forecast
         """
         import matplotlib.pyplot as plt
+        import seaborn as sns
 
         figsize = kwargs.get('figsize',(10,7))
 
@@ -831,6 +832,7 @@ class GAS(tsm.TSM):
         - Plot of the forecast against data 
         """
         import matplotlib.pyplot as plt
+        import seaborn as sns
 
         figsize = kwargs.get('figsize',(10,7))
         plt.figure(figsize=figsize)
@@ -951,6 +953,7 @@ class GAS(tsm.TSM):
             raise Exception("No latent variables estimated!")
         else:
             import matplotlib.pyplot as plt
+            import seaborn as sns
 
             figsize = kwargs.get('figsize',(10,7))
             plt.figure(figsize=figsize)
@@ -1006,6 +1009,8 @@ class GAS(tsm.TSM):
             raise Exception("No latent variables estimated!")
         else:
             import matplotlib.pyplot as plt
+            import seaborn as sns
+
             figsize = kwargs.get('figsize',(10,7))
 
             lv_draws = self.draw_latent_variables(nsims=nsims)

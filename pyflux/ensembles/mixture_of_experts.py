@@ -293,6 +293,7 @@ class Aggregate():
         - A plot of the weights for each model constituent over time
         """
         import matplotlib.pyplot as plt
+        import seaborn as sns
 
         figsize = kwargs.get('figsize',(10,7))
 

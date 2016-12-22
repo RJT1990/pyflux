@@ -1,7 +1,5 @@
 import numpy as np
 import pandas as pd
-from matplotlib import rcParams
-import seaborn as sns
 
 from .covariances import acf
 from .output import TablePrinter
@@ -275,6 +273,7 @@ class LatentVariables(object):
     def plot_z(self,indices=None,figsize=(15,5),loc=1):
         import matplotlib.pyplot as plt
         import matplotlib.mlab as mlab
+        import seaborn as sns
 
         plt.figure(figsize=figsize) 
         for z in range(1,len(self.z_list)+1):
@@ -306,6 +305,7 @@ class LatentVariables(object):
     def trace_plot(self,figsize=(15,15)):
         import matplotlib.pyplot as plt
         import matplotlib.mlab as mlab
+        import seaborn as sns
 
         if hasattr(self.z_list[0], 'sample'):
             fig = plt.figure(figsize=figsize)
@@ -372,6 +372,7 @@ class LatentVariable(object):
 
     def plot_z(self,figsize=(15,5)):
         import matplotlib.pyplot as plt
+        import seaborn as sns
 
         if hasattr(self, 'sample'):
             sns.distplot(self.prior.transform(self.sample), rug=False, hist=False,label=self.method + ' estimate of ' + self.name)

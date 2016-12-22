@@ -6,7 +6,6 @@ import numpy as np
 import pandas as pd
 import scipy.stats as ss
 import scipy.special as sp
-import seaborn as sns
 
 from .. import families as fam
 from .. import tsm as tsm
@@ -367,6 +366,7 @@ class GASRank(tsm.TSM):
 
     def plot_abilities_one_components(self, team_ids, **kwargs):
         import matplotlib.pyplot as plt
+        import seaborn as sns
 
         figsize = kwargs.get('figsize',(15,5))
 
@@ -399,6 +399,7 @@ class GASRank(tsm.TSM):
 
     def plot_abilities_two_components(self, team_ids, component_id=0, **kwargs):
         import matplotlib.pyplot as plt
+        import seaborn as sns
 
         figsize = kwargs.get('figsize',(15,5))
 

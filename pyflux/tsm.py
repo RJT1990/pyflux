@@ -8,7 +8,6 @@ if sys.version_info < (3,):
 
 import numpy as np
 from scipy import optimize
-import seaborn as sns
 import numdifftools as nd
 import pandas as pd
 

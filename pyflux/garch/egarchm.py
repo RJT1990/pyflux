@@ -5,7 +5,6 @@ if sys.version_info < (3,):
 import numpy as np
 import pandas as pd
 import scipy.stats as ss
-import seaborn as sns
 
 from .. import families as fam
 from .. import output as op
@@ -521,6 +520,7 @@ class EGARCHM(tsm.TSM):
         None (plots data and the fit)
         """
         import matplotlib.pyplot as plt
+        import seaborn as sns
 
         figsize = kwargs.get('figsize',(10,7))
 
@@ -556,6 +556,7 @@ class EGARCHM(tsm.TSM):
         - Plot of the forecast
         """
         import matplotlib.pyplot as plt
+        import seaborn as sns
 
         figsize = kwargs.get('figsize',(10,7))
 
@@ -663,6 +664,7 @@ class EGARCHM(tsm.TSM):
         - Plot of the forecast against data 
         """
         import matplotlib.pyplot as plt
+        import seaborn as sns
 
         figsize = kwargs.get('figsize',(10,7))
 
@@ -784,6 +786,7 @@ class EGARCHM(tsm.TSM):
             raise Exception("No latent variables estimated!")
         else:
             import matplotlib.pyplot as plt
+            import seaborn as sns
 
             alpha = 1.0
             figsize = kwargs.get('figsize',(10,7))
@@ -838,6 +841,8 @@ class EGARCHM(tsm.TSM):
             raise Exception("No latent variables estimated!")
         else:
             import matplotlib.pyplot as plt
+            import seaborn as sns
+
             figsize = kwargs.get('figsize',(10,7))
 
             lv_draws = self.draw_latent_variables(nsims=nsims)

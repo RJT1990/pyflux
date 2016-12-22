@@ -6,8 +6,6 @@ import numpy as np
 import pandas as pd
 import scipy.stats as ss
 from scipy import optimize
-from matplotlib.animation import FuncAnimation, writers
-import seaborn as sns
 
 from .. import inference as ifr
 from .. import families as fam
@@ -294,6 +292,9 @@ class NLLT(tsm.TSM):
         ----------
         None (changes model attributes)
         """
+        from matplotlib.animation import FuncAnimation, writers
+        import matplotlib.pyplot as plt
+        import seaborn as sns
 
         fig = plt.figure()
         ax = fig.add_subplot(1, 1, 1)
@@ -598,6 +599,7 @@ class NLLT(tsm.TSM):
         - Plot of the forecast
         """
         import matplotlib.pyplot as plt
+        import seaborn as sns
 
         figsize = kwargs.get('figsize',(10,7))
 
@@ -663,6 +665,7 @@ class NLLT(tsm.TSM):
         None (plots data and the fit)
         """
         import matplotlib.pyplot as plt
+        import seaborn as sns
 
         figsize = kwargs.get('figsize',(10,7))
 
@@ -794,6 +797,7 @@ class NLLT(tsm.TSM):
         - Plot of the forecast against data 
         """
         import matplotlib.pyplot as plt
+        import seaborn as sns
 
         figsize = kwargs.get('figsize',(10,7))
 

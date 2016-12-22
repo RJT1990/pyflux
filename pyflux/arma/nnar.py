@@ -5,7 +5,6 @@ if sys.version_info < (3,):
 import numpy as np
 import pandas as pd
 import scipy.stats as ss
-import seaborn as sns
 
 from .. import families as fam
 from .. import output as op
@@ -503,7 +502,8 @@ class NNAR(tsm.TSM):
         Plots the fit of the model against the data
         """
         import matplotlib.pyplot as plt
-        
+        import seaborn as sns
+
         figsize = kwargs.get('figsize',(10,7))
         plt.figure(figsize=figsize)
         date_index = self.index[self.ar:self.data.shape[0]]
@@ -539,6 +539,7 @@ class NNAR(tsm.TSM):
             raise Exception("No latent variables estimated!")
         else:
             import matplotlib.pyplot as plt
+            import seaborn as sns
 
             # Retrieve data, dates and (transformed) latent variables
             mu, Y = self._model(self.latent_variables.get_z_values())         
@@ -631,6 +632,7 @@ class NNAR(tsm.TSM):
         - Plot of the forecast against data 
         """     
         import matplotlib.pyplot as plt
+        import seaborn as sns
 
         figsize = kwargs.get('figsize',(10,7))
         plt.figure(figsize=figsize)
@@ -751,6 +753,7 @@ class NNAR(tsm.TSM):
             raise Exception("No latent variables estimated!")
         else:
             import matplotlib.pyplot as plt
+            import seaborn as sns
 
             figsize = kwargs.get('figsize',(10,7))
             plt.figure(figsize=figsize)
@@ -806,6 +809,8 @@ class NNAR(tsm.TSM):
             raise Exception("No latent variables estimated!")
         else:
             import matplotlib.pyplot as plt
+            import seaborn as sns
+
             figsize = kwargs.get('figsize',(10,7))
 
             lv_draws = self.draw_latent_variables(nsims=nsims)

@@ -5,7 +5,6 @@ if sys.version_info < (3,):
 import numpy as np
 import pandas as pd
 import scipy.stats as ss
-import seaborn as sns
 from patsy import dmatrices, dmatrix, demo_data
 
 from .. import families as fam
@@ -491,6 +490,7 @@ class NNARX(tsm.TSM):
         """
 
         import matplotlib.pyplot as plt
+        import seaborn as sns
 
         figsize = kwargs.get('figsize',(10,7))
         plt.figure(figsize=figsize)
@@ -528,6 +528,7 @@ class NNARX(tsm.TSM):
         else:
 
             import matplotlib.pyplot as plt
+            import seaborn as sns
 
             # Retrieve data, dates and (transformed) latent variables
             mu, Y = self._model(self.latent_variables.get_z_values())         
@@ -621,6 +622,7 @@ class NNARX(tsm.TSM):
         """     
 
         import matplotlib.pyplot as plt
+        import seaborn as sns
 
         figsize = kwargs.get('figsize',(10,7))
         plt.figure(figsize=figsize)
@@ -741,7 +743,8 @@ class NNARX(tsm.TSM):
             raise Exception("No latent variables estimated!")
         else:
             import matplotlib.pyplot as plt
-
+            import seaborn as sns
+            
             figsize = kwargs.get('figsize',(10,7))
             plt.figure(figsize=figsize)
             date_index = self.index[self.ar:self.data_length]
@@ -796,6 +799,8 @@ class NNARX(tsm.TSM):
             raise Exception("No latent variables estimated!")
         else:
             import matplotlib.pyplot as plt
+            import seaborn as sns
+            
             figsize = kwargs.get('figsize',(10,7))
 
             lv_draws = self.draw_latent_variables(nsims=nsims)
