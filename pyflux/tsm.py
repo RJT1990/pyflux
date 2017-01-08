@@ -46,7 +46,23 @@ class TSM(object):
             theta, Y, states = self._model(z)
             scores = None
             states_var = None
-            X_names = None           
+            X_names = None       
+        elif self.model_type in ['Skellam']:
+            theta_1, theta_2, Y_1, Y_2 = self._model(z)
+            Y = Y_1 - Y_2
+            theta = np.exp(theta_1) - np.exp(theta_2)
+            scores = None
+            states = None
+            states_var = None
+            X_names = None
+        elif self.model_type in ['DoubleGASRank']:
+            theta_1, theta_2, Y_1, Y_2, _, _ = self._model(z)
+            Y = Y_1 - Y_2
+            theta = theta_1
+            scores = None
+            states = None
+            states_var = None
+            X_names = None
         elif self.model_type in ['GASLLT']:
             theta, mu_t, Y, scores = self._model(z)
             states = np.array([theta, mu_t])
@@ -614,6 +630,6 @@ class TSM(object):
             return np.array([i.q.draw_variable_local(size=nsims) for i in self.latent_variables.z_list])
         elif self.latent_variables.estimation_method == "M-H":
             chain = np.array([self.latent_variables.z_list[i].sample for i in range(len(self.latent_variables.z_list))])
-            return chain[:,np.random.choice(chain.shape[0], nsims)]
+            return chain[:,np.random.choice(chain.shape[1], nsims)]
         else:
             raise Exception("No latent variables estimated through Bayesian inference")

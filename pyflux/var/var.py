@@ -15,6 +15,19 @@ from .. import data_check as dc
 
 from .var_recursions import create_design_matrix, custom_covariance_matrix, var_likelihood
 
+def create_design_matrix_2(Z, data, Y_len, lag_no):
+    """
+    For Python 2.7 - cythonized version only works for 3.5
+    """
+    row_count = 1
+
+    for lag in range(1, lag_no+1):
+        for reg in range(Y_len):
+            Z[row_count, :] = data[reg][(lag_no-lag):-lag]
+            row_count += 1
+
+    return Z
+
 
 class VAR(tsm.TSM):
     """ Inherits time series methods from TSM class.
@@ -46,6 +59,12 @@ class VAR(tsm.TSM):
         super(VAR,self).__init__('VAR')
 
         self.neg_logposterior = self.multivariate_neg_logposterior
+
+        # Use uncythonized version of this function for older Pythons
+        if sys.version_info < (3,):
+            self.create_design_matrix = create_design_matrix_2
+        else:
+            self.create_design_matrix = create_design_matrix
 
         # Latent Variables
         self.lags = lags
@@ -152,10 +171,10 @@ class VAR(tsm.TSM):
         Returns
         ----------
         The design matrix Z
-        """ 
+        """
 
         Z = np.ones(((self.ylen*self.lags +1),Y[0].shape[0]))
-        return create_design_matrix(Z, self.data, Y.shape[0], self.lags)
+        return self.create_design_matrix(Z, self.data, Y.shape[0], self.lags)
 
     def _forecast_mean(self,h,t_params,Y,shock_type=None,shock_index=0,shock_value=None,shock_dir='positive',irf_intervals=False):
         """ Function allows for mean prediction; also allows shock specification for simulations or impulse response effects

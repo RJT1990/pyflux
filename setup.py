@@ -10,7 +10,7 @@ LONG_DESCRIPTION = DESCRIPTION
 AUTHOR = "Ross Taylor"
 AUTHOR_EMAIL = "rj-taylor@live.co.uk"
 URL = 'https://github.com/rjt1990/pyflux'
-DOWNLOAD_URL = 'https://github.com/rjt1990/pyflux/tarball/0.4.11'
+DOWNLOAD_URL = 'https://github.com/rjt1990/pyflux/tarball/0.4.12'
 LICENSE = 'BSD'
 
 def version(package, encoding='utf-8'):
