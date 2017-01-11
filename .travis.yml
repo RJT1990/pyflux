@@ -3,7 +3,6 @@ language: python
 matrix:
   include:
     - python: 2.7
-    - python: 3.4
     - python: 3.5
 
 install:
@@ -13,7 +12,7 @@ install:
   - conda config --set always_yes yes --set changeps1 no
   - conda update conda
 
-  - conda create -n pyflux python=$TRAVIS_PYTHON_VERSION pytest numpy pandas scipy patsy
+  - conda create -n pyflux python=$TRAVIS_PYTHON_VERSION pytest numpy pandas scipy patsy pytest-cov
   - source activate pyflux
   - conda install -c omnia numdifftools=0.9.14
 

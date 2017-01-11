@@ -1,4 +1,4 @@
-__version__ = "0.4.12"
+__version__ = "0.4.13"
 
 from . import __check_build
 
@@ -14,3 +14,4 @@ from .ssm import *
 from .covariances import *
 from .output import *
 from .tests import *
+from .other import *

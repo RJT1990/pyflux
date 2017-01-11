@@ -148,7 +148,7 @@ class MetropolisHastings(object):
             print("Acceptance rate of Metropolis-Hastings is " + str(acceptance))
 
         # Remove warm-up and thin
-        self.phi = self.phi[self.nsims/2:,:][::self.thinning,:]
+        self.phi = self.phi[int(self.nsims/2):,:][::self.thinning,:]
 
         chain = np.array([self.phi[i][0] for i in range(0, self.phi.shape[0])])
 
