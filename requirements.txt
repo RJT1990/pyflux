@@ -5,3 +5,4 @@ patsy>=0.4.1
 numdifftools>=0.9.16
 matplotlib>=1.5.3
 seaborn>=0.7.1
+pandas-datareader

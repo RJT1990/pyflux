@@ -20,7 +20,7 @@ First let us load some financial time series data from Yahoo Finance:
    import numpy as np
    import pyflux as pf
    import pandas as pd
-   from pandas.io.data import DataReader
+   from pandas_datareader import DataReader
    from datetime import datetime
    import matplotlib.pyplot as plt
    %matplotlib inline 
