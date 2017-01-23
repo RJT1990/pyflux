@@ -21,7 +21,7 @@ We'll run an VAR model for US banking sector stocks.
 
    import numpy as np
    import pyflux as pf
-   from pandas.io.data import DataReader
+   from pandas_datareader import DataReader
    from datetime import datetime
    import matplotlib.pyplot as plt
    %matplotlib inline 

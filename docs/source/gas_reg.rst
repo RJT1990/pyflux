@@ -29,7 +29,7 @@ We will use a dynamic t regression to extract a dynamic :math:`\beta` for a stoc
 
 .. code-block:: python
 
-   from pandas.io.data import DataReader
+   from pandas_datareader import DataReader
    from datetime import datetime
 
    a = DataReader('AMZN',  'yahoo', datetime(2012,1,1), datetime(2016,6,1))
