@@ -15,6 +15,8 @@ from .. import tsm as tsm
 from .. import data_check as dc
 
 from .arma_recursions import arimax_recursion
+import matplotlib.pylab as plt
+import seaborn as sns
 
 class ARIMAX(tsm.TSM):
     """ Inherits time series methods from TSM parent class.
@@ -714,11 +716,10 @@ class ARIMAX(tsm.TSM):
         """ 
         Plots the fit of the model against the data
         """
-        import matplotlib.pyplot as plt
-        import seaborn as sns
-
-        figsize = kwargs.get('figsize',(10,7))
-        plt.figure(figsize=figsize)
+        ax = kwargs.get('ax', None)
+        if ax is None:
+            figsize = kwargs.get('figsize', (10, 7))
+            fig, ax = plt.subplots(figsize=figsize)
         date_index = self.index[max(self.ar, self.ma):self.data.shape[0]]
         mu, Y = self._model(self.latent_variables.get_z_values())
 
@@ -734,10 +735,10 @@ class ARIMAX(tsm.TSM):
         else:
             values_to_plot = self.link(mu)
 
-        plt.plot(date_index, Y, label='Data')
-        plt.plot(date_index, values_to_plot, label='ARIMA model', c='black')
-        plt.title(self.data_name)
-        plt.legend(loc=2)   
+        ax.plot(date_index, Y, label='Data')
+        ax.plot(date_index, values_to_plot, label='ARIMA model', c='black')
+        ax.title(self.data_name)
+        ax.legend(loc=2)
         plt.show()          
 
     def plot_predict(self, h=5, past_values=20, intervals=True, oos_data=None, **kwargs):
@@ -761,10 +762,10 @@ class ARIMAX(tsm.TSM):
         ----------
         - Plot of the forecast
         """
-        import matplotlib.pyplot as plt
-        import seaborn as sns
-
-        figsize = kwargs.get('figsize',(10,7))
+        ax = kwargs.get('ax', None)
+        if ax is None:
+            figsize = kwargs.get('figsize', (10, 7))
+            fig, ax = plt.subplots(figsize=figsize)
 
         if self.latent_variables.estimated is False:
             raise Exception("No latent variables estimated!")
@@ -806,15 +807,14 @@ class ARIMAX(tsm.TSM):
 
                 error_bars, forecasted_values, plot_values, plot_index = self._summarize_simulations(mean_values, sim_values, date_index, h, past_values)
 
-            plt.figure(figsize=figsize)
             if intervals == True:
                 alpha =[0.15*i/float(100) for i in range(50,12,-2)]
                 for count, pre in enumerate(error_bars):
-                    plt.fill_between(date_index[-h-1:], error_bars[count], error_bars[-count-1],alpha=alpha[count])             
-            plt.plot(plot_index,plot_values)
-            plt.title("Forecast for " + self.data_name)
-            plt.xlabel("Time")
-            plt.ylabel(self.data_name)
+                    ax.fill_between(date_index[-h-1:], error_bars[count], error_bars[-count-1],alpha=alpha[count])
+            ax.plot(plot_index,plot_values)
+            ax.title("Forecast for " + self.data_name)
+            ax.set_xlabel("Time")
+            ax.set_ylabel(self.data_name)
             plt.show()
 
     def predict_is(self, h=5, fit_once=True, fit_method='MLE', intervals=False, **kwargs):
@@ -887,17 +887,16 @@ class ARIMAX(tsm.TSM):
         ----------
         - Plot of the forecast against data 
         """
-        import matplotlib.pyplot as plt
-        import seaborn as sns
-
-        figsize = kwargs.get('figsize',(10,7))
-        plt.figure(figsize=figsize)
+        ax = kwargs.get('ax', None)
+        if ax is None:
+            figsize = kwargs.get('figsize', (10, 7))
+            fig, ax = plt.subplots(figsize=figsize)
         predictions = self.predict_is(h, fit_method=fit_method, fit_once=fit_once)
         data = self.data[-h:]
-        plt.plot(predictions.index, data, label='Data')
-        plt.plot(predictions.index, predictions, label='Predictions', c='black')
-        plt.title(self.data_name)
-        plt.legend(loc=2)   
+        ax.plot(predictions.index, data, label='Data')
+        ax.plot(predictions.index, predictions, label='Predictions', c='black')
+        ax.title(self.data_name)
+        ax.legend(loc=2)
         plt.show()          
 
     def predict(self, h=5, oos_data=None, intervals=False):
@@ -1016,18 +1015,17 @@ class ARIMAX(tsm.TSM):
         if self.latent_variables.estimation_method not in ['BBVI', 'M-H']:
             raise Exception("No latent variables estimated!")
         else:
-            import matplotlib.pyplot as plt
-            import seaborn as sns
-
-            figsize = kwargs.get('figsize',(10,7))
-            plt.figure(figsize=figsize)
+            ax = kwargs.get('ax', None)
+            if ax is None:
+                figsize = kwargs.get('figsize', (10, 7))
+                fig, ax = plt.subplots(figsize=figsize)
             date_index = self.index[max(self.ar, self.ma):self.data.shape[0]]
             mu, Y = self._model(self.latent_variables.get_z_values())
             draws = self.sample(nsims).T
-            plt.plot(date_index, draws, label='Posterior Draws', alpha=1.0)
+            ax.plot(date_index, draws, label='Posterior Draws', alpha=1.0)
             if plot_data is True:
-                plt.plot(date_index, Y, label='Data', c='black', alpha=0.5, linestyle='', marker='s')
-            plt.title(self.data_name)
+                ax.plot(date_index, Y, label='Data', c='black', alpha=0.5, linestyle='', marker='s')
+            ax.title(self.data_name)
             plt.show()    
 
     def ppc(self, nsims=1000, T=np.mean):
@@ -1072,10 +1070,10 @@ class ARIMAX(tsm.TSM):
         if self.latent_variables.estimation_method not in ['BBVI', 'M-H']:
             raise Exception("No latent variables estimated!")
         else:
-            import matplotlib.pyplot as plt
-            import seaborn as sns
-
-            figsize = kwargs.get('figsize',(10,7))
+            ax = kwargs.get('ax', None)
+            if ax is None:
+                figsize = kwargs.get('figsize', (10, 7))
+                fig, ax = plt.subplots(figsize=figsize)
 
             lv_draws = self.draw_latent_variables(nsims=nsims)
             mus = [self._model(lv_draws[:,i])[0] for i in range(nsims)]
@@ -1097,7 +1095,6 @@ class ARIMAX(tsm.TSM):
             else:
                 description = ""
 
-            plt.figure(figsize=figsize)
             ax = plt.subplot()
             ax.axvline(T_actual)
             sns.distplot(T_sim, kde=False, ax=ax)
