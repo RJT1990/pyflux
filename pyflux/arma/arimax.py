@@ -737,7 +737,7 @@ class ARIMAX(tsm.TSM):
 
         ax.plot(date_index, Y, label='Data')
         ax.plot(date_index, values_to_plot, label='ARIMA model', c='black')
-        ax.title(self.data_name)
+        ax.set_title(self.data_name)
         ax.legend(loc=2)
         plt.show()          
 
@@ -812,7 +812,7 @@ class ARIMAX(tsm.TSM):
                 for count, pre in enumerate(error_bars):
                     ax.fill_between(date_index[-h-1:], error_bars[count], error_bars[-count-1],alpha=alpha[count])
             ax.plot(plot_index,plot_values)
-            ax.title("Forecast for " + self.data_name)
+            ax.set_title("Forecast for " + self.data_name)
             ax.set_xlabel("Time")
             ax.set_ylabel(self.data_name)
             plt.show()
@@ -895,7 +895,7 @@ class ARIMAX(tsm.TSM):
         data = self.data[-h:]
         ax.plot(predictions.index, data, label='Data')
         ax.plot(predictions.index, predictions, label='Predictions', c='black')
-        ax.title(self.data_name)
+        ax.set_title(self.data_name)
         ax.legend(loc=2)
         plt.show()          
 
@@ -1025,7 +1025,7 @@ class ARIMAX(tsm.TSM):
             ax.plot(date_index, draws, label='Posterior Draws', alpha=1.0)
             if plot_data is True:
                 ax.plot(date_index, Y, label='Data', c='black', alpha=0.5, linestyle='', marker='s')
-            ax.title(self.data_name)
+            ax.set_title(self.data_name)
             plt.show()    
 
     def ppc(self, nsims=1000, T=np.mean):

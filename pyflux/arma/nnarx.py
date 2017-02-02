@@ -500,7 +500,7 @@ class NNARX(tsm.TSM):
         mu, Y = self._model(self.latent_variables.get_z_values())
         ax.plot(date_index,Y,label='Data')
         ax.plot(date_index,mu,label='Filter',c='black')
-        ax.title(self.data_name)
+        ax.set_title(self.data_name)
         ax.legend(loc=2)
         plt.show()          
 
@@ -551,7 +551,7 @@ class NNARX(tsm.TSM):
                 for count, pre in enumerate(error_bars):
                     plt.fill_between(date_index[-h-1:], forecasted_values-pre, forecasted_values+pre,alpha=alpha[count])            
             ax.plot(plot_index,plot_values)
-            ax.title("Forecast for " + self.data_name)
+            ax.set_title("Forecast for " + self.data_name)
             ax.xlabel("Time")
             ax.ylabel(self.data_name)
             plt.show()
@@ -632,7 +632,7 @@ class NNARX(tsm.TSM):
         data = self.data[-h:]
         ax.plot(predictions.index, data, label='Data')
         ax.plot(predictions.index, predictions, label='Predictions', c='black')
-        ax.title(self.data_name)
+        ax.set_title(self.data_name)
         ax.legend(loc=2)
         plt.show()          
 
@@ -754,7 +754,7 @@ class NNARX(tsm.TSM):
             ax.plot(date_index, draws, label='Posterior Draws', alpha=1.0)
             if plot_data is True:
                 ax.plot(date_index, Y, label='Data', c='black', alpha=0.5, linestyle='', marker='s')
-            ax.title(self.data_name)
+            ax.set_title(self.data_name)
             plt.show()    
 
     def ppc(self, nsims=1000, T=np.mean):
