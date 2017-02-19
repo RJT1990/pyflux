@@ -1,6 +1,6 @@
 import numpy as np
-from pyflux.arma.arma import ARIMA
-from pyflux.families.exponential import Exponential
+from pyflux.arma import ARIMA
+from pyflux.families import Exponential
 
 data = np.random.exponential(3,200)
 

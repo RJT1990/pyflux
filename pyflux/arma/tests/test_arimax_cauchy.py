@@ -1,7 +1,7 @@
 import numpy as np
 import pandas as pd
-from pyflux.arma.arimax import ARIMAX
-from pyflux.families.cauchy import Cauchy
+from pyflux.arma import ARIMAX
+from pyflux.families import Cauchy
 
 # Set up some data to use for the tests
 

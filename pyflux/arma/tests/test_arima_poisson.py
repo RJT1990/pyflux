@@ -1,6 +1,6 @@
 import numpy as np
-from pyflux.arma.arma import ARIMA
-from pyflux.families.poisson import Poisson
+from pyflux.arma import ARIMA
+from pyflux.families import Poisson
 
 noise = np.random.normal(0,0.1,100)
 data = np.zeros(100)

@@ -1,5 +1,5 @@
 import numpy as np
-from pyflux.arma.arma import ARIMA
+from pyflux.arma import ARIMA
 
 noise = np.random.normal(0,1,100)
 data = np.zeros(100)

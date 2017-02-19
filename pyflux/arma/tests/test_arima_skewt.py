@@ -1,6 +1,6 @@
 import numpy as np
-from pyflux.arma.arma import ARIMA
-from pyflux.families.skewt import Skewt
+from pyflux.arma import ARIMA
+from pyflux.families import Skewt
 
 noise = np.random.normal(0,1,300)
 data = np.zeros(300)
