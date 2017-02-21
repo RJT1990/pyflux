@@ -4,6 +4,15 @@ import re
 import sys
 import subprocess
 
+# Use of SETUP built-in adapted from scikit-learn's setup structure.
+
+if sys.version_info[0] < 3:
+    import __builtin__ as builtins
+else:
+    import builtins
+
+builtins.__PYFLUX_SETUP__ = True
+
 PACKAGE_NAME = 'pyflux'
 DESCRIPTION = "PyFlux: A time-series analysis library for Python"
 LONG_DESCRIPTION = DESCRIPTION

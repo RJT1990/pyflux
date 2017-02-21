@@ -1,7 +1,15 @@
 __version__ = "0.4.14"
 
-from . import __check_build
+try:
+    __PYFLUX_SETUP__
+except NameError:
+    __PYFLUX_SETUP__ = False
 
+if __PYFLUX_SETUP__:
+    sys.stderr.write('Partial import of PyFlux during the build process.\n')
+else:
+    from . import __check_build
+	
 from .arma import *
 from .var import *
 from .ensembles import *

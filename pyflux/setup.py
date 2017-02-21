@@ -7,7 +7,9 @@ def configuration(parent_package='', top_path=None):
     from numpy.distutils.misc_util import Configuration
 
     config = Configuration(PACKAGE_NAME, parent_package, top_path)
+
     config.add_subpackage('__check_build')
+    
     config.add_subpackage('arma')
     config.add_subpackage('ensembles')
     config.add_subpackage('families')

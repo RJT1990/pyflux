@@ -11,6 +11,8 @@ def configuration(parent_package='', top_path=None):
     config.add_extension('nn_architecture',
                          sources=['nn_architecture.c'])
 
+    config.add_subpackage('tests')
+
     return config
 
 
