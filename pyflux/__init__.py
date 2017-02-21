@@ -1,5 +1,6 @@
 __version__ = "0.4.14"
 
+# Use of SETUP built-in adapted from scikit-learn's setup utility.
 try:
     __PYFLUX_SETUP__
 except NameError:

@@ -12,9 +12,10 @@ install:
   - conda config --set always_yes yes --set changeps1 no
   - conda update conda
 
-  - conda create -n pyflux python=$TRAVIS_PYTHON_VERSION pytest numpy pandas scipy patsy pytest-cov
+  - conda create -n pyflux python=$TRAVIS_PYTHON_VERSION pytest numpy pandas scipy patsy pytest-cov cython
   - source activate pyflux
   - conda install -c omnia numdifftools=0.9.14
+  - python setup.py install
 
 script:
 - py.test -s --cov=pyflux --pyargs pyflux
