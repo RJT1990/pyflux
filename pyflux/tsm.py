@@ -111,7 +111,7 @@ class TSM(object):
 
     def _bbvi_fit(self, posterior, optimizer='RMSProp', iterations=1000, 
         map_start=True, batch_size=12, mini_batch=None, learning_rate=0.001, 
-        record_elbo=False, **kwargs):
+        record_elbo=False, quiet_progress=False, **kwargs):
         """ Performs Black Box Variational Inference
 
         Parameters
@@ -127,8 +127,6 @@ class TSM(object):
 
         map_start : boolean
             Whether to start values from a MAP estimate (if False, uses default starting values)
-
-
 
         Returns
         ----------
@@ -160,9 +158,9 @@ class TSM(object):
         q_list = [k.q for k in self.latent_variables.z_list]
 
         if mini_batch is None:
-            bbvi_obj = BBVI(posterior, q_list, batch_size, optimizer, iterations, learning_rate, record_elbo)
+            bbvi_obj = BBVI(posterior, q_list, batch_size, optimizer, iterations, learning_rate, record_elbo, quiet_progress)
         else:
-            bbvi_obj = BBVIM(posterior, self.neg_logposterior, q_list, mini_batch, optimizer, iterations, learning_rate, mini_batch, record_elbo)
+            bbvi_obj = BBVIM(posterior, self.neg_logposterior, q_list, mini_batch, optimizer, iterations, learning_rate, mini_batch, record_elbo, quiet_progress)
         
         q, q_z, q_ses, elbo_records = bbvi_obj.run()
         self.latent_variables.set_z_values(q_z,'BBVI',np.exp(q_ses),None)
@@ -223,7 +221,7 @@ class TSM(object):
                 z_hide=self._z_hide,max_lag=self.max_lag,states=states,states_var=states_var)
 
     def _mcmc_fit(self, scale=1.0, nsims=10000, printer=True, method="M-H", 
-        cov_matrix=None, map_start=True, **kwargs):
+        cov_matrix=None, map_start=True, quiet_progress=False, **kwargs):
         """ Performs random walk Metropolis-Hastings
 
         Parameters
@@ -264,7 +262,7 @@ class TSM(object):
 
         if method == "M-H":
             sampler = MetropolisHastings(self.neg_logposterior, scale, nsims, starting_values, 
-                cov_matrix=cov_matrix, model_object=None)
+                cov_matrix=cov_matrix, model_object=None, quiet_progress=quiet_progress)
             chain, mean_est, median_est, upper_95_est, lower_95_est = sampler.sample()
         else:
             raise Exception("Method not recognized!")
@@ -429,6 +427,7 @@ class TSM(object):
         map_start = kwargs.get('map_start', True)
         learning_rate = kwargs.get('learning_rate', 0.001)
         record_elbo = kwargs.get('record_elbo', None)
+        quiet_progress = kwargs.get('quiet_progress', False)
 
         if method is None:
             method = self.default_method
@@ -441,7 +440,7 @@ class TSM(object):
             return self._optimize_fit(self.neg_logposterior, **kwargs)   
         elif method == 'M-H':
             return self._mcmc_fit(nsims=nsims, method=method, cov_matrix=cov_matrix,
-                map_start=map_start)
+                map_start=map_start, quiet_progress=quiet_progress)
         elif method == "Laplace":
             return self._laplace_fit(self.neg_logposterior) 
         elif method == "BBVI":
@@ -451,7 +450,7 @@ class TSM(object):
                 posterior = self.mb_neg_logposterior
             return self._bbvi_fit(posterior, optimizer=optimizer, iterations=iterations,
                 batch_size=batch_size, mini_batch=mini_batch, map_start=map_start, 
-                learning_rate=learning_rate, record_elbo=record_elbo)
+                learning_rate=learning_rate, record_elbo=record_elbo, quiet_progress=quiet_progress)
         elif method == "OLS":
             return self._ols_fit()          
 

@@ -35,18 +35,22 @@ class MetropolisHastings(object):
 
     model_object : TSM object
         A model object (for use in SPDK sampling)
+
+    quiet_progress : boolean
+        Whether to print progress to console or stay quiet
     """
 
     def __init__(self, posterior, scale, nsims, initials, 
-        cov_matrix=None, thinning=2, warm_up_period=True, model_object=None):
+        cov_matrix=None, thinning=2, warm_up_period=True, model_object=None, quiet_progress=False):
         self.posterior = posterior
         self.scale = scale
         self.nsims = (1+warm_up_period)*nsims*thinning
         self.initials = initials
         self.param_no = self.initials.shape[0]
-        self.phi = np.zeros([self.nsims,self.param_no])
+        self.phi = np.zeros([self.nsims, self.param_no])
         self.phi[0] = self.initials # point from which to start the Metropolis-Hasting algorithm
-        
+        self.quiet_progress = quiet_progress
+
         if cov_matrix is None:
             self.cov_matrix = np.identity(self.param_no) * np.abs(self.initials)
         else:
@@ -124,8 +128,9 @@ class MetropolisHastings(object):
             # If acceptance is in range, proceed to sample, else continue tuning
             if not (acceptance < 0.234 or acceptance > 0.4):
                 finish = 1
-                print("")
-                print("Tuning complete! Now sampling.")
+                if not self.quiet_progress:
+                    print("")
+                    print("Tuning complete! Now sampling.")
                 sims_to_do = self.nsims
             else:
                 sims_to_do = int(self.nsims/2) # For acceptance rate tuning
@@ -144,8 +149,8 @@ class MetropolisHastings(object):
 
             acceptance = a_rate.sum()/a_rate.shape[0]
             self.scale = self.tune_scale(acceptance,self.scale)
-
-            print("Acceptance rate of Metropolis-Hastings is " + str(acceptance))
+            if not self.quiet_progress:
+                print("Acceptance rate of Metropolis-Hastings is " + str(acceptance))
 
         # Remove warm-up and thin
         self.phi = self.phi[int(self.nsims/2):,:][::self.thinning,:]

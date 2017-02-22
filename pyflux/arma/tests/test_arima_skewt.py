@@ -50,7 +50,7 @@ def test_bbvi():
     list is correct, and that the estimated latent variables are not nan
     """
     model = ARIMA(data=data, ar=1, ma=1, family=Skewt())
-    x = model.fit('BBVI',iterations=100)
+    x = model.fit('BBVI', iterations=100, quiet_progress=True)
     assert(len(model.latent_variables.z_list) == 6)
     lvs = np.array([i.value for i in model.latent_variables.z_list])
     assert(len(lvs[np.isnan(lvs)]) == 0)
@@ -61,7 +61,7 @@ def test_bbvi_mini_batch():
     list is correct, and that the estimated latent variables are not nan
     """
     model = ARIMA(data=data, ar=1, ma=1, family=Skewt())
-    x = model.fit('BBVI',iterations=100, mini_batch=32)
+    x = model.fit('BBVI', iterations=100, quiet_progress=True, mini_batch=32)
     assert(len(model.latent_variables.z_list) == 6)
     lvs = np.array([i.value for i in model.latent_variables.z_list])
     assert(len(lvs[np.isnan(lvs)]) == 0)
@@ -71,7 +71,7 @@ def test_bbvi_elbo():
     Tests that the ELBO increases
     """
     model = ARIMA(data=data, ar=1, ma=1, family=Skewt())
-    x = model.fit('BBVI',iterations=400, record_elbo=True)
+    x = model.fit('BBVI', iterations=200, record_elbo=True, quiet_progress=True)
     assert(x.elbo_records[-1]>x.elbo_records[0])
 
 def test_bbvi_mini_batch_elbo():
@@ -79,7 +79,7 @@ def test_bbvi_mini_batch_elbo():
     Tests that the ELBO increases
     """
     model = ARIMA(data=data, ar=1, ma=1, family=Skewt())
-    x = model.fit('BBVI',iterations=400, mini_batch=32, record_elbo=True)
+    x = model.fit('BBVI', iterations=400, mini_batch=32, record_elbo=True, quiet_progress=True)
     assert(x.elbo_records[-1]>x.elbo_records[0])
 
 def test_mh():
@@ -88,7 +88,7 @@ def test_mh():
     latent variable list is correct, and that the estimated latent variables are not nan
     """
     model = ARIMA(data=data, ar=1, ma=1, family=Skewt())
-    x = model.fit('M-H',nsims=300)
+    x = model.fit('M-H', nsims=200, quiet_progress=True)
     assert(len(model.latent_variables.z_list) == 6)
     lvs = np.array([i.value for i in model.latent_variables.z_list])
     assert(len(lvs[np.isnan(lvs)]) == 0)
@@ -186,7 +186,6 @@ def test_predict_is_intervals():
     model = ARIMA(data=data, ar=2, ma=2, family=Skewt())
     x = model.fit()
     predictions = model.predict_is(h=10, intervals=True)
-    print(predictions)
     assert(np.all(predictions['99% Prediction Interval'].values > predictions['95% Prediction Interval'].values))
     assert(np.all(predictions['95% Prediction Interval'].values > predictions[model.data_name].values))
     assert(np.all(predictions[model.data_name].values > predictions['5% Prediction Interval'].values))
@@ -195,7 +194,7 @@ def test_predict_is_intervals():
 def test_predict_intervals_bbvi():
     Tests prediction intervals are ordered correctly
     model = ARIMA(data=data, ar=2, ma=2, family=Skewt())
-    x = model.fit('BBVI', iterations=100)
+    x = model.fit('BBVI', iterations=100, quiet_progress=True)
     predictions = model.predict(h=10, intervals=True)
 
     assert(np.all(predictions['99% Prediction Interval'].values > predictions['95% Prediction Interval'].values))
@@ -206,9 +205,8 @@ def test_predict_intervals_bbvi():
 def test_predict_is_intervals_bbvi():
     Tests prediction intervals are ordered correctly
     model = ARIMA(data=data, ar=2, ma=2, family=Skewt())
-    x = model.fit('BBVI', iterations=100)
+    x = model.fit('BBVI', iterations=100, quiet_progress=True)
     predictions = model.predict_is(h=10, intervals=True)
-    print(predictions)
     assert(np.all(predictions['99% Prediction Interval'].values > predictions['95% Prediction Interval'].values))
     assert(np.all(predictions['95% Prediction Interval'].values > predictions[model.data_name].values))
     assert(np.all(predictions[model.data_name].values > predictions['5% Prediction Interval'].values))
@@ -230,7 +228,6 @@ def test_predict_is_intervals_mh():
     model = ARIMA(data=data, ar=2, ma=2, family=Skewt())
     x = model.fit('M-H', nsims=400)
     predictions = model.predict_is(h=10, intervals=True)
-    print(predictions)
     assert(np.all(predictions['99% Prediction Interval'].values > predictions['95% Prediction Interval'].values))
     assert(np.all(predictions['95% Prediction Interval'].values > predictions[model.data_name].values))
     assert(np.all(predictions[model.data_name].values > predictions['5% Prediction Interval'].values))
@@ -243,7 +240,7 @@ def test_sample_model():
     Tests sampling function
     """
     model = ARIMA(data=data, ar=2, ma=2, family=Skewt())
-    x = model.fit('BBVI', iterations=100)
+    x = model.fit('BBVI', iterations=100, quiet_progress=True)
     sample = model.sample(nsims=40)
     assert(sample.shape[0]==40)
     assert(sample.shape[1]==len(data)-2)
@@ -253,6 +250,6 @@ def test_ppc():
     Tests PPC value
     """
     model = ARIMA(data=data, ar=2, ma=2, family=Skewt())
-    x = model.fit('BBVI', iterations=100)
+    x = model.fit('BBVI', iterations=100, quiet_progress=True)
     p_value = model.ppc(nsims=40)
     assert(0.0 <= p_value <= 1.0)

@@ -33,9 +33,13 @@ class BBVI(object):
 
     record_elbo : boolean
         Whether to record the ELBO at every iteration
+
+    quiet_progress : boolean
+        Whether to print progress or stay quiet
     """
 
-    def __init__(self, neg_posterior, q, sims, optimizer='RMSProp', iterations=1000, learning_rate=0.001, record_elbo=False):
+    def __init__(self, neg_posterior, q, sims, optimizer='RMSProp', iterations=1000, learning_rate=0.001, record_elbo=False,
+        quiet_progress=False):
         self.neg_posterior = neg_posterior
         self.q = q
         self.sims = sims
@@ -45,6 +49,7 @@ class BBVI(object):
         self.printer = True
         self.learning_rate = learning_rate
         self.record_elbo = record_elbo
+        self.quiet_progress = quiet_progress
 
     def change_parameters(self,params):
         """
@@ -188,7 +193,8 @@ class BBVI(object):
                 post = -self.neg_posterior(current_params)
                 approx = self.create_normal_logq(current_params)
                 diff = post - approx
-                print(str(split) + "0% done : ELBO is " + str(diff) + ", p(y,z) is " + str(post) + ", q(z) is " + str(approx))
+                if not self.quiet_progress:
+                    print(str(split) + "0% done : ELBO is " + str(diff) + ", p(y,z) is " + str(post) + ", q(z) is " + str(approx))
 
     def get_elbo(self, current_params):
         """
@@ -242,7 +248,7 @@ class BBVI(object):
         self.change_parameters(final_parameters)
         final_means = np.array([final_parameters[el] for el in range(len(final_parameters)) if el%2==0])
         final_ses = np.array([final_parameters[el] for el in range(len(final_parameters)) if el%2!=0])
-        if self.printer is True:
+        if not self.quiet_progress:
             print("")
             print("Final model ELBO is " + str(-self.neg_posterior(final_means)-self.create_normal_logq(final_means)))
         return self.q, final_means, final_ses, elbo_records
@@ -301,7 +307,7 @@ class BBVI(object):
         final_means = np.array([final_parameters[el] for el in range(len(final_parameters)) if el%2==0])
         final_ses = np.array([final_parameters[el] for el in range(len(final_parameters)) if el%2!=0])
 
-        if self.printer is True:
+        if not self.quiet_progress:
             print("")
             print("Final model ELBO is " + str(-self.neg_posterior(final_means)-self.create_normal_logq(final_means)))
         return self.q, final_means, final_ses, stored_means, stored_predictive_likelihood, elbo_records
@@ -309,8 +315,8 @@ class BBVI(object):
 class CBBVI(BBVI):
 
     def __init__(self, neg_posterior, log_p_blanket, q, sims, optimizer='RMSProp',iterations=300000, 
-        learning_rate=0.001, record_elbo=False):
-        super(CBBVI, self).__init__(neg_posterior, q, sims, optimizer, iterations, learning_rate, record_elbo)
+        learning_rate=0.001, record_elbo=False, quiet_progress=False):
+        super(CBBVI, self).__init__(neg_posterior, q, sims, optimizer, iterations, learning_rate, record_elbo, quiet_progress)
         self.log_p_blanket = log_p_blanket
 
     def log_p(self,z):
@@ -397,10 +403,16 @@ class BBVIM(BBVI):
 
     mini_batch : int
         Mini batch size
+
+    record_elbo : boolean
+        Whether to record the ELBO
+
+    quiet_progress : boolean
+        Whether to print progress or stay quiet
     """
 
     def __init__(self, neg_posterior, full_neg_posterior, q, sims, optimizer='RMSProp', 
-        iterations=1000, learning_rate=0.001, mini_batch=2, record_elbo=False):
+        iterations=1000, learning_rate=0.001, mini_batch=2, record_elbo=False, quiet_progress=False):
         self.neg_posterior = neg_posterior
         self.full_neg_posterior = full_neg_posterior
         self.q = q
@@ -412,6 +424,7 @@ class BBVIM(BBVI):
         self.learning_rate = learning_rate
         self.mini_batch = mini_batch
         self.record_elbo = record_elbo
+        self.quiet_progress = quiet_progress
 
     def log_p(self,z):
         """
@@ -434,7 +447,8 @@ class BBVIM(BBVI):
                 post = -self.full_neg_posterior(current_params)
                 approx = self.create_normal_logq(current_params)
                 diff = post - approx
-                print(str(split) + "0% done : ELBO is " + str(diff) + ", p(y,z) is " + str(post) + ", q(z) is " + str(approx))
+                if not self.quiet_progress:
+                    print(str(split) + "0% done : ELBO is " + str(diff) + ", p(y,z) is " + str(post) + ", q(z) is " + str(approx))
 
     def run(self):
         """
@@ -482,7 +496,7 @@ class BBVIM(BBVI):
         self.change_parameters(final_parameters)
         final_means = np.array([final_parameters[el] for el in range(len(final_parameters)) if el%2==0])
         final_ses = np.array([final_parameters[el] for el in range(len(final_parameters)) if el%2!=0])
-        if self.printer is True:
+        if not self.quiet_progress:
             print("")
             print("Final model ELBO is " + str(-self.full_neg_posterior(final_means)-self.create_normal_logq(final_means)))
         return self.q, final_means, final_ses, elbo_records
@@ -541,7 +555,7 @@ class BBVIM(BBVI):
         final_means = np.array([final_parameters[el] for el in range(len(final_parameters)) if el%2==0])
         final_ses = np.array([final_parameters[el] for el in range(len(final_parameters)) if el%2!=0])
 
-        if self.printer is True:
+        if not self.quiet_progress:
             print("")
             print("Final model ELBO is " + str(-self.full_neg_posterior(final_means)-self.create_normal_logq(final_means)))
         return self.q, final_means, final_ses, stored_means, stored_predictive_likelihood, elbo_records
