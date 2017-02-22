@@ -44,77 +44,6 @@ def test_couple_terms_integ():
     lvs = np.array([i.value for i in model.latent_variables.z_list])
     assert(len(lvs[np.isnan(lvs)]) == 0)
 
-def test_bbvi():
-    """
-    Tests an ARIMA model estimated with BBVI and that the length of the latent variable
-    list is correct, and that the estimated latent variables are not nan
-    """
-    model = ARIMA(data=data, ar=1, ma=1, family=Laplace())
-    x = model.fit('BBVI',iterations=100, quiet_progress=True)
-    assert(len(model.latent_variables.z_list) == 4)
-    lvs = np.array([i.value for i in model.latent_variables.z_list])
-    assert(len(lvs[np.isnan(lvs)]) == 0)
-
-def test_bbvi_mini_batch():
-    """
-    Tests an ARIMA model estimated with BBVI and that the length of the latent variable
-    list is correct, and that the estimated latent variables are not nan
-    """
-    model = ARIMA(data=data, ar=1, ma=1, family=Laplace())
-    x = model.fit('BBVI',iterations=100, quiet_progress=True, mini_batch=32)
-    assert(len(model.latent_variables.z_list) == 4)
-    lvs = np.array([i.value for i in model.latent_variables.z_list])
-    assert(len(lvs[np.isnan(lvs)]) == 0)
-
-def test_bbvi_elbo():
-    """
-    Tests that the ELBO increases
-    """
-    model = ARIMA(data=data, ar=1, ma=1, family=Laplace())
-    x = model.fit('BBVI',iterations=100, quiet_progress=True, record_elbo=True)
-    assert(x.elbo_records[-1]>x.elbo_records[0])
-
-def test_bbvi_mini_batch_elbo():
-    """
-    Tests that the ELBO increases
-    """
-    model = ARIMA(data=data, ar=1, ma=1, family=Laplace())
-    x = model.fit('BBVI',iterations=100, quiet_progress=True, mini_batch=32, record_elbo=True)
-    assert(x.elbo_records[-1]>x.elbo_records[0])
-
-def test_mh():
-    """
-    Tests an ARIMA model estimated with Metropolis-Hastings and that the length of the 
-    latent variable list is correct, and that the estimated latent variables are not nan
-    """
-    model = ARIMA(data=data, ar=1, ma=1, family=Laplace())
-    x = model.fit('M-H', nsims=200, quiet_progress=True)
-    assert(len(model.latent_variables.z_list) == 4)
-    lvs = np.array([i.value for i in model.latent_variables.z_list])
-    assert(len(lvs[np.isnan(lvs)]) == 0)
-
-def test_laplace():
-    """
-    Tests an ARIMA model estimated with Laplace approximation and that the length of the 
-    latent variable list is correct, and that the estimated latent variables are not nan
-    """
-    model = ARIMA(data=data, ar=1, ma=1, family=Laplace())
-    x = model.fit('Laplace')
-    assert(len(model.latent_variables.z_list) == 4)
-    lvs = np.array([i.value for i in model.latent_variables.z_list])
-    assert(len(lvs[np.isnan(lvs)]) == 0)
-
-def test_pml():
-    """
-    Tests a PML model estimated with Laplace approximation and that the length of the 
-    latent variable list is correct, and that the estimated latent variables are not nan
-    """
-    model = ARIMA(data=data, ar=1, ma=1, family=Laplace())
-    x = model.fit('PML')
-    assert(len(model.latent_variables.z_list) == 4)
-    lvs = np.array([i.value for i in model.latent_variables.z_list])
-    assert(len(lvs[np.isnan(lvs)]) == 0)
-
 def test_predict_length():
     """
     Tests that the prediction dataframe length is equal to the number of steps h
@@ -187,7 +116,6 @@ def test_predict_is_intervals():
     model = ARIMA(data=data, ar=2, ma=2, family=Laplace())
     x = model.fit()
     predictions = model.predict_is(h=10, intervals=True)
-    print(predictions)
     assert(np.all(predictions['99% Prediction Interval'].values > predictions['95% Prediction Interval'].values))
     assert(np.all(predictions['95% Prediction Interval'].values > predictions[model.data_name].values))
     assert(np.all(predictions[model.data_name].values > predictions['5% Prediction Interval'].values))
@@ -213,7 +141,6 @@ def test_predict_is_intervals_bbvi():
     model = ARIMA(data=data, ar=2, ma=2, family=Laplace())
     x = model.fit('BBVI', iterations=100, quiet_progress=True)
     predictions = model.predict_is(h=10, intervals=True)
-    print(predictions)
     assert(np.all(predictions['99% Prediction Interval'].values > predictions['95% Prediction Interval'].values))
     assert(np.all(predictions['95% Prediction Interval'].values > predictions[model.data_name].values))
     assert(np.all(predictions[model.data_name].values > predictions['5% Prediction Interval'].values))
@@ -239,7 +166,6 @@ def test_predict_is_intervals_mh():
     model = ARIMA(data=data, ar=2, ma=2, family=Laplace())
     x = model.fit('M-H', nsims=200, quiet_progress=True)
     predictions = model.predict_is(h=10, intervals=True)
-    print(predictions)
     assert(np.all(predictions['99% Prediction Interval'].values > predictions['95% Prediction Interval'].values))
     assert(np.all(predictions['95% Prediction Interval'].values > predictions[model.data_name].values))
     assert(np.all(predictions[model.data_name].values > predictions['5% Prediction Interval'].values))

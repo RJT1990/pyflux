@@ -416,7 +416,6 @@ def a_test2_predict_nonconstant():
     model = ARIMAX(formula="y ~ x1 + x2", data=data, ar=1, ma=1, family=Exponential())
     x = model.fit('BBVI',iterations=200)
     predictions = model.predict(h=10, oos_data=data_oos, intervals=False)
-    print(predictions)
     assert(not np.all(predictions.values==predictions.values[0]))
     
 def a_test2_predict_is_nonconstant():
