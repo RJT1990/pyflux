@@ -11,6 +11,8 @@ See some examples and documentation below. PyFlux is still only alpha software; 
 
 [Click here for a getting started guide](http://pyflux.readthedocs.io/en/latest/getting_started.html).
 
+**Note From Author** : I am currently working on other projects as of now, so have paused updates for this library for the immediate future. I will likely come back to finish things later this year, but if you'd like to help move the library forward by contributing, then do get in touch!
+
 ## Models
 
 - [ARIMA models](http://pyflux.readthedocs.io/en/latest/arima.html)
