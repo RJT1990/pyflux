@@ -746,7 +746,7 @@ class NDynReg(tsm.TSM):
         predictions = []
 
         for t in range(0,h):
-            data1 = self.data_original.iloc[0:-h+t,:]
+            data1 = self.data_original.iloc[:-h+t,:]
             data2 = self.data_original.iloc[-h+t:,:] 
             x = NDynReg(formula=self.formula, data=data1, family=self.family)                                       
             x.fit(print_progress=False)

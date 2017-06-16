@@ -549,7 +549,7 @@ class GASReg(tsm.TSM):
         import matplotlib.pyplot as plt
         import seaborn as sns
 
-        figsize = kwargs.get('figsize',(10,7))
+        figsize = kwargs.get('figsize', (10,7))
 
         plt.figure(figsize=figsize)
         predictions = self.predict_is(h=h, fit_method=fit_method, fit_once=fit_once)
@@ -679,7 +679,7 @@ class GASReg(tsm.TSM):
         predictions = []
 
         for t in range(0,h):
-            data1 = self.data_original.iloc[:-(h+t),:]
+            data1 = self.data_original.iloc[:-h+t,:]
             data2 = self.data_original.iloc[-h+t:,:]
             x = GASReg(formula=self.formula, data=self.data_original[:(-h+t)], family=self.family)
 

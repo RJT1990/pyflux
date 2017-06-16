@@ -835,7 +835,7 @@ class GASX(tsm.TSM):
         predictions = []
 
         for t in range(0,h):
-            data1 = self.data_original.iloc[:-(h+t),:]
+            data1 = self.data_original.iloc[:-h+t,:]
             data2 = self.data_original.iloc[-h+t:,:]
             x = GASX(ar=self.ar,sc=self.sc,formula=self.formula,integ=self.integ,family=self.family,data=self.data_original[:-h+t])
             

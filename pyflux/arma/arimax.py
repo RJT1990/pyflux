@@ -842,8 +842,9 @@ class ARIMAX(tsm.TSM):
         predictions = []
 
         for t in range(0, h):
-            data1 = self.data_original.iloc[:-(h+t),:]
+            data1 = self.data_original.iloc[:-h+t,:]
             data2 = self.data_original.iloc[-h+t:,:]
+
             x = ARIMAX(ar=self.ar, ma=self.ma, integ=self.integ, formula=self.formula, 
                 data=data1, family=self.family)
 

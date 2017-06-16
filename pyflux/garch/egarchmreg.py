@@ -681,7 +681,7 @@ class EGARCHMReg(tsm.TSM):
         predictions = []
 
         for t in range(0, h):
-            data1 = self.data_original.iloc[:-(h+t),:]
+            data1 = self.data_original.iloc[:-h+t,:]
             data2 = self.data_original.iloc[-h+t:,:]
             x = EGARCHMReg(p=self.p, q=self.q, data=self.data_original[:(-h+t)],formula=self.formula)
 
