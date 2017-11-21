@@ -923,6 +923,11 @@ class ARIMAX(tsm.TSM):
         if self.latent_variables.estimated is False:
             raise Exception("No latent variables estimated!")
         else:
+
+            # Replace nans in dep var so can be handled by patsy (hacky)
+            dep_var = self.formula.split("~")[0]
+            oos_data[dep_var] = oos_data[dep_var].replace(np.nan, 0)
+
             _, X_oos = dmatrices(self.formula, oos_data)
             X_oos = np.array([X_oos])[0]
             X_pred = X_oos[:h]

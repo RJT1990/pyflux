@@ -1,4 +1,4 @@
-__version__ = "0.4.15"
+__version__ = "0.4.16"
 
 # Use of SETUP built-in adapted from scikit-learn's setup utility.
 try:
