@@ -19,7 +19,7 @@ LONG_DESCRIPTION = DESCRIPTION
 AUTHOR = "Ross Taylor"
 AUTHOR_EMAIL = "rj-taylor@live.co.uk"
 URL = 'https://github.com/rjt1990/pyflux'
-DOWNLOAD_URL = 'https://github.com/rjt1990/pyflux/tarball/0.4.15'
+DOWNLOAD_URL = 'https://github.com/rjt1990/pyflux/tarball/0.4.17'
 LICENSE = 'BSD'
 
 def version(package, encoding='utf-8'):
@@ -60,7 +60,6 @@ def configuration(parent_package='',top_path=None):
 
 def setup_package():
     from numpy.distutils.core import setup
-
     old_path = os.getcwd()
     local_path = os.path.dirname(os.path.abspath(sys.argv[0]))
     src_path = local_path
