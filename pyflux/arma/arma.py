@@ -41,7 +41,72 @@ class ARIMA(tsm.TSM):
     family : family object
         E.g pf.Normal(), pf.t(), pf.Laplace()...
     """
+    def index_mean_sim(self, h=5, past_values=20, intervals=True,sims=15000, **kwargs):
+        """ Simulate the model, get mean value and the index
 
+        Parameters
+        ----------
+        h : int (default : 5)
+            How many steps ahead would you like to forecast?
+
+        past_values : int (default : 20)
+            How many past observations to show on the forecast graph?
+
+        intervals : boolean
+            Would you like to show prediction intervals for the forecast?
+
+        Returns
+        ----------
+        - Plot of the forecast
+        """
+        #import matplotlib.pyplot as plt
+        import seaborn as sns
+
+        figsize = kwargs.get('figsize',(10,7))
+
+        if self.latent_variables.estimated is False:
+            raise Exception("No latent variables estimated!")
+        else:
+
+            mu, Y = self._model(self.latent_variables.get_z_values())   
+            date_index = self.shift_dates(h)
+
+            if self.latent_variables.estimation_method in ['M-H']:
+                sim_vector = self._sim_prediction_bayes(h, sims)
+                error_bars = []
+
+                for pre in range(5,100,5):
+                    error_bars.append(np.insert([np.percentile(i,pre) for i in sim_vector], 0, Y[-1]))
+
+                forecasted_values = np.insert([np.mean(i) for i in sim_vector], 0, Y[-1])
+                plot_values = np.append(Y[-1-past_values:-2], forecasted_values)
+                plot_index = date_index[-h-past_values:]
+
+            else:
+                t_z = self.transform_z()
+                mean_values = self._mean_prediction(mu, Y, h, t_z)
+
+                if self.model_name2 == "Skewt":
+                    model_scale, model_shape, model_skewness = self._get_scale_and_shape(t_z)
+                    m1 = (np.sqrt(model_shape)*sp.gamma((model_shape-1.0)/2.0))/(np.sqrt(np.pi)*sp.gamma(model_shape/2.0))
+                    forecasted_values = mean_values[-h:] + (model_skewness - (1.0/model_skewness))*model_scale*m1 
+                else:
+                    forecasted_values = mean_values[-h:] 
+
+                if intervals is True:
+                    sim_values = self._sim_prediction(mu, Y, h, t_z, sims)
+                else:
+                    sim_values = self._sim_prediction(mu, Y, h, t_z, 2)
+
+                error_bars, forecasted_values, plot_values, plot_index = self._summarize_simulations(mean_values, sim_values, date_index, h, past_values)
+
+            #plt.figure(figsize=figsize)
+            if intervals == True:
+                alpha =[0.15*i/float(100) for i in range(50,12,-2)]
+                for count, pre in enumerate(error_bars):
+                    pass
+            return plot_index,mean_values,sim_values
+    
     def __init__(self, data, ar, ma, integ=0, target=None, family=fam.Normal()):
 
         super(ARIMA, self).__init__('ARIMA')
