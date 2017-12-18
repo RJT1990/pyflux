@@ -89,7 +89,7 @@ def setup_package():
               license=LICENSE,
               configuration=configuration,
               keywords = ['time series','machine learning','bayesian statistics'],
-              install_requires=['numpy', 'pandas', 'scipy', 'numdifftools','patsy'])
+              install_requires=['numpy', 'pandas', 'scipy', 'numdifftools','patsy', 'seaborn'])
     finally:
         del sys.path[0]
         os.chdir(old_path)
