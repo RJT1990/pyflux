@@ -1,5 +1,6 @@
 __version__ = "0.4.17"
 
+import sys
 # Use of SETUP built-in adapted from scikit-learn's setup utility.
 try:
     __PYFLUX_SETUP__
