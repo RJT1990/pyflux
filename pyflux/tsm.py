@@ -1,10 +1,7 @@
 from math import exp, sqrt, log, tanh
 import copy
-import sys
 import warnings
 warnings.filterwarnings('ignore') # here to suppress nan-slice error warnings through optimization; not tackling root of problem...
-if sys.version_info < (3,):
-    range = xrange
 
 import numpy as np
 from scipy import optimize
