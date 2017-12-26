@@ -16,6 +16,12 @@ from .tests import find_p_value
 from .latent_variables import LatentVariable, LatentVariables
 from .results import BBVIResults, MLEResults, LaplaceResults, MCMCResults
 
+try:
+    range = xrange  # Python 2
+except NameError:
+    pass  # xrange is not defined in Python 3
+
+
 class TSM(object):
     """ TSM PARENT CLASS
 
