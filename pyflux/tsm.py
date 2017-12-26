@@ -1,10 +1,7 @@
 from math import exp, sqrt, log, tanh
 import copy
-import sys
 import warnings
 warnings.filterwarnings('ignore') # here to suppress nan-slice error warnings through optimization; not tackling root of problem...
-if sys.version_info < (3,):
-    range = xrange
 
 import numpy as np
 from scipy import optimize
@@ -18,6 +15,12 @@ from .output import TablePrinter
 from .tests import find_p_value
 from .latent_variables import LatentVariable, LatentVariables
 from .results import BBVIResults, MLEResults, LaplaceResults, MCMCResults
+
+try:
+    range = xrange  # Python 2
+except NameError:
+    pass  # xrange is not defined in Python 3
+
 
 class TSM(object):
     """ TSM PARENT CLASS
