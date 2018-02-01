@@ -19,6 +19,73 @@ def test_no_terms():
     lvs = np.array([i.value for i in model.latent_variables.z_list])
     assert(len(lvs[np.isnan(lvs)]) == 0)
 
+
+def get_ar_process(ar, samples=10000):
+    """
+    Generates a realization of an AR(ar) process.
+    """
+    # a small noise so that the coefficients are well determined
+    noise = np.random.normal(scale=0.001, size=samples)
+
+    # sum of coefficients must be smaller than 1 for the process to be non-stationary
+    coefficients = 0.99*np.ones(shape=ar)/ar
+
+    # start is 1
+    x = np.ones(samples)
+
+    for i in range(ar, len(x)):
+        x[i] = np.sum(coefficients[d] * x[i - d - 1] for d in range(0, ar)) + noise[i]
+
+    return x
+
+
+def _test_AR(ar):
+    """
+    Tests that a AR(ar) model fits an AR(ar) process.
+    """
+    data = get_ar_process(ar=ar)
+
+    model = ARIMA(data=data, ar=ar, ma=0)
+    x = model.fit()
+    lvs = np.array([i.value for i in model.latent_variables.z_list])
+    assert (len(lvs) == ar + 2)
+
+    coefficients = x.z.get_z_values(transformed=True)
+
+    # Constant coefficient within 10%
+    assert (np.abs(coefficients[0]) < 0.1)
+
+    expected = 0.99/ar
+
+    # AR coefficients within 10%
+    for ar_i in range(ar):
+        assert (np.abs(coefficients[1 + ar_i] - expected) / expected < 0.1)
+
+    # Normal scale coefficient within 10%
+    assert (np.abs(coefficients[-1] - 0.001) / 0.001 < 0.1)
+
+
+def test_AR1():
+    """
+    Tests that an AR(1) model fits an AR(1) process.
+    """
+    _test_AR(1)
+
+
+def test_AR2():
+    """
+    Tests that an AR(2) model fits an AR(2) process.
+    """
+    _test_AR(2)
+
+
+def test_AR3():
+    """
+    Tests that an AR(3) model fits an AR(3) process.
+    """
+    _test_AR(3)
+
+
 def test_couple_terms():
     """
     Tests an ARIMA model with 1 AR and 1 MA term and that
