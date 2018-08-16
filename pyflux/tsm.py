@@ -18,6 +18,7 @@ from .output import TablePrinter
 from .tests import find_p_value
 from .latent_variables import LatentVariable, LatentVariables
 from .results import BBVIResults, MLEResults, LaplaceResults, MCMCResults
+from IPython.terminal.debugger import TerminalPdb
 
 class TSM(object):
     """ TSM PARENT CLASS
@@ -31,7 +32,6 @@ class TSM(object):
     """
 
     def __init__(self,model_type):
-
         # Holding variables for model output
         self.model_type = model_type
         self.latent_variables = LatentVariables(self.model_type)
@@ -418,6 +418,8 @@ class TSM(object):
         None (stores fit information)
         """
 
+#        pdb = TerminalPdb()
+#        pdb.set_trace()
         cov_matrix = kwargs.get('cov_matrix', None)
         iterations = kwargs.get('iterations', 1000)
         nsims = kwargs.get('nsims', 10000)

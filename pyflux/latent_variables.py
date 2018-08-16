@@ -364,7 +364,7 @@ class LatentVariable(object):
 
     def __init__(self,name,index,prior,q):
         self.name = name
-        self.index = 0
+        self.index = index
         self.prior = prior
         self.transform = self.prior.transform
         self.start = 0.0
