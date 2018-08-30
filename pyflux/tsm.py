@@ -418,8 +418,6 @@ class TSM(object):
         None (stores fit information)
         """
 
-#        pdb = TerminalPdb()
-#        pdb.set_trace()
         cov_matrix = kwargs.get('cov_matrix', None)
         iterations = kwargs.get('iterations', 1000)
         nsims = kwargs.get('nsims', 10000)
@@ -515,6 +513,7 @@ class TSM(object):
                 break
             else:
                 post += -self.latent_variables.z_list[k].prior.logpdf(beta[k])
+
         return post
 
     def shift_dates(self,h):

@@ -42,7 +42,7 @@ class ARIMA(tsm.TSM):
     family : family object
         E.g pf.Normal(), pf.t(), pf.Laplace()...
 
-    ar_idx_list : list of integers (default=None)
+    ar_idx_list : list of integers (default : None)
         Specifies the AR coefficients that will be estimated by
         the ARIMA model. E.g., [1, 3] specifies that only autoregressive lags
         1 and 3 will be considered by the model, i.e., an autoregressive
