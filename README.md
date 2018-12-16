@@ -1,5 +1,4 @@
 # PyFlux
-[![PyFlux](http://pyflux.com/pyflux.png)](http://github.com/RJT1990/pyflux)
 
 [![Join the chat at https://gitter.im/RJT1990/pyflux](https://badges.gitter.im/RJT1990/pyflux.svg)](https://gitter.im/RJT1990/pyflux?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
 [![PyPI version](https://badge.fury.io/py/pyflux.svg)](https://badge.fury.io/py/pyflux)
@@ -40,10 +39,6 @@ See some examples and documentation below. PyFlux is still only alpha software; 
 - [Maximum Likelihood](http://pyflux.readthedocs.io/en/latest/classical.html) and [Penalized Maximum Likelihood](http://pyflux.readthedocs.io/en/latest/bayes.html)
 - [Metropolis-Hastings](http://pyflux.readthedocs.io/en/latest/bayes.html)
 
-## Tools
-
-- [Aggregating Algorithms](http://www.pyflux.com/aggregating-algorithms/)
-
 ## Installing PyFlux
 
 ```{bash}
@@ -65,4 +60,3 @@ PyFlux is still alpha software so results should be treated with care, but citat
 
 > Ross Taylor. 2016.
 > _PyFlux: An open source time series library for Python_
-> http://www.pyflux.com
