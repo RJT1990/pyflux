@@ -18,6 +18,7 @@ from .output import TablePrinter
 from .tests import find_p_value
 from .latent_variables import LatentVariable, LatentVariables
 from .results import BBVIResults, MLEResults, LaplaceResults, MCMCResults
+from IPython.terminal.debugger import TerminalPdb
 
 class TSM(object):
     """ TSM PARENT CLASS
@@ -31,7 +32,6 @@ class TSM(object):
     """
 
     def __init__(self,model_type):
-
         # Holding variables for model output
         self.model_type = model_type
         self.latent_variables = LatentVariables(self.model_type)
@@ -513,6 +513,7 @@ class TSM(object):
                 break
             else:
                 post += -self.latent_variables.z_list[k].prior.logpdf(beta[k])
+
         return post
 
     def shift_dates(self,h):

@@ -14,17 +14,20 @@ from .. import tsm as tsm
 from .. import data_check as dc
 
 from .var_recursions import create_design_matrix, custom_covariance_matrix, var_likelihood
+import itertools as it
+from IPython.terminal.debugger import TerminalPdb
 
-def create_design_matrix_2(Z, data, Y_len, lag_no):
+def create_design_matrix_2(Z, data, Y_len, ar_idx_list, max_lag):
     """
     For Python 2.7 - cythonized version only works for 3.5
     """
     row_count = 1
 
-    for lag in range(1, lag_no+1):
+    for lag in ar_idx_list:
         for reg in range(Y_len):
-            Z[row_count, :] = data[reg][(lag_no-lag):-lag]
+            Z[row_count, :] = data[reg][(max_lag-lag):-lag]
             row_count += 1
+
 
     return Z
 
@@ -51,9 +54,18 @@ class VAR(tsm.TSM):
 
     use_ols_covariance : Boolean
         If true use OLS covariance; if false use estimated covariance
+    
+    ar_idx_list : list of integers (default : None)
+        Specifies the AR coefficients that will be estimated by
+        the VAR model. E.g., [1, 3] specifies that only autoregressive lags
+        1 and 3 will be considered by the model, i.e., an autoregressive
+        parameter for lag 2 will not be estimated (for practical purposes
+        it will be equal to zero). If None, all lags <= ar are taken into
+        account by the model (conventional setting).
     """
 
-    def __init__(self,data,lags,target=None,integ=0,use_ols_covariance=False):
+    def __init__(self, data, lags, target=None, integ=0,
+                 use_ols_covariance=False, ar_idx_list=None):
 
         # Initialize TSM object     
         super(VAR,self).__init__('VAR')
@@ -88,6 +100,22 @@ class VAR(tsm.TSM):
         self.data = X   
         self.ylen = self.data_name.shape[0]
 
+        # Inspect AR indexes (if provided)
+        if ar_idx_list is None:
+            ar_idx_list = list(np.arange(self.max_lag) + 1)
+        else:
+            assert(isinstance(ar_idx_list, list)),\
+                'ar_idx_list must be of type list, not "%s"'\
+                % type(ar_idx_list).__name__
+            assert(all(isinstance(elem, int) for elem in ar_idx_list)),\
+                'elements of ar_idx_list must be all int'
+            assert(np.max(ar_idx_list) <= self.max_lag),\
+                'lags in ar_idx_list can be at most %d' % self.max_lag
+            assert(ar_idx_list), 'ar_idx_list must have at least one element'
+
+        self.ar_idx_list = ar_idx_list
+
+        # Generate latent variables
         self._create_latent_variables()
 
         # Other attributes
@@ -133,30 +161,42 @@ class VAR(tsm.TSM):
         # TODO: There must be a cleaner way to do this below
 
         # Create VAR latent variables
-        for variable in range(self.ylen):
-            self.latent_variables.add_z(self.data_name[variable] + ' Constant', fam.Normal(0,3,transform=None), fam.Normal(0,3))
-            other_variables = np.delete(range(self.ylen), [variable])
-            for lag_no in range(self.lags):
-                self.latent_variables.add_z(str(self.data_name[variable]) + ' AR(' + str(lag_no+1) + ')', fam.Normal(0,0.5,transform=None), fam.Normal(0,3))
-                for other in other_variables:
-                    self.latent_variables.add_z(str(self.data_name[other]) + ' to ' + str(self.data_name[variable]) + ' AR(' + str(lag_no+1) + ')', fam.Normal(0,0.5,transform=None), fam.Normal(0,3))
+        curr_var = ''
+        vars_lags_combin = it.product(self.data_name, self.ar_idx_list,
+                                      self.data_name)
+        for tup in vars_lags_combin:
+            if tup[0] != curr_var:
+                curr_var = tup[0]
+                self.latent_variables.add_z(tup[0] + ' Constant',
+                                            fam.Normal(0, 3, transform=None),
+                                            fam.Normal(0, 3))
+            if tup[0] == tup[-1]:
+                self.latent_variables.add_z('{0} AR({1})'.format(*tup[:-1]),
+                                            fam.Normal(0, 0.5, transform=None),
+                                            fam.Normal(0, 3))
+            else:
+                self.latent_variables.add_z('{2} to {0} AR({1})'.format(*tup),
+                                            fam.Normal(0, 0.5, transform=None),
+                                            fam.Normal(0, 3))
 
         starting_params_temp = self._create_B_direct().flatten()
 
         # Variance latent variables
-        for i in range(self.ylen):
-            for k in range(self.ylen):
+        for i in range(1, self.ylen+1):
+            for k in range(1, self.ylen+1):
                 if i == k:
-                    self.latent_variables.add_z('Cholesky Diagonal ' + str(i), fam.Flat(transform='exp'), fam.Normal(0,3))
+                    self.latent_variables.add_z('Cholesky Diagonal {}'.format(i),
+                                                fam.Flat(transform='exp'),
+                                                fam.Normal(0, 3))
+                    starting_params_temp = np.append(starting_params_temp,
+                                                     np.array([0.5]))
                 elif i > k:
-                    self.latent_variables.add_z('Cholesky Off-Diagonal (' + str(i) + ',' + str(k) + ')', fam.Flat(transform=None), fam.Normal(0,3))
-
-        for i in range(0,self.ylen):
-            for k in range(0,self.ylen):
-                if i == k:
-                    starting_params_temp = np.append(starting_params_temp,np.array([0.5]))
-                elif i > k:
-                    starting_params_temp = np.append(starting_params_temp,np.array([0.0]))
+                    self.latent_variables.add_z('Cholesky Off-Diag '
+                                                '({0},{1})'.format(i, k),
+                                                fam.Flat(transform=None),
+                                                fam.Normal(0, 3))
+                    starting_params_temp = np.append(starting_params_temp,
+                                                     np.array([0.0]))
 
         self.latent_variables.set_z_starting_values(starting_params_temp)
 
@@ -173,8 +213,10 @@ class VAR(tsm.TSM):
         The design matrix Z
         """
 
-        Z = np.ones(((self.ylen*self.lags +1),Y[0].shape[0]))
-        return self.create_design_matrix(Z, self.data, Y.shape[0], self.lags)
+        Z = np.ones(((self.ylen*len(self.ar_idx_list) + 1), Y[0].shape[0]))
+        return self.create_design_matrix(Z, self.data, Y.shape[0],
+                                         np.array(self.ar_idx_list),
+                                         self.max_lag)
 
     def _forecast_mean(self,h,t_params,Y,shock_type=None,shock_index=0,shock_value=None,shock_dir='positive',irf_intervals=False):
         """ Function allows for mean prediction; also allows shock specification for simulations or impulse response effects
@@ -258,12 +300,14 @@ class VAR(tsm.TSM):
         # Transform latent variables
         beta = np.array([self.latent_variables.z_list[k].prior.transform(beta[k]) for k in range(beta.shape[0])])
 
+        # Format beta as coefficient matrix B (VAR(p) general matrix notation)
         params = []
-        col_length = 1 + self.ylen*self.lags
-        for i in range(0,self.ylen):
+        col_length = 1 + self.ylen*len(self.ar_idx_list)
+        for i in range(0, self.ylen):
             params.append(beta[(col_length*i): (col_length*(i+1))])
 
-        mu = np.dot(np.array(params),self._create_Z(Y))
+        # Retrieve mean values of \bar{x_t}
+        mu = np.dot(np.array(params), self._create_Z(Y))
         return mu, Y
 
     def _shock_create(self, h, shock_type, shock_index, shock_value, shock_dir, irf_intervals):
@@ -383,7 +427,9 @@ class VAR(tsm.TSM):
 
         cov_matrix = np.zeros((self.ylen,self.ylen))
         parm = np.array([self.latent_variables.z_list[k].prior.transform(beta[k]) for k in range(beta.shape[0])])
-        return custom_covariance_matrix(cov_matrix, self.ylen, self.lags, parm)
+
+        return custom_covariance_matrix(cov_matrix, self.ylen,
+                                        len(self.ar_idx_list), parm)
 
     def estimator_cov(self,method):
         """ Creates covariance matrix for the estimators
@@ -421,13 +467,21 @@ class VAR(tsm.TSM):
 
         mu, Y = self._model(beta)
 
+        # If custom covariance, estimate it based on parameters of Cholesky
+        # factorization of the covariance matrix
         if self.use_ols_covariance is False:
             cm = self.custom_covariance(beta)
         else:
             cm = self.ols_covariance()
 
+        # Compute residuals of VAR estimation
         diff = Y.T - mu.T
-        ll1 =  -(mu.T.shape[0]*mu.T.shape[1]/2.0)*np.log(2.0*np.pi) - (mu.T.shape[0]/2.0)*np.linalg.slogdet(cm)[1]
+
+        # Compute term of the multivariate loglik function independent from mu 
+        ll1 =  - (mu.T.shape[0]*mu.T.shape[1]/2.0)*np.log(2.0*np.pi)\
+               - (mu.T.shape[0]/2.0)*np.linalg.slogdet(cm)[1]
+
+        # Compute inverse of covariance matrix, estimate complete loglik
         inverse = np.linalg.pinv(cm)
 
         return var_likelihood(ll1, mu.T.shape[0], diff, inverse)

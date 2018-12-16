@@ -14,6 +14,7 @@ from .. import tsm as tsm
 from .. import data_check as dc
 
 from .arma_recursions import arima_recursion, arima_recursion_normal, arima_recursion_poisson
+from IPython.terminal.debugger import TerminalPdb
 
 class ARIMA(tsm.TSM):
     """ Inherits time series methods from the TSM parent class.
@@ -40,10 +41,22 @@ class ARIMA(tsm.TSM):
 
     family : family object
         E.g pf.Normal(), pf.t(), pf.Laplace()...
+
+    ar_idx_list : list of integers (default : None)
+        Specifies the AR coefficients that will be estimated by
+        the ARIMA model. E.g., [1, 3] specifies that only autoregressive lags
+        1 and 3 will be considered by the model, i.e., an autoregressive
+        parameter for lag 2 will not be estimated (for practical purposes
+        it will be equal to zero). If None, all lags <= ar are taken into
+        account by the model (conventional setting).
+
     """
 
-    def __init__(self, data, ar, ma, integ=0, target=None, family=fam.Normal()):
+    def __init__(self, data, ar, ma, integ=0, target=None, family=fam.Normal(),
+                 ar_idx_list=None):
 
+#        pdb = TerminalPdb()
+#        pdb.set_trace()
         super(ARIMA, self).__init__('ARIMA')
 
         # Latent Variable information
@@ -68,6 +81,22 @@ class ARIMA(tsm.TSM):
             self.data_name = "Differenced " + self.data_name
         self.data_length = self.data.shape[0]
 
+        # Inspect AR indexes (if provided)
+        if ar_idx_list is None:
+            ar_idx_list = list(np.arange(self.ar) + 1)
+        else:
+            assert(isinstance(ar_idx_list, list)),\
+                'ar_idx_list must be of type list, not "%s"'\
+                % type(ar_idx_list).__name__
+            assert(all(isinstance(elem, int) for elem in ar_idx_list)),\
+                'elements of ar_idx_list must be all int'
+            assert(np.max(ar_idx_list) <= self.ar),\
+                'lags in ar_idx_list can be at most %d' % self.ar
+            assert(ar_idx_list), 'ar_idx_list must have at least one element'
+
+        self.ar_idx_list = ar_idx_list
+
+        # Generate regressor matrix, create ARMA latent variables
         self.X = self._ar_matrix()
         self._create_latent_variables()
 
@@ -78,7 +107,7 @@ class ARIMA(tsm.TSM):
         # Build any remaining latent variables that are specific to the family chosen
         for no, i in enumerate(self.family.build_latent_variables()):
             self.latent_variables.add_z(i[0], i[1], i[2])
-            self.latent_variables.z_list[1+no+self.ar+self.ma].start = i[3]
+            self.latent_variables.z_list[-1].start = i[3]
         self.latent_variables.z_list[0].start = self.mean_transform(np.mean(self.data))
 
         self.family_z_no = len(self.family.build_latent_variables())
@@ -118,8 +147,8 @@ class ARIMA(tsm.TSM):
         X = np.ones(self.data_length-self.max_lag)
 
         if self.ar != 0:
-            for i in range(0, self.ar):
-                X = np.vstack((X,self.data[(self.max_lag-i-1):-i-1]))
+            for i in self.ar_idx_list:
+                X = np.vstack((X, self.data[(self.max_lag-i):-i]))
 
         return X
 
@@ -137,10 +166,13 @@ class ARIMA(tsm.TSM):
         None (adds to self.latent_variables)
         """
 
-        self.latent_variables.add_z('Constant', fam.Normal(0,3,transform=None), fam.Normal(0, 3))
+        self.latent_variables.add_z('Constant', fam.Normal(0,3,transform=None),
+                                    fam.Normal(0, 3))
 
-        for ar_term in range(self.ar):
-            self.latent_variables.add_z('AR(' + str(ar_term+1) + ')', fam.Normal(0,0.5,transform=None), fam.Normal(0, 3))
+        for ar_term in self.ar_idx_list:
+            self.latent_variables.add_z('AR(' + str(ar_term) + ')',
+                                        fam.Normal(0, 0.5, transform=None),
+                                        fam.Normal(0, 3))
 
         for ma_term in range(self.ma):
             self.latent_variables.add_z('MA(' + str(ma_term+1) + ')', fam.Normal(0,0.5,transform=None), fam.Normal(0, 3))
