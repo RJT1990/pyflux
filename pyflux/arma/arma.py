@@ -498,7 +498,7 @@ class ARIMA(tsm.TSM):
                 Y_exp = np.append(Y_exp, [self.link(new_value)])
 
             mu_exp = np.append(mu_exp,[0]) # For indexing consistency
-
+        del mu_exp
         return Y_exp
 
     def _sim_prediction(self, mu, Y, h, t_z, simulations):
@@ -562,7 +562,8 @@ class ARIMA(tsm.TSM):
                 mu_exp = np.append(mu_exp, [0]) # For indexing consistency
 
                 sim_vector[n] = Y_exp[-h:]
-
+            del Y_exp
+            del mu_exp
         return np.transpose(sim_vector)
 
     def _sim_prediction_bayes(self, h, simulations):
@@ -622,7 +623,8 @@ class ARIMA(tsm.TSM):
                 mu_exp = np.append(mu_exp, [0]) # For indexing consistency
 
                 sim_vector[n] = Y_exp[-h:]
-
+            del Y_exp
+            del mu_exp
         return np.transpose(sim_vector)
 
     def _summarize_simulations(self, mean_values, sim_vector, date_index, h, past_values):
