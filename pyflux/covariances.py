@@ -21,7 +21,7 @@ def acf_plot(data, max_lag=10):
 
     plt.figure(figsize=(15,5)) 
     ax = plt.subplot(111)
-    plt.bar(range(1,10), [acf(data,lag) for lag in range(1,10)])
+    plt.bar(range(1,max_lag), [acf(data,lag) for lag in range(1,max_lag)])
     plt.xlabel("Lag")
     plt.ylabel("Autocorrelation")
     plt.title("ACF Plot")
