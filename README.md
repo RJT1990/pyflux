@@ -49,6 +49,12 @@ pip install pyflux
 
 Supported on Python 2.7 and 3.5.
 
+## Run tests
+
+1. install development requirements: `pip install -r requirements-dev.txt`
+2. compile cython modules: `python setup.py build_ext --inplace` (takes some time)
+3. run tests: `py.test -s --pyargs pyflux`
+
 ## Talks
 
 - [PyData San Francisco 2016](https://github.com/RJT1990/PyData2016-SanFrancisco) - August 2016 -  a tour of time series (and predicting NFL games)
