@@ -77,6 +77,16 @@ def setup_package():
         # Generate Cython sources, unless building from source release
         generate_cython(PACKAGE_NAME)
 
+    install_requires = [
+        "matplotlib",
+        "numdifftools",
+        "numpy",
+        "pandas",
+        "patsy",
+        "scipy",
+        "seaborn"
+    ]
+
     try:
         setup(name=PACKAGE_NAME,
               author=AUTHOR,
@@ -89,7 +99,7 @@ def setup_package():
               license=LICENSE,
               configuration=configuration,
               keywords = ['time series','machine learning','bayesian statistics'],
-              install_requires=['numpy', 'pandas', 'scipy', 'numdifftools','patsy', 'seaborn'])
+              install_requires=install_requires)
     finally:
         del sys.path[0]
         os.chdir(old_path)
